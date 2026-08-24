@@ -1,0 +1,7 @@
+This skill's subject is consulting current third-party documentation and
+implementation code, so its cases cannot be measured offline. Evaluated
+offline, the skill correctly refuses to implement without research and
+produces nothing, losing to a baseline that guesses from memory.
+
+Presence of this file makes scripts/shuhari_staged_targets.sh pass
+`--network=true` for this skill.

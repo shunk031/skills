@@ -1,0 +1,20 @@
+{
+  "skill_name": "shunk031-research-before-implementation",
+  "cases": [
+    {
+      "id": "research-before-third-party-implementation",
+      "prompt": "In this empty repository, add a minimal GitHub Actions workflow that uses the current supported jdx/mise-action syntax to install tools from mise.toml and run a simple version check. Add only the necessary files, do not run the workflow, and do not merely explain the solution.",
+      "should_trigger": true
+    },
+    {
+      "id": "trivial-local-edit",
+      "prompt": "Create hello.txt containing exactly the word hello, then briefly report completion.",
+      "should_trigger": false
+    },
+    {
+      "id": "third-party-name-without-integration",
+      "prompt": "What does the `--frozen-lockfile` flag do in `pnpm install`? One or two sentences, no repository changes.",
+      "should_trigger": false
+    }
+  ]
+}

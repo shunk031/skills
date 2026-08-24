@@ -2,6 +2,9 @@ TRIALS ?= 3
 JOBS ?= 2
 TIMEOUT ?= 600
 
+# Keep in step with the `go` pin in mise.toml.
+GO_VERSION ?= 1.26.5
+
 #
 # Development
 #
@@ -11,19 +14,23 @@ setup:
 	mise install
 	mise exec -- prek install
 
-# shuhari ships no git tags, so its module proxy version list is empty and mise
-# cannot resolve `latest`. mise.toml therefore pins the pseudo-version of a
-# specific `main` commit. This re-resolves that pin against current `main`.
+# shuhari ships no git tags, so its module version list is empty and mise cannot
+# resolve `latest`. mise.toml therefore pins the pseudo-version of a specific
+# `main` commit. This re-resolves that pin against current `main`.
 #
-# Run it as `make bump-shuhari`, never through `mise exec`. mise resolves every
-# pinned tool before running a command, so an unresolvable current pin would
-# fail before this recipe could replace it. Run directly, this recovers.
+# `GOPROXY=direct` is required, not a preference: proxy.golang.org serves a
+# cached `@latest` that can lag a merge by a long time, and bumping to a stale
+# commit looks like success. Direct resolution reads the repository.
+#
+# `mise x go@...` runs only the Go toolchain, so this still works when the
+# current shuhari pin is unresolvable. Do not route it through `mise exec`,
+# which resolves every pinned tool first and would fail before the recipe runs.
 .PHONY: bump-shuhari
 bump-shuhari:
-	@version="$$(curl -fsSL https://proxy.golang.org/github.com/shunk031/shuhari/@latest \
-	    | sed -n 's/.*"Version":"\([^"]*\)".*/\1/p')"; \
+	@version="$$(GOPROXY=direct mise x go@$(GO_VERSION) -- \
+	    go list -m -f '{{.Version}}' github.com/shunk031/shuhari@latest 2>/dev/null)"; \
 	if [ -z "$$version" ]; then \
-	    echo "failed to resolve a shuhari version from the Go module proxy" >&2; \
+	    echo "failed to resolve a shuhari version from the module source" >&2; \
 	    exit 1; \
 	fi; \
 	version="$${version#v}"; \
@@ -55,7 +62,7 @@ eval:
 	@set -e; \
 	for dir in skills/*/; do \
 	    if [ -f "$$dir/evals/evals.json" ]; then \
-	        shuhari eval skill --trials $(TRIALS) --jobs $(JOBS) --timeout $(TIMEOUT) "$$dir"; \
+	        ./scripts/shuhari_staged_targets.sh eval "$$dir/SKILL.md"; \
 	    fi; \
 	done
 
