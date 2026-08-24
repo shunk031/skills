@@ -11,6 +11,29 @@ setup:
 	mise install
 	mise exec -- prek install
 
+# shuhari ships no git tags, so its module proxy version list is empty and mise
+# cannot resolve `latest`. mise.toml therefore pins the pseudo-version of a
+# specific `main` commit. This re-resolves that pin against current `main`.
+#
+# Run it as `make bump-shuhari`, never through `mise exec`. mise resolves every
+# pinned tool before running a command, so an unresolvable current pin would
+# fail before this recipe could replace it. Run directly, this recovers.
+.PHONY: bump-shuhari
+bump-shuhari:
+	@version="$$(curl -fsSL https://proxy.golang.org/github.com/shunk031/shuhari/@latest \
+	    | sed -n 's/.*"Version":"\([^"]*\)".*/\1/p')"; \
+	if [ -z "$$version" ]; then \
+	    echo "failed to resolve a shuhari version from the Go module proxy" >&2; \
+	    exit 1; \
+	fi; \
+	version="$${version#v}"; \
+	sed -i.bak \
+	    "s|^\"go:github.com/shunk031/shuhari/cmd/shuhari\" = .*|\"go:github.com/shunk031/shuhari/cmd/shuhari\" = \"$$version\"|" \
+	    mise.toml; \
+	rm -f mise.toml.bak; \
+	echo "pinned shuhari to $$version"
+	mise install
+
 #
 # Gates
 #
