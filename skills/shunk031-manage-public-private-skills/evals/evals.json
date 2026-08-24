@@ -1,0 +1,45 @@
+{
+  "skill_name": "shunk031-manage-public-private-skills",
+  "evals": [
+    {
+      "id": "edit-skill-from-dotfiles-checkout",
+      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-structured-writing skill so it also covers pull request bodies, then get it onto this machine.",
+      "expected_output": "Says the edit does not belong in the checkout the user is standing in, because skill content moved out of both dotfiles repositories, and routes to shunk031/skills since this skill names nothing internal. Works in a task worktree of that repository, runs its gates, and opens a pull request. For getting the change onto the machine, explains that chezmoi apply installs from the merged repository and that its update step is throttled to once a day, so a forced update is needed right after merging.",
+      "assertions": [
+        "The response redirects the edit to the skill repository rather than the dotfiles checkout the user is in.",
+        "The response picks the public repository and gives a reason based on the skill's content.",
+        "The response describes reaching the machine through merge and chezmoi apply, not by editing an installed copy."
+      ]
+    },
+    {
+      "id": "classify-new-skill-visibility",
+      "prompt": "I want a new skill for rotating the deploy key on our internal artifact host. Which repository should it go in, and why?",
+      "expected_output": "Places it in shunk031/skills-private, because the skill body will name an internal host and a credential. Gives that as the deciding test rather than the fact that the work is job-related. Notes that eval and trigger prompts there are committed in plaintext, so hosts and key material must appear as placeholders.",
+      "assertions": [
+        "The response chooses the private repository.",
+        "The response justifies it by what the skill body names rather than by the work being work-related.",
+        "The response warns that committed eval prompts must use placeholders instead of real values."
+      ]
+    },
+    {
+      "id": "author-eval-cases",
+      "prompt": "Add eval and trigger cases to a skill that currently has none. What goes in each file and what do I have to be careful about when writing them?",
+      "expected_output": "Separates the two files: behaviour cases in evals/evals.json with id, prompt, and expected_output, and trigger cases in evals/triggers.json needing at least one positive and one near-miss negative. Warns that expected_output must not repeat the assertions, because a blind comparator runs alongside assertion grading and copied wording tilts it. Warns that an unrelated negative control measures nothing. Gives the run order as validate-only, then trigger check, then the full evaluation.",
+      "assertions": [
+        "The response assigns behaviour cases and trigger cases to their separate files with the right required fields.",
+        "The response says expected_output must not restate the assertions, and gives the comparator as the reason.",
+        "The response requires negative controls to be near misses rather than unrelated prompts."
+      ]
+    },
+    {
+      "id": "live-skill-edit-does-not-stick",
+      "prompt": "I edited ~/.agents/skills/shunk031-humanizer-ja/SKILL.md yesterday and my change is gone. What happened and where should I have made it?",
+      "expected_output": "Explains that the path is a copy written by the skills CLI rather than a link to any source, so an update overwrote the edit. Sends the user to a worktree of the owning skill repository, and describes the route back to the machine as merge followed by chezmoi apply. Does not suggest re-editing the installed copy or protecting it from updates.",
+      "assertions": [
+        "The response identifies the installed path as a CLI-managed copy that updates overwrite.",
+        "The response directs the edit to the owning skill repository instead.",
+        "The response does not propose editing or preserving the installed copy as the fix."
+      ]
+    }
+  ]
+}
