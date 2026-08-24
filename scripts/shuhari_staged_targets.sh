@@ -121,6 +121,10 @@ function run_validate() {
         shuhari eval skill --validate-only "${eval_targets[@]}"
     fi
 
+    # Bash 3.2 treats expanding an empty array as an unbound variable under
+    # `set -u`, so every array expansion here is guarded by a count check.
+    [ "${#trigger_targets[@]}" -gt 0 ] || return 0
+
     local target
     for target in "${trigger_targets[@]}"; do
         shuhari check trigger --validate-only "${target}"
@@ -148,6 +152,7 @@ function run_eval() {
 function run_trigger() {
     local -a targets=()
     read_lines_into targets < <(filter_by_eval_file triggers.json "$@")
+    [ "${#targets[@]}" -gt 0 ] || return 0
 
     local target
     local status=0
