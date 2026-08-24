@@ -1,0 +1,11 @@
+# Shuhari writes iteration artifacts next to the evaluated skill, so they land
+# inside `skills/`. They hold verbatim agent transcripts: never commit them.
+skills/*-workspace/
+
+.agents/worklog/
+.playwright-cli/
+.DS_Store
+
+__pycache__/
+*.py[cod]
+.venv/

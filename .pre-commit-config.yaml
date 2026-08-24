@@ -1,0 +1,48 @@
+repos:
+  - repo: local
+    hooks:
+      # Offline static checks. Cheap enough to run on every skill change.
+      - id: skill-layout
+        name: check skill layout and naming
+        entry: scripts/check_skill_layout.sh
+        language: system
+        pass_filenames: false
+        files: ^skills/
+
+      # Schema-only validation. Offline, no agent, no model calls.
+      - id: shuhari-validate
+        name: validate changed skill eval and trigger schemas
+        entry: scripts/shuhari_staged_targets.sh validate
+        language: system
+        pass_filenames: true
+        require_serial: true
+        files: ^skills/[^/]+/(SKILL\.md|evals/(evals|triggers)\.json)$
+
+      # Live model calls. `require_serial` keeps concurrent Codex sessions to
+      # the count Shuhari itself manages through `--jobs`.
+      - id: shuhari-check-trigger
+        name: check trigger boundaries for changed skills
+        entry: scripts/shuhari_staged_targets.sh trigger
+        language: system
+        pass_filenames: true
+        require_serial: true
+        files: ^skills/[^/]+/(SKILL\.md|evals/triggers\.json)$
+
+      # Live model calls, two arms per case. The most expensive gate.
+      - id: shuhari-eval-skill
+        name: evaluate changed skills
+        entry: scripts/shuhari_staged_targets.sh eval
+        language: system
+        pass_filenames: true
+        require_serial: true
+        files: ^skills/[^/]+/(SKILL\.md|evals/evals\.json)$
+
+      - id: textlint-markdown
+        name: fix hard-wrapped Markdown prose
+        entry: textlint --fix --config .textlintrc.json
+        language: node
+        additional_dependencies:
+          - textlint@15.8.0
+          - "@cffnpwr/textlint-rule-no-arbitrary-line-break@1.1.0"
+          - textlint-rule-ja-space-between-half-and-full-width@3.0.3
+        types: [markdown]
