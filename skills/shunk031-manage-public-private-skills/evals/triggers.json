@@ -1,0 +1,40 @@
+{
+  "skill_name": "shunk031-manage-public-private-skills",
+  "cases": [
+    {
+      "id": "edit-skill-from-dotfiles-checkout",
+      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-structured-writing skill so it also covers pull request bodies, then get it onto this machine.",
+      "should_trigger": true
+    },
+    {
+      "id": "classify-new-skill-visibility",
+      "prompt": "I want a new skill for rotating the deploy key on our internal artifact host. Which repository should it go in, and why?",
+      "should_trigger": true
+    },
+    {
+      "id": "author-eval-cases",
+      "prompt": "Add eval and trigger cases to a skill that currently has none. What goes in each file and what do I have to be careful about when writing them?",
+      "should_trigger": true
+    },
+    {
+      "id": "live-skill-edit-does-not-stick",
+      "prompt": "I edited ~/.agents/skills/shunk031-humanizer-ja/SKILL.md yesterday and my change is gone. What happened and where should I have made it?",
+      "should_trigger": true
+    },
+    {
+      "id": "skills-cli-usage-question",
+      "prompt": "What does the --copy flag do in npx skills add, and when would I want it instead of the default? One or two sentences, no changes to anything.",
+      "should_trigger": false
+    },
+    {
+      "id": "write-skill-body-content",
+      "prompt": "Draft the body text for a skill that teaches an agent to write conventional commit messages. Just the prose — I'll deal with where it goes.",
+      "should_trigger": false
+    },
+    {
+      "id": "ordinary-dotfiles-config-change",
+      "prompt": "Add fd to the pinned CLI tools in the dotfiles mise config and tell me what else needs to change.",
+      "should_trigger": false
+    }
+  ]
+}
