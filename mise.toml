@@ -4,10 +4,12 @@ min_version = "2026.8.2"
 [tools]
 # Keep each group sorted by package name, ignoring backend prefixes.
 
-# Language runtimes. `go` builds the Shuhari gate binary below, and `node` backs
-# the textlint pre-commit hook.
+# Language runtimes. `go` builds the Shuhari gate binary below, `node` backs the
+# textlint pre-commit hook, and `python` runs the unit tests for skills that
+# ship executable scripts.
 go = "1.26.5"
 node = "lts"
+python = "3.14.6"
 
 # Aqua tools
 "aqua:j178/prek" = "0.4.11"

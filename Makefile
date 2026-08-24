@@ -72,6 +72,11 @@ check-triggers:
 # Quality
 #
 
+# Unit tests for skills that ship executable scripts. Offline, no agent.
+.PHONY: test
+test:
+	python -m unittest discover -s tests/python
+
 # The same offline hooks CI runs. The live gates are skipped here by design.
 .PHONY: gate
 gate:
