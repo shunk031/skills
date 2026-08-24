@@ -1,0 +1,46 @@
+{
+  "skill_name": "shunk031-doc-slop-review",
+  "evals": [
+    {
+      "id": "training-doc-draft",
+      "prompt": "I need to add a TRAINING.md to a package in this repository describing how to reproduce our training runs. Draft it and tell me how you would finish the job before I publish it.",
+      "expected_output": "Drafts the TRAINING.md, then treats the draft as unpublished until it has been reviewed. Names the skill's own document slop review script, scripts/doc_slop_review.py, as the tool to run on the draft file. States that a failing review is fixed and re-run, or waived with a reason recorded by the user, before the document is published.",
+      "assertions": [
+        "The response reviews the drafted document before treating it as ready to publish.",
+        "The response names the skill's document slop review script as the tool to run on the draft.",
+        "The response says a failing review is fixed, or waived with a recorded reason, before publication."
+      ]
+    },
+    {
+      "id": "issue-body-draft",
+      "prompt": "Write the issue body for a bug where our nightly job silently skips half its inputs, then open it. Tell me what you do before it goes up, and tell me what you will do if the review reports findings before you open the issue.",
+      "expected_output": "Writes the issue body, then runs the skill's document slop review script on that body before the issue is created rather than after. States that reported findings are addressed and the review re-run, or waived with a reason recorded by the user, before the issue is opened.",
+      "assertions": [
+        "The response reviews the issue body before the issue is created rather than after.",
+        "The response names the skill's document slop review script as the tool to run on the body.",
+        "The response says a failing review is fixed, or waived with a recorded reason, before the issue is opened."
+      ]
+    },
+    {
+      "id": "pull-request-body-draft",
+      "prompt": "I am about to open a pull request for a change that reworks our retry logic. Write the pull request description and explain how you check it before publishing, and tell me what you will do if the review reports findings before you publish it.",
+      "expected_output": "Writes the pull request description, then runs the skill's document slop review script on it before the pull request is created or updated. States that reported findings are addressed and the review re-run, or waived with a reason recorded by the user, before publishing.",
+      "assertions": [
+        "The response checks the pull request description before the pull request is created or updated.",
+        "The response names the skill's document slop review script as the tool to run on the description.",
+        "The response says a failing review is fixed, or waived with a recorded reason, before publishing."
+      ]
+    },
+    {
+      "id": "judge-timeout-blocks-publish",
+      "prompt": "A Japanese research report contains an invented label 主実行, the undefined count 全24行, and an unexplained final label. The deterministic tier of the two-tier document review reports PASS, but the blind model judge times out twice and the command exits 2. The worker wants to publish the report because the regex tier passed. Explain the gate decision and the exact condition under which publication may proceed.",
+      "expected_output": "States that exit code 2 and the repeated judge timeout mean the review could not complete, which is a failed gate rather than a PASS. Blocks publication on the deterministic-only result and rejects --skip-model or a regex PASS as a complete review. Allows publication only after a successful complete review, or after an explicit user waiver that names the failed gate and records the user's reason; the worker cannot grant that waiver itself. Notes that the undefined label and count need the model judge or a manual reading because the deterministic tier cannot infer their meaning.",
+      "assertions": [
+        "The response states that the judge timeout and exit code 2 mean the review failed or could not complete, not that it passed.",
+        "The response blocks publication after the deterministic-only PASS and does not treat --skip-model or a regex PASS as a complete review.",
+        "The response requires a successful complete review PASS before publication, or an explicit user waiver that records the failed gate and reason; the worker cannot grant the waiver itself.",
+        "The response recognizes that undefined terms and units may require manual or model review because the deterministic tier cannot infer their meaning."
+      ]
+    }
+  ]
+}
