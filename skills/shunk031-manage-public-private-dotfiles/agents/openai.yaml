@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Public and Private Dotfiles"
+  short_description: "Coordinate changes across both dotfiles repositories"
+  default_prompt: "Use $shunk031-manage-public-private-dotfiles to inspect both dotfiles repositories, identify the source of truth, and coordinate the required changes safely."
