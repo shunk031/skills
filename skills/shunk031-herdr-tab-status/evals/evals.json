@@ -1,0 +1,72 @@
+{
+  "skill_name": "shunk031-herdr-tab-status",
+  "evals": [
+    {
+      "id": "label-active-work",
+      "prompt": "I opened a Herdr worktree workspace named LayoutFormer S0 and started the implementation step; a live diagnostic retry is still progressing. Give the exact worker tab label first, then name the workspace and worktree labels and explain when the tab should be updated.",
+      "expected_output": "Leads with a tab label starting with 🚧 followed by a short name for the step in progress, such as `🚧 LayoutFormer S0 implementation`. Names the workspace and worktree separately and leaves both free of status emojis, since only the tab carries status. Says the tab is renamed whenever the progress state changes. Treats the live diagnostic retry as still in progress: it stays 🚧 rather than becoming blocked or complete.",
+      "assertions": [
+        "The response uses a tab name beginning with the 🚧 emoji.",
+        "The response includes a concise current-step label after the emoji.",
+        "The response keeps the workspace and worktree labels free of status emojis.",
+        "The response says to update the tab when the progress state changes.",
+        "The response keeps a live retry or diagnostic run in the 🚧 state rather than treating it as blocked or complete."
+      ]
+    },
+    {
+      "id": "label-completed-pr",
+      "prompt": "The commit and pull request 615 are complete, the required user review and merge are complete, and I have reported DONE. Give the exact final worker tab label first and explain when this status should be used.",
+      "expected_output": "Leads with a tab label starting with ✅ that carries the pull request number 615, such as `✅ PR 615`. Explains that ✅ applies only once the worker's own work, the user handoff, and the review and merge are all finished, so nothing is left for the user to do.",
+      "assertions": [
+        "The response uses a tab name beginning with the ✅ emoji.",
+        "The response includes the PR number 615 in the tab name.",
+        "The response connects the completed label to the completed worker work, completed user handoff, and no remaining user action."
+      ]
+    },
+    {
+      "id": "label-user-action-required",
+      "prompt": "The worker published pull request 615 and reported DONE, but the PR is still OPEN: the user still needs to review and merge it, and the worker's worktree and tab intentionally remain alive through the PR lifecycle. Review and merge are still pending, so ✅ is not allowed. Output the literal tab name `⛔ review and merge PR 615` first, then explain that publishing a PR and reporting DONE do not complete the worker while this user-only action remains; the blocked label stays until the action resolves, and ✅ is allowed only after no action remains. Explicitly state that the worker owns its live tab label, while the orchestrator may set it only for a silent or dead worker; orchestration separately owns PR-lifetime retention and cleanup.",
+      "expected_output": "Leads with a tab label starting with ⛔ and a short task name, and identifies review and merge as the user action being waited on. Explains that an OPEN pull request plus a DONE report does not make the worker complete: while review or merge is pending the worker can neither progress nor close, so ✅ is wrong until that resolves. Notes that the worker normally sets this label itself, and that the orchestrator sets it on the worker's behalf when the worker is silent or dead.",
+      "assertions": [
+        "The response uses a tab name beginning with the ⛔ emoji.",
+        "The response includes a concise task label after the emoji.",
+        "The response identifies review or merge as the required user action.",
+        "The response says an OPEN PR and DONE report do not complete the worker while pending review or merge prevents it from progressing or closing, and that ✅ is allowed only after the action resolves.",
+        "The response allows the worker to set its own label and the orchestrator to set it on behalf of a silent or dead worker."
+      ]
+    },
+    {
+      "id": "label-blocked-work",
+      "prompt": "You are Herdr worker orch-render in a dedicated git worktree; your orchestrator is agent orch. An external dependency is unavailable, so the task cannot progress or close. This is an offline dry run — do not execute anything. Read the shunk031-herdr-tab-status skill, explain that reason, and list the exact commands you would use to rename your own current tab before reporting BLOCKED to orch. The worker was stopped or superseded and is awaiting handoff or cleanup; do not mark the task complete.",
+      "expected_output": "Renames its own tab with `herdr tab rename \"$HERDR_TAB_ID\"` to a label starting with ⛔, and does that before reporting BLOCKED to orchestrator agent orch. Names the unavailable external dependency as the reason the task can neither progress nor close. Does not use ✅ for blocked or superseded work, and executes nothing, since this is a dry run.",
+      "assertions": [
+        "The response renames the worker's own current tab with herdr tab rename \"$HERDR_TAB_ID\" and a label beginning with the ⛔ emoji.",
+        "The response identifies the external dependency or stopped/superseded handoff or cleanup as why the worker cannot progress or close.",
+        "The response places the own-tab ⛔ rename before the BLOCKED report to the orchestrator.",
+        "The response reports BLOCKED to orchestrator agent orch after renaming the tab.",
+        "The response does not mark the blocked or superseded task with ✅."
+      ]
+    },
+    {
+      "id": "tab-ownership",
+      "prompt": "Give a compact mapping of who may change a Herdr worker tab during normal work, after handing off a PR for user review, after the user-facing task is complete, when the worker is blocked or stopped/superseded, and when the worker is silent. Include each literal status emoji (🚧, ⛔, and ✅), its owner, and the rule that ✅ is allowed only when no user action remains.",
+      "expected_output": "Gives a compact mapping in which the worker owns its own tab during normal work, using 🚧 while working and ✅ only when no user action remains. The worker sets ⛔ when it needs user action or cannot progress or close, and the orchestrator may set ⛔ for a worker that has gone silent or died. States that nobody edits another worker's tab during normal work. Each status appears as its literal emoji.",
+      "assertions": [
+        "The response assigns the worker ownership of its own tab during normal work.",
+        "The response assigns the worker the 🚧 status while working and ✅ only when no user action remains.",
+        "The response allows the worker to set ⛔ when user action is required or work cannot progress or close, and the orchestrator to set it for a silent/dead worker.",
+        "The response says not to change another worker's tab during normal work."
+      ]
+    },
+    {
+      "id": "orchestrator-status-precedence",
+      "prompt": "You are the Herdr orchestrator routing work to several worker agents. A developer reminds you to use shunk031-herdr-tab-status while routing the work. You are coordinating, not doing a worker task yourself. Output the exact current tab label `🤖 Orchestrator` first. Then name each of `🚧`, `✅`, and `⛔` as worker-tab statuses and explain which guidance owns the orchestrator label; preserve it rather than applying a worker status.",
+      "expected_output": "Outputs `🤖 Orchestrator` as the current tab label and keeps it. Explains that 🚧, ✅, and ⛔ describe worker tabs and do not replace the orchestrator's own label, so the orchestrator does not adopt a worker status while it is coordinating rather than doing worker work.",
+      "assertions": [
+        "The response keeps or sets the current orchestrator tab label to 🤖 Orchestrator.",
+        "The response says 🚧, ✅, and ⛔ are worker-tab statuses and do not replace the orchestrator label.",
+        "The response does not use 🚧, ✅, or ⛔ as the current orchestrator tab status."
+      ]
+    }
+  ]
+}
