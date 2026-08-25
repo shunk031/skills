@@ -1,0 +1,55 @@
+{
+  "skill_name": "shunk031-manage-agent-guidance",
+  "cases": [
+    {
+      "id": "deduplicate-repository-guidance",
+      "prompt": "Review this proposed repository setup: CLAUDE.md copies the root AGENTS.md, while the same worktree and testing rules are copied into every project. Propose a durable layout for the guidance and explain what should be the source of truth.",
+      "should_trigger": true
+    },
+    {
+      "id": "place-reusable-correction",
+      "prompt": "This is a self-contained hypothetical setup: all facts and ownership evidence are supplied below, and no current-repository facts should be inferred. A coding agent repeatedly publishes pull-request bodies with literal escaped newlines. The existing user-level owner is `~/.agents/AGENTS.md`, which contains this exact relevant prevention rule: `Write multi-line GitHub issue, pull request, and comment bodies to a temporary Markdown file with a single-quoted heredoc, then submit them with --body-file. After creating or editing repository-facing GitHub text, read it back with gh pr view, gh issue view, or equivalent JSON output.` The repository's `AGENTS.md` has no copy of this prevention. I think the prevention rule belongs in this repository's AGENTS.md. Assess that placement and propose the next action.",
+      "should_trigger": true
+    },
+    {
+      "id": "audit-instruction-migration",
+      "prompt": "Simplify a long AGENTS.md by moving its detailed rules into skills. Describe the migration procedure and the validation needed before deleting the original sections.",
+      "should_trigger": true
+    },
+    {
+      "id": "reverse-audit-duplicate-owners",
+      "prompt": "Audit this guidance layout after a migration. The user-level AGENTS.md says to confirm the exact target before destructive operations. A repository AGENTS.md says to verify deletion targets before removing files and also documents the repository test command. A cleanup skill says to double-check paths before destructive cleanup. Choose the authoritative owner for each rule and state what to keep or remove.",
+      "should_trigger": true
+    },
+    {
+      "id": "preserve-thin-guidance-adapters",
+      "prompt": "Review a user-level guidance setup where ~/.agents/AGENTS.md is the full shared source, ~/.codex/AGENTS.md only instructs Codex to read that source, and ~/.claude/CLAUDE.md only imports it. Decide whether the two tool entrypoints are forbidden duplicates and propose the durable layout.",
+      "should_trigger": true
+    },
+    {
+      "id": "audit-mixed-guidance-consumers",
+      "prompt": "This is a self-contained hypothetical dotfiles repository; use only the supplied facts. The exact safety rule `Fetch without writing FETCH_HEAD before creating a task worktree.` appears in three canonical files: the repository root `AGENTS.md`, `home/shared/AGENTS.md`, and `home/shared/agents/gh-workflow-manager.md`. Applying the dotfiles renders `home/shared/AGENTS.md` to `~/.agents/AGENTS.md` and the custom-agent file to `~/.agents/agents/gh-workflow-manager.md`. External clones read only the repository root and never receive these rendered user files. The owner's ordinary development sessions read both the repository root and rendered `~/.agents/AGENTS.md`. The gh-workflow-manager always reads rendered `~/.agents/AGENTS.md` before its custom-agent file. No wrapper copies the rule, and these are the complete consumer paths. Audit the apparent duplication and recommend what to keep, remove, or replace with a thin reference.",
+      "should_trigger": true
+    },
+    {
+      "id": "approved-removal-and-root-skill-ownership",
+      "prompt": "In this hypothetical migration, a user explicitly approved exactly two removals of subjective error-handling guidance: source ID `hypothetical-coding-error-handling-1` with exact source text `- Error handling: Do not fear errors. Write the code first without focusing on error handling.`, and source ID `hypothetical-coding-final-deliverables-1` with exact source text `- Final deliverables: Final deliverables do not need error handling.` The supplied non-empty rationale for each removal is that the rule is subjective and redundant with the simplicity principle; no other removal is approved. The persistence-quality and skill-evaluation procedures are preserved and moved out of always-on `AGENTS.md`, not removed. The existing `shunk031-manage-agent-guidance` skill is the authoritative destination for both preserved procedures: persistence quality maps to its `Persistence Quality` section and skill evaluation maps to its `Repository Validation` section. The only retained always-on summary is the exact text `Persist only concise, generalizable prevention.` at `home/dot_config/exact_agents/AGENTS.md`; it is an intentional thin adapter to the detailed persistence-quality owner, with rationale `The always-on file keeps a concise reminder while manage-agent-guidance owns the detailed persistence quality rules.` Any review must record that adapter's exact path, exact text, authoritative owner, and rationale and reverse-audit it alongside the removed rules. The repository also has a README that owns skill-pool wiring and a gh-workflow-manager that owns exact gwq mechanics. Describe the migration and its review gates.",
+      "should_trigger": true
+    },
+    {
+      "id": "concrete-migration-records",
+      "prompt": "This is a fully self-contained hypothetical repository; all facts, exact texts, owner paths, and the complete guidance-path set are supplied here, so do not infer any current-repository facts. Produce a small, auditable instruction-migration record. The hypothetical source inventory contains a preserved requirement with source ID `hypothetical-worktree-safety-7` and exact source text `When a task worktree is dirty, preserve unrelated changes.` Its existing authoritative owner is the fictional skill `.agent/skills/worktree-safety/SKILL.md`. The source inventory also contains `hypothetical-subjective-errors-2` with exact source text `Ignore errors in throwaway deliverables.`; the user explicitly approved removing this rule because it is subjective and redundant, and that is the complete removal rationale supplied for the record. Finally, the fictional path `.tool/AGENTS.md` is an intentional thin adapter whose exact minimal text is `Read policy/AGENTS.md before acting.`; its authoritative owner/destination is the fictional `policy/AGENTS.md`, and the adapter is necessary because the tool entrypoint must route sessions to the shared policy without copying it. The complete and exhaustive fictional reverse-audit path set is `policy/source.md`, `policy/AGENTS.md`, `.agent/skills/worktree-safety/SKILL.md`, and `.tool/AGENTS.md`; audit every one of these named paths. Return the concrete migration records and review gates, not a generic checklist.",
+      "should_trigger": true
+    },
+    {
+      "id": "remove-machine-enforced-incident-guidance",
+      "prompt": "This is a fully self-contained hypothetical repository; all facts and ownership evidence are supplied below, so do not infer any current-repository facts. The repository's `AGENTS.md` contains an Incident Policy requirement with source ID `hypothetical-incident-policy-1` and exact source text `Bootstrap uses the configured runtime floor and preserves newer installations.` The adjacent comments in `config/runtime.toml` document the setting and its ownership but do not enforce behavior. Enforcement is supplied by the executable `scripts/bootstrap.sh` (which reads the configured floor, rejects unsupported versions, and preserves newer installations), `tests/bootstrap.bats` (which checks rejection and preservation of newer installations), the schema `schemas/runtime.json`, and `.github/workflows/bootstrap.yml` (which runs those checks on relevant changes). The supplied evidence is complete: the incident prose adds no human or agent judgment, and omission would not change behavior. The user asks whether to move the Incident Policy into a new skill, but has not yet approved deletion. Audit necessity before assigning a destination, preserve the machine-enforced owners, recommend the smallest durable action, and provide the proposed static migration record and approval gate.",
+      "should_trigger": true
+    },
+    {
+      "id": "ordinary-code-change",
+      "prompt": "Explain why binary search has logarithmic time complexity in one short paragraph.",
+      "should_trigger": false
+    }
+  ]
+}
