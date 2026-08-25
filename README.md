@@ -18,6 +18,24 @@ npx skills add shunk031/skills --list
 
 `--global` keeps one canonical copy at `~/.agents/skills/<name>` and points each agent at it, so Claude Code and Codex read the same file instead of drifting apart. `--yes` answers the prompts, which is what makes the command safe to run from a script.
 
+### As a plugin
+
+This repository is also a plugin for both agents, which installs every skill at once instead of naming them one at a time. For Claude Code:
+
+```bash
+claude plugin marketplace add shunk031/skills
+claude plugin install shunk031-skills@shunk031
+```
+
+For Codex:
+
+```bash
+codex plugin marketplace add shunk031/skills
+codex plugin add shunk031-skills@shunk031
+```
+
+Both read the same `skills/` directory, so the two channels deliver identical content — pick the plugin when you want all of it and the `skills` CLI when you want a few. Neither manifest lists the skills individually, so an installed plugin picks up whatever `skills/` currently holds; refresh with `claude plugin update shunk031-skills` or `codex plugin marketplace upgrade`.
+
 ## Skills
 
 | Skill                                                                                        | What it does                                                                                                                      |

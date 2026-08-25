@@ -1,0 +1,16 @@
+{
+  "name": "shunk031",
+  "description": "Publicly shareable coding-agent skills maintained by shunk031.",
+  "owner": {
+    "name": "Shunsuke Kitada",
+    "url": "https://github.com/shunk031"
+  },
+  "plugins": [
+    {
+      "name": "shunk031-skills",
+      "source": "./",
+      "description": "Coding-agent skills for writing, research, repository workflow, and agent orchestration.",
+      "category": "productivity"
+    }
+  ]
+}
