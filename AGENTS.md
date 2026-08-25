@@ -33,6 +33,7 @@
 - In every new clone or worktree, run `make setup` before editing or committing. It installs the pinned toolchain and the pre-commit hooks.
 - `shuhari` must be on `PATH` for the gates to run. The wrapper exits with status 2 when it is missing, because a gate that cannot run is a failure rather than a pass.
 - `shuhari` has no tagged release, so `mise.toml` pins the pseudo-version of a `main` commit rather than a semantic version. Run `make bump-shuhari` to move that pin to current `main`. Run it as plain `make`, never through `mise exec`: mise resolves every pinned tool before running a command, so a stale or unresolvable pin would fail before the recipe could replace it.
+- Never install `shuhari` with a bare `go install`. That writes into the Go toolchain's own `bin` directory, which sits ahead of the pinned tool on `PATH`, so the gates silently run a build nobody pinned. Check with `mise which shuhari`: it must resolve under `installs/go-github-com-shunk031-shuhari-cmd-shuhari/<version>/`. If it resolves anywhere else, delete that binary and re-run `make setup`.
 - The live gates make real model calls through Codex, so they run in pre-commit only. CI is limited to schema validation, layout checks, linting, and unit tests.
 - `SKIP=shuhari-check-trigger,shuhari-eval-skill git commit` is the authorized escape hatch when the model path is unavailable. Report the skip in the pull request body; do not treat a skipped gate as a passing gate.
 

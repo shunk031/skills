@@ -2,11 +2,14 @@ name: CI
 
 # No workflow-level path filters: a skipped required check can stay pending and
 # block merges. Jobs decide what to do instead.
+#
+# `pull_request` carries no branch filter on purpose. Filtering it to `main`
+# would silently give stacked pull requests no CI at all, because their base is
+# the branch below them rather than `main`.
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -42,6 +45,19 @@ jobs:
 
       - name: Validate skill layout and eval schemas
         run: make validate
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: jdx/mise-action@v3
+        with:
+          cache: true
+
+      - name: Run unit tests
+        run: make test
 
   lint:
     runs-on: ubuntu-latest

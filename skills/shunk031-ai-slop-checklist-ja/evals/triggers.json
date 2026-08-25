@@ -1,0 +1,20 @@
+{
+  "skill_name": "shunk031-ai-slop-checklist-ja",
+  "cases": [
+    {
+      "id": "technical-report-undefined-terms",
+      "prompt": "この日本語の技術報告をAI臭さの観点でレビューし、重大な問題を指摘して修正案を出してください。主実行は max_tokens=4096 とした。全24行のうち、reasoningが4096-token上限まで消費されてfinalが空になった12行だけ、入力とpromptを変えず max_tokens=8192 で再実行した。retryは別のサンプルではなく、同じ入力・promptに対して長さ上限だけを変えた再実行である。",
+      "should_trigger": true
+    },
+    {
+      "id": "plain-japanese-report-negative-control",
+      "prompt": "次の短い報告を、事実を変えずに簡潔に確認してください。24クエリ（3実験 × 8ペア）を実行し、最終回答が空になった12クエリだけ、同じ入力とプロンプトでmax_tokensを4096から8192に変えて再実行した。問題がなかった12クエリは再実行していない。",
+      "should_trigger": true
+    },
+    {
+      "id": "ordinary-conversation-negative-control",
+      "prompt": "一文で自然に返してください。やっと不安定なテストを直せました。助かりました！",
+      "should_trigger": false
+    }
+  ]
+}
