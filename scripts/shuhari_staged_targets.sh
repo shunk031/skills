@@ -27,9 +27,41 @@ readonly REPO_ROOT
 readonly SKILLS_ROOT="${REPO_ROOT}/skills"
 
 # Policy values owned by this repository rather than by Shuhari.
+#
+# `JOBS` is high because the model endpoint's cost is per-request queueing
+# rather than throughput: a single trivial run takes about 90 seconds, three
+# concurrent ones take 71, and eight take 116. Running two at a time made an
+# evaluation nearly serial and cost roughly an hour per skill for no reason.
 readonly TRIALS=3
-readonly JOBS=2
+readonly JOBS=8
 readonly TIMEOUT=600
+
+# Shuhari defaults the model to whatever the Codex configuration carries, which
+# is not a decision this repository should inherit silently. Pin it.
+#
+# The evaluated model is deliberately the weaker of the ones available. The
+# measurement is the difference the skill makes, and a strong model succeeds on
+# both arms, which reports a useful skill as useless. A weaker one leaves the
+# baseline room to fail, so the difference is visible. Drop to `medium` if
+# `high` starts passing both arms on everything.
+readonly MODEL=gpt-5.6-luna
+readonly REASONING_EFFORT=high
+
+# The judge is a different model on purpose. Left unset, Shuhari points it at
+# `--model`, so the same model grades its own output. The harness this
+# repository replaced kept the two apart for that reason.
+# Grading reads one artifact tree and decides against written assertions, which
+# does not need the effort the evaluated work does. Keeping it lower also keeps
+# the judge from dominating a run's wall-clock.
+readonly JUDGE_MODEL=gpt-5.6-sol
+readonly JUDGE_REASONING_EFFORT=medium
+
+readonly MODEL_FLAGS=(
+    --model "${MODEL}"
+    --reasoning-effort "${REASONING_EFFORT}"
+    --judge-model "${JUDGE_MODEL}"
+    --judge-reasoning-effort "${JUDGE_REASONING_EFFORT}"
+)
 
 # @description Put the pinned `shuhari` on `PATH`, or fail loudly.
 # @description
@@ -164,6 +196,28 @@ function needs_network() {
     [ -f "$1/evals/network-required" ]
 }
 
+# @description Print the `--allow-tool` flags a skill declares.
+# @description
+#   Evaluated agents see a fixed system PATH, so a skill whose subject is a tool
+#   installed elsewhere measures the sandbox rather than the skill: the agent
+#   reports the tool as unavailable and loses to a baseline that improvises. A
+#   skill declares what it needs in `evals/tools-required`, one name per line,
+#   with `#` comments ignored.
+# @arg $1 target Absolute skill directory.
+# @stdout Alternating `--allow-tool <name>` arguments, one pair per line.
+function declared_tool_flags() {
+    local manifest="$1/evals/tools-required"
+    [ -f "${manifest}" ] || return 0
+
+    local line
+    while IFS= read -r line || [ -n "${line}" ]; do
+        line="${line%%#*}"
+        line="$(printf '%s' "${line}" | tr -d '[:space:]')"
+        [ -n "${line}" ] || continue
+        printf -- '--allow-tool\n%s\n' "${line}"
+    done < "${manifest}"
+}
+
 # @description Evaluate skills with and without their guidance.
 # @description
 #   `shuhari eval skill` takes network access as a whole-run flag, so skills that
@@ -187,16 +241,31 @@ function run_eval() {
     done
 
     local status=0
-    if [ "${#offline[@]}" -gt 0 ]; then
-        shuhari eval skill \
-            --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
-            "${offline[@]}" || status=1
-    fi
-    if [ "${#online[@]}" -gt 0 ]; then
-        shuhari eval skill --network=true \
-            --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
-            "${online[@]}" || status=1
-    fi
+    local -a group_flags=()
+    local group
+    for group in offline online; do
+        local -a members=()
+        if [ "${group}" = "offline" ]; then
+            members=(${offline[@]+"${offline[@]}"})
+            group_flags=()
+        else
+            members=(${online[@]+"${online[@]}"})
+            group_flags=(--network=true)
+        fi
+        [ "${#members[@]}" -gt 0 ] || continue
+
+        local member
+        for member in "${members[@]}"; do
+            # Tool declarations are per-run flags, so a skill that declares any
+            # is evaluated on its own rather than batched with the others.
+            local -a tool_flags=()
+            read_lines_into tool_flags < <(declared_tool_flags "${member}")
+            shuhari eval skill ${group_flags[@]+"${group_flags[@]}"} ${tool_flags[@]+"${tool_flags[@]}"} \
+                "${MODEL_FLAGS[@]}" \
+                --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
+                "${member}" || status=1
+        done
+    done
     return "${status}"
 }
 
@@ -212,7 +281,10 @@ function run_trigger() {
     local target
     local status=0
     for target in "${targets[@]}"; do
-        shuhari check trigger "${target}" \
+        local -a tool_flags=()
+        read_lines_into tool_flags < <(declared_tool_flags "${target}")
+        shuhari check trigger "${target}" ${tool_flags[@]+"${tool_flags[@]}"} \
+            "${MODEL_FLAGS[@]}" \
             --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" || status=1
     done
     return "${status}"

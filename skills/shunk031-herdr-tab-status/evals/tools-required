@@ -1,0 +1,4 @@
+# Cases expect the agent to actually invoke `herdr`, for example renaming its
+# own tab before reporting BLOCKED. Without it the agent can only describe the
+# command, which grades as a failure to follow the skill.
+herdr
