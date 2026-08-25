@@ -11,15 +11,6 @@
       ]
     },
     {
-      "id": "python-fixture-path-relocation",
-      "prompt": "Implement a Python utility in `src/fixture_loader.py` that opens `tests/fixtures/config.json`, and add a test for it. The repository will be relocated between worktrees, so the code must work regardless of the process's current working directory. An explicitly supplied root argument or environment variable is allowed if the implementation needs an externally selected root. Implement and test the change, then report the path strategy and result.",
-      "expected_output": "Anchors the fixture path to the module's own location with `Path(__file__).parents[N]`, or to a root passed in explicitly at runtime, so it resolves the same whatever the process working directory is. Never hard-codes an absolute filesystem prefix. Ships a test alongside it and runs the tests through the project's uv workflow.",
-      "assertions": [
-        "The response identifies the fixture path as derived from the module's `__file__` location with a parent-relative path or from an explicitly supplied runtime root.",
-        "The final code constructs the fixture path from a source-file anchor (`Path(__file__).parents[N]`) or an explicitly passed root, never from a hard-coded absolute filesystem prefix."
-      ]
-    },
-    {
       "id": "python-refactor-precommit-gate",
       "prompt": "`csv_reader.py` in this directory contains:\n\n```python\ndef parse_header(header: str | None) -> list[str]:\n    return header.split(',') if header else []\n```\n\nChange it so a missing header raises `ValueError` instead of returning an empty list. Report the order in which you made the change and covered it with a test. Do not create a project, add dependencies, or configure any tooling.",
       "expected_output": "Adds a test asserting that a missing header raises `ValueError`, runs it against the unchanged function, and reports that it fails. Then changes `parse_header` to raise, re-runs the test, and reports that it passes. The ordering is stated explicitly, and nothing beyond the function and its test is created.",
