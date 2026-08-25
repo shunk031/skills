@@ -56,6 +56,10 @@ readonly REASONING_EFFORT=high
 readonly JUDGE_MODEL=gpt-5.6-sol
 readonly JUDGE_REASONING_EFFORT=medium
 
+# Streams phase events as JSON Lines on stderr. stdout keeps carrying only the
+# verdict, so a caller can still parse the result.
+readonly PROGRESS_FLAG=--progress
+
 readonly MODEL_FLAGS=(
     --model "${MODEL}"
     --reasoning-effort "${REASONING_EFFORT}"
@@ -261,7 +265,7 @@ function run_eval() {
             local -a tool_flags=()
             read_lines_into tool_flags < <(declared_tool_flags "${member}")
             shuhari eval skill ${group_flags[@]+"${group_flags[@]}"} ${tool_flags[@]+"${tool_flags[@]}"} \
-                "${MODEL_FLAGS[@]}" \
+                "${PROGRESS_FLAG}" "${MODEL_FLAGS[@]}" \
                 --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
                 "${member}" || status=1
         done
@@ -284,7 +288,7 @@ function run_trigger() {
         local -a tool_flags=()
         read_lines_into tool_flags < <(declared_tool_flags "${target}")
         shuhari check trigger "${target}" ${tool_flags[@]+"${tool_flags[@]}"} \
-            "${MODEL_FLAGS[@]}" \
+            "${PROGRESS_FLAG}" "${MODEL_FLAGS[@]}" \
             --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" || status=1
     done
     return "${status}"
