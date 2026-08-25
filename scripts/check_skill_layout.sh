@@ -82,12 +82,15 @@ function assert_no_root_skill_file() {
 }
 
 # @description Reject a `SKILL.md` nested deeper than `skills/<name>/`.
+# @description
+#   Shuhari workspaces are pruned: they are run artifacts that can contain a
+#   copy of the skill under evaluation, which is not a layout violation.
 function assert_no_nested_skill_files() {
     local file
     while IFS= read -r file; do
         [ -n "${file}" ] || continue
         fail "SKILL.md nested too deep: ${file#"${REPO_ROOT}/"}"
-    done < <(find "${SKILLS_ROOT}" -mindepth 3 -name 'SKILL.md' -print 2> /dev/null)
+    done < <(find "${SKILLS_ROOT}" -type d -name '*-workspace' -prune -o -mindepth 3 -name 'SKILL.md' -print 2> /dev/null)
 }
 
 # @description Verify frontmatter and eval-file naming for one skill.
@@ -148,7 +151,14 @@ function main() {
 
     local skill_dir
     for skill_dir in "${SKILLS_ROOT}"/*/; do
-        check_skill "${skill_dir%/}"
+        skill_dir="${skill_dir%/}"
+        # Shuhari writes `<skill>-workspace/` beside the skill it evaluated.
+        # Those are gitignored run artifacts, not skills, and they are present
+        # whenever someone has run a gate locally.
+        case "${skill_dir}" in
+        *-workspace) continue ;;
+        esac
+        check_skill "${skill_dir}"
     done
 
     if [ "${#failures[@]}" -gt 0 ]; then

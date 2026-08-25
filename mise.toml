@@ -22,4 +22,4 @@ python = "3.14.6"
 # for the current `main` commit. `mise` cannot resolve `latest` for a module with
 # an empty version list, and a floating spec would not be reproducible anyway.
 # Replace this with the semantic version once Shuhari cuts one.
-"go:github.com/shunk031/shuhari/cmd/shuhari" = "0.0.0-20260824120001-66e997f3e8f2"
+"go:github.com/shunk031/shuhari/cmd/shuhari" = "0.0.0-20260824171335-deb972da670a"
