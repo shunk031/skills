@@ -85,12 +85,23 @@ function assert_no_root_skill_file() {
 # @description
 #   Shuhari workspaces are pruned: they are run artifacts that can contain a
 #   copy of the skill under evaluation, which is not a layout violation.
+#
+#   Depth is judged from the path rather than with `-mindepth`. `-mindepth` is a
+#   global option, not a test, so `find` skips evaluating the expression for
+#   shallower entries entirely — including the `-prune` that excludes the
+#   workspaces, which sit one level down. With it, every workspace was walked
+#   and every skill copy inside one was reported: 52 false failures here, on a
+#   checkout where the only fault was having run the gates.
 function assert_no_nested_skill_files() {
-    local file
+    local file relative
     while IFS= read -r file; do
         [ -n "${file}" ] || continue
-        fail "SKILL.md nested too deep: ${file#"${REPO_ROOT}/"}"
-    done < <(find "${SKILLS_ROOT}" -type d -name '*-workspace' -prune -o -mindepth 3 -name 'SKILL.md' -print 2> /dev/null)
+        relative="${file#"${SKILLS_ROOT}/"}"
+        # `skills/<name>/SKILL.md` is the correct depth; anything deeper is not.
+        case "${relative}" in
+        */*/*) fail "SKILL.md nested too deep: ${file#"${REPO_ROOT}/"}" ;;
+        esac
+    done < <(find "${SKILLS_ROOT}" -type d -name '*-workspace' -prune -o -name 'SKILL.md' -print 2> /dev/null)
 }
 
 # @description Verify frontmatter and eval-file naming for one skill.

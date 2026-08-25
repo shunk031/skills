@@ -60,9 +60,17 @@ readonly JUDGE_REASONING_EFFORT=medium
 # verdict, so a caller can still parse the result.
 readonly PROGRESS_FLAG=--progress
 
-readonly MODEL_FLAGS=(
+# The evaluated run's model. Both gates take these.
+readonly RUN_MODEL_FLAGS=(
     --model "${MODEL}"
     --reasoning-effort "${REASONING_EFFORT}"
+)
+
+# The grader's model. `shuhari eval skill` grades and compares two arms and
+# takes these; `shuhari check trigger` runs one arm and judges it by whether the
+# skill engaged, so it has no judge and rejects the flags outright.
+readonly EVAL_MODEL_FLAGS=(
+    "${RUN_MODEL_FLAGS[@]}"
     --judge-model "${JUDGE_MODEL}"
     --judge-reasoning-effort "${JUDGE_REASONING_EFFORT}"
 )
@@ -265,7 +273,7 @@ function run_eval() {
             local -a tool_flags=()
             read_lines_into tool_flags < <(declared_tool_flags "${member}")
             shuhari eval skill ${group_flags[@]+"${group_flags[@]}"} ${tool_flags[@]+"${tool_flags[@]}"} \
-                "${PROGRESS_FLAG}" "${MODEL_FLAGS[@]}" \
+                "${PROGRESS_FLAG}" "${EVAL_MODEL_FLAGS[@]}" \
                 --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
                 "${member}" || status=1
         done
@@ -288,7 +296,7 @@ function run_trigger() {
         local -a tool_flags=()
         read_lines_into tool_flags < <(declared_tool_flags "${target}")
         shuhari check trigger "${target}" ${tool_flags[@]+"${tool_flags[@]}"} \
-            "${PROGRESS_FLAG}" "${MODEL_FLAGS[@]}" \
+            "${PROGRESS_FLAG}" "${RUN_MODEL_FLAGS[@]}" \
             --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" || status=1
     done
     return "${status}"

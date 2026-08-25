@@ -1,5 +1,7 @@
 # skills
 
+[![skills.sh](https://skills.sh/b/shunk031/skills)](https://skills.sh/shunk031/skills)
+
 Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Each skill is a single `SKILL.md` that both agents read, and the ones that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari) — a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
 
 ## Install
