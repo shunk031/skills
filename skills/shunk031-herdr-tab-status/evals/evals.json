@@ -38,12 +38,12 @@
     {
       "id": "label-blocked-work",
       "prompt": "You are Herdr worker orch-render in a dedicated git worktree; your orchestrator is agent orch. An external dependency is unavailable, so the task cannot progress or close. This is an offline dry run — do not execute anything. Read the shunk031-herdr-tab-status skill, explain that reason, and list the exact commands you would use to rename your own current tab before reporting BLOCKED to orch. The worker was stopped or superseded and is awaiting handoff or cleanup; do not mark the task complete.",
-      "expected_output": "Renames its own tab with `herdr tab rename \"$HERDR_TAB_ID\"` to a label starting with ⛔, and does that before reporting BLOCKED to orchestrator agent orch. Names the unavailable external dependency as the reason the task can neither progress nor close. Does not use ✅ for blocked or superseded work, and executes nothing, since this is a dry run.",
+      "expected_output": "Names the unavailable external dependency, and the stopped or superseded handoff, as why the worker can neither progress nor close. Gives the exact commands it would run, in order: first `herdr tab rename \"$HERDR_TAB_ID\"` with a ⛔ label on its own tab, then the BLOCKED report to orchestrator agent orch. Executes nothing, since this is a dry run, and does not mark the task ✅.",
       "assertions": [
-        "The response renames the worker's own current tab with herdr tab rename \"$HERDR_TAB_ID\" and a label beginning with the ⛔ emoji.",
+        "The response gives `herdr tab rename \"$HERDR_TAB_ID\"` with a label beginning with the ⛔ emoji as the command it would run on its own tab.",
         "The response identifies the external dependency or stopped/superseded handoff or cleanup as why the worker cannot progress or close.",
         "The response places the own-tab ⛔ rename before the BLOCKED report to the orchestrator.",
-        "The response reports BLOCKED to orchestrator agent orch after renaming the tab.",
+        "The response gives the BLOCKED report to orchestrator agent orch as the command it would run after the rename.",
         "The response does not mark the blocked or superseded task with ✅."
       ]
     },

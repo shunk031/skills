@@ -1,5 +1,5 @@
 TRIALS ?= 3
-JOBS ?= 2
+JOBS ?= 8
 TIMEOUT ?= 600
 
 # Keep in step with the `go` pin in mise.toml.

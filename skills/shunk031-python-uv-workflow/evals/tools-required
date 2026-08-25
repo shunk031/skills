@@ -1,0 +1,4 @@
+# The cases run tests through `uv run`, which is the skill's subject. Evaluated
+# agents see a fixed system PATH, so without this the agent falls back to the
+# standard library and the case measures the sandbox instead.
+uv
