@@ -1,0 +1,91 @@
+{
+  "skill_name": "shunk031-structured-writing",
+  "evals": [
+    {
+      "id": "organize-operating-instructions",
+      "prompt": "Rewrite these notes as concise operating instructions: install the hook in a new clone; the hook evaluates changed agent guidance; authentication failure must stop the commit; use SKIP=agent-guidance-eval only for emergencies; the static validator must still run; do not run model evaluation in CI.",
+      "expected_output": "Produce short operating instructions ordered the way the work unfolds: installing the hook in a new clone comes first, and what it evaluates at commit time follows from that. Failure handling reads as one block — an authentication failure stops the commit, `SKIP=agent-guidance-eval` exists only for emergencies, and the static validator runs regardless — with that literal value and the validation constraint carried through unchanged. The prohibition on running model evaluation in CI stands as its own item rather than being folded into the description of local hook behavior.",
+      "assertions": [
+        "The response presents hook installation before the commit-time behavior it enables.",
+        "The response groups evaluation failures and the emergency bypass without weakening static validation.",
+        "The response preserves the exact SKIP=agent-guidance-eval value and the static-validation constraint.",
+        "The response keeps the no-model-evaluation-in-CI rule distinct from local hook behavior."
+      ]
+    },
+    {
+      "id": "repair-flat-supporting-list",
+      "prompt": "Turn these notes into an easy-to-scan bullet list without changing their meaning: Guidance evaluation protects quality. It runs only for changed guidance and skills. Successful results are cached. Network failures block commits. Documentation changes follow a separate review process.",
+      "expected_output": "Return one parent bullet for guidance evaluation, with the limited scope (only changed guidance and skills), the caching of successful results, and commits blocked on network failure nested underneath, since all three qualify that same subject. The separate documentation review process stands on its own as a top-level bullet. Every claim from the notes survives with its meaning intact.",
+      "assertions": [
+        "The response nests changed-guidance-and-skill scope, caching, and network-failure behavior under guidance evaluation.",
+        "The response keeps the documentation review process as an independent topic.",
+        "The response preserves every original claim."
+      ]
+    },
+    {
+      "id": "japanese-report-hierarchy",
+      "prompt": "Rewrite this Japanese technical-report note as an easy-to-scan bullet list without changing any facts. The report counts 24 queries (3 experiments × 8 pairs): 主実行は max_tokens=4096 とした。全24行のうち、reasoningが4096-token上限まで消費されてfinalが空になった12行だけ、入力とpromptを変えず max_tokens=8192 で再実行した。retryは別のサンプルではなく、同じ入力・promptに対して長さ上限だけを変えた再実行である。モデルはQwen3-VL-32B-ThinkingをSGLang経由で呼び出し、temperature=0、thinking有効、画像番号付与、座標はPicture 1基準の0..1000に正規化した。",
+      "expected_output": "Return a Japanese bullet list whose parents are readable topic statements and whose children are the compact facts that qualify them, rather than several full sentences packed into flat bullets or an unexplained label-value pair at the top. All supplied numbers survive: max_tokens=4096 for the main run, 24 queries from 3 experiments × 8 pairs, the 12 rows whose reasoning consumed the 4096-token ceiling and left final empty, and the rerun of exactly those 12 at max_tokens=8192 on identical input and prompt — a length-limit change, not different samples. The model configuration also survives intact: Qwen3-VL-32B-Thinking called through SGLang, temperature=0, thinking enabled, image numbering, and coordinates normalized to 0..1000 against Picture 1.",
+      "assertions": [
+        "The response does not leave related sentences flat: whenever a topic has supporting details, it uses a parent topic with nested supporting bullets; independent one-fact topics may remain at one level.",
+        "Supporting bullets that serve as compact evidence or conditions use noun-phrase endings where appropriate; parent topics remain readable and the response does not force a uniform ending on every bullet.",
+        "The response preserves the supplied execution facts: max_tokens=4096 for the initial run, 24 queries with 12 qualifying reruns, the same input and prompt, and max_tokens=8192 for the rerun.",
+        "The response preserves the supplied model and settings: Qwen3-VL-32B-Thinking via SGLang, temperature=0, thinking enabled, image numbering, and Picture 1-based 0..1000 coordinate normalization."
+      ]
+    },
+    {
+      "id": "decision-complete-plan",
+      "prompt": "Create an implementation plan for replacing a synchronous file-processing loop with two-worker parallel processing. The implementation will be handed to another engineer.",
+      "expected_output": "Deliver a plan another engineer can execute without making a further design decision. It names the files and functions it touches, or states precisely which repository facts must be inspected to identify them. It fixes the two-worker execution model rather than leaving it open: how work items are handed out, whether output ordering is preserved, what happens when one worker raises, and how pending work is cancelled or partial results handled. The parallelization itself appears as a function signature, pseudocode, or a short code fragment consistent with the surrounding prose, and any fact that could not be established is stated as an explicit assumption with its consequence.",
+      "assertions": [
+        "The plan identifies affected paths or clearly states which repository facts must be inspected to identify them.",
+        "The plan specifies the concurrency interface, data flow, failure behavior, tests, and assumptions.",
+        "The plan includes pseudocode, a function signature, or a short code fragment for the important parallelization change.",
+        "The plan is concrete enough to implement without another design decision."
+      ]
+    },
+    {
+      "id": "concise-reporting",
+      "prompt": "Write a completion report for the maintainer using only these supplied facts: the small repository change updated `src/cli.py` to reject malformed configuration; `uv run pytest tests/test_cli.py` passed all 18 tests; and `git diff --check` passed. Include the result and the essential validation without inventing additional changes or checks.",
+      "expected_output": "Write a few lines and stop: `src/cli.py` now rejects malformed configuration, `uv run pytest tests/test_cli.py` passed all 18 tests, and `git diff --check` came back clean. No scaffolding headings, no narration of process, and no checks or changes beyond the three supplied. Brevity here comes from applying the same structural judgment at a smaller size, not from inventing a separate short-report format, and detail is added only if the maintainer asks.",
+      "assertions": [
+        "The response keeps the report focused and concise.",
+        "The response includes the outcome and essential validation without expanding into unnecessary process detail.",
+        "The response expands only when asked.",
+        "The response treats concise reporting as a structural priority rather than creating a separate reporting template."
+      ]
+    },
+    {
+      "id": "evidence-training-document",
+      "prompt": "Revise `models/atlas/TRAINING.md` for a maintainer. The target file is not present in the evaluation repository, so return the complete self-contained revised document in your final response rather than reporting a missing file or describing an editing plan. Preserve every supplied fact and do not invent facts. The factual content is mandatory, but the supplied headings, order, and first-person work-log or evidence prose are defects to rewrite; the supplied formatting is not a fact. Current document supplied as source material:\n\n# 268\n\nI first checked the trainer config, then I ran the 300-step comparison, and then I looked at the stage records.\n\n## What I did\n\nThe package is atlas. The S0 data-loader check is accepted. I recorded S1 as a candidate. S2-S5 still need separate real-source gates.\n\n## Evidence notes\n\nThe comparison run used 300 lockstep steps. Issue #268 tracks the remaining parity work.\n\nRewrite the document so a reader can understand the current result before the supporting stage and evidence details.",
+      "expected_output": "Return the complete rewritten `TRAINING.md` inline instead of reporting a missing file or an editing plan. It opens with where the work currently stands — the atlas package, the accepted S0 data-loader check, S1 held as a candidate rather than accepted, and S2-S5 still requiring their own real-source gates — and only then gives the supporting evidence of the 300-step lockstep comparison. Headings name stages or concepts, the first-person work-log framing is gone, and 268 appears as tracking metadata attached to the remaining parity work rather than as a title or the subject of a sentence.",
+      "assertions": [
+        "The final response contains a self-contained revised document and preserves every supplied fact: package atlas, the accepted S0 data-loader check, S1 as an unaccepted candidate, separate S2-S5 real-source gates, 300 lockstep steps, and issue #268.",
+        "The revised document presents the current result and scope before the detailed stage and evidence information, organizing the material for the reader rather than around the author's work sequence.",
+        "The document uses headings that name concepts or stages.",
+        "The document does not use a bare issue number as a heading or as the grammatical subject of a sentence."
+      ]
+    },
+    {
+      "id": "repository-protocol-document",
+      "prompt": "Revise the supplied section of `docs/lockstep-protocol.md` for a reader who must apply the protocol. The target file is not present in the evaluation repository, so return the complete self-contained revised section in your final response rather than reporting a missing file or describing an editing plan. Preserve every supplied fact and do not invent commands, stages, or evidence. The factual content is mandatory, but the supplied headings, order, and first-person work-log or evidence prose are defects to rewrite; the supplied formatting is not a fact. Current section supplied as source material:\n\n# 271\n\n## Work log\n\nI checked the checker output first, then I wrote this rule.\n\n### 1\n\nA later stage may advance only after the prior stage's evidence is accepted.\n\n## Evidence\n\nI observed a clean checker result, but a clean checker alone is not runtime evidence. The failed behavioral gate preserves the candidate and stops publication. Issue #271 records the protocol clarification.\n\nRewrite the section so the rule's purpose and reader-relevant outcome come before the ordering and failure details.",
+      "expected_output": "Return the complete rewritten section inline rather than an editing plan. It leads with what the rule secures for someone applying the protocol — a stage advances only once the prior stage's evidence has been accepted — and puts the mechanics after: a clean checker result is not runtime evidence on its own, and a failed behavioral gate holds the candidate in place and stops publication. Headings name protocol concepts, the first-person work-log framing is gone, and 271 is mentioned as the record of this clarification rather than as a heading or a grammatical subject.",
+      "assertions": [
+        "The final response contains a self-contained revised section and preserves every supplied fact: prior-stage evidence must be accepted before advancement, a clean checker alone is not runtime evidence, a failed behavioral gate preserves the candidate and stops publication, and issue #271 records the clarification.",
+        "The revised section presents the rule's purpose and reader-relevant outcome before the ordering and failure details, organizing the material for the reader rather than around the author's work sequence.",
+        "The section uses headings that name concepts or protocol topics.",
+        "The section does not use a bare issue number as a heading or as the grammatical subject of a sentence."
+      ]
+    },
+    {
+      "id": "pull-request-body-template",
+      "prompt": "Write the complete Markdown body for pull request #627 using this supplied template order: purpose, changes, evidence, validation, and next action. Use only these supplied facts: the change expands the `shunk031-structured-writing` description and adds evaluation cases for an evidence `TRAINING.md`, a repository protocol document, and a pull-request body; two negative controls cover code-only work and a short conversational reply; the canonical guidance gate runs once at commit time with three trials under the per-case majority policy; the pull request must not be merged by the worker; and the final handoff requires a read-back. Put the purpose and outcome before the detailed evidence. Do not invent results.",
+      "expected_output": "Produce the full Markdown body following the supplied purpose, changes, evidence, validation, next-action order, opening with why the change exists and what it achieves before any detail. It carries every supplied fact: the widened `shunk031-structured-writing` description, new cases covering an evidence `TRAINING.md`, a repository protocol document, and a pull-request body, two negative controls for code-only work and a short conversational reply, the canonical guidance gate running once at commit time across three trials under per-case majority, the worker's prohibition on merging, and the read-back required at final handoff. Section names describe those topics, 627 never serves as a heading or a sentence subject, and no result appears that was not supplied.",
+      "assertions": [
+        "The body leads with the purpose and outcome, then presents the detailed changes and evidence in a reader-understandable order.",
+        "The headings name the supplied topics rather than using a bare issue number, and no sentence uses a bare issue number as its grammatical subject.",
+        "The response preserves all supplied facts about the description expansion, the three document cases, the two negative controls, the single three-trial canonical gate with per-case majority, the no-merge boundary, and read-back handoff."
+      ]
+    }
+  ]
+}
