@@ -1,0 +1,45 @@
+{
+  "skill_name": "shunk031-codex-worker-prompting",
+  "cases": [
+    {
+      "id": "gate-contract-and-conflict",
+      "prompt": "Write a task prompt for a Codex worker that must inspect exact commit SHA abc1234, run `uv run pytest tests/test_cli.py`, and stop if `git ls-remote origin refs/heads/task` does not match the expected remote head. Pair the test gate with what it does not measure, and require a stop-and-report response if any gate conflicts with another instead of silently satisfying one gate.",
+      "should_trigger": true
+    },
+    {
+      "id": "literal-invariants-and-environment",
+      "prompt": "Draft a follow-up to a Codex worker after a stale PR head was reported. State invariants for the expected number, claim strength, attribution, file scope, and section order. Require verified proxy, HTTPS push URL, API field ID, sandbox, and auth facts inline, mark any unverified belief as a hypothesis, and include the exact command block for precondition, PR read-back, and `ls-remote` checks before a retry.",
+      "should_trigger": true
+    },
+    {
+      "id": "bounded-lifecycle-judgment",
+      "prompt": "Write an authorization prompt for one Codex worker dispatch that may carry a full lifecycle. Give every retryable step an explicit retry budget, wait duration, and terminal report state. For a review decision, include the decision rule, uncertain-case default, and cost asymmetry that justifies the default. Encode STOP conditions for user-owned merges and destructive actions.",
+      "should_trigger": true
+    },
+    {
+      "id": "requirements-register-and-research",
+      "prompt": "Write a dispatch for a worker producing a reader-facing report. Specify requirements and acceptance criteria rather than an implementation. Treat a belief that a tool is unsuitable as a hypothesis to verify, require research before implementation for tool choices, write the dispatch in the report's target register, keep internal codenames and audit constraints out of the report, and put compliance evidence in the PR body.",
+      "should_trigger": true
+    },
+    {
+      "id": "class-sweep-and-role-rotation",
+      "prompt": "Write a follow-up after a reviewer names three instances of the same defect class. Require the worker to remove the class and provide either an enumerate-and-classify table for every candidate or a detector that reproduces the known-bad state before the fix and reports zero after it. Also specify fresh sessions for independent review verdicts, retirement on degraded or anchored output, natural-boundary rotation, on-disk paths with final-versus-draft state after crashes, what not to recompute, and handoff documents or PR comments while keeping the PR body reader-facing.",
+      "should_trigger": true
+    },
+    {
+      "id": "transport-ownership-boundary",
+      "prompt": "Explain which skill should own dispatch delivery, report formats, and Herdr reconciliation, and which skill should own the wording of Codex worker task prompts. Keep the answer to two sentences and do not reproduce transport procedures.",
+      "should_trigger": true
+    },
+    {
+      "id": "ordinary-code-request",
+      "prompt": "Write a Python function named cube that returns the cube of its numeric argument, then show one example call.",
+      "should_trigger": false
+    },
+    {
+      "id": "short-conversation",
+      "prompt": "Reply naturally in one or two sentences: I finally fixed the flaky test. Thanks for your help!",
+      "should_trigger": false
+    }
+  ]
+}

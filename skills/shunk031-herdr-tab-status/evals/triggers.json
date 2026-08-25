@@ -1,0 +1,40 @@
+{
+  "skill_name": "shunk031-herdr-tab-status",
+  "cases": [
+    {
+      "id": "label-active-work",
+      "prompt": "I opened a Herdr worktree workspace named LayoutFormer S0 and started the implementation step; a live diagnostic retry is still progressing. Give the exact worker tab label first, then name the workspace and worktree labels and explain when the tab should be updated.",
+      "should_trigger": true
+    },
+    {
+      "id": "label-completed-pr",
+      "prompt": "The commit and pull request 615 are complete, the required user review and merge are complete, and I have reported DONE. Give the exact final worker tab label first and explain when this status should be used.",
+      "should_trigger": true
+    },
+    {
+      "id": "label-user-action-required",
+      "prompt": "The worker published pull request 615 and reported DONE, but the PR is still OPEN: the user still needs to review and merge it, and the worker's worktree and tab intentionally remain alive through the PR lifecycle. Review and merge are still pending, so ✅ is not allowed. Output the literal tab name `⛔ review and merge PR 615` first, then explain that publishing a PR and reporting DONE do not complete the worker while this user-only action remains; the blocked label stays until the action resolves, and ✅ is allowed only after no action remains. Explicitly state that the worker owns its live tab label, while the orchestrator may set it only for a silent or dead worker; orchestration separately owns PR-lifetime retention and cleanup.",
+      "should_trigger": true
+    },
+    {
+      "id": "label-blocked-work",
+      "prompt": "You are Herdr worker orch-render in a dedicated git worktree; your orchestrator is agent orch. An external dependency is unavailable, so the task cannot progress or close. This is an offline dry run — do not execute anything. Read the shunk031-herdr-tab-status skill, explain that reason, and list the exact commands you would use to rename your own current tab before reporting BLOCKED to orch. The worker was stopped or superseded and is awaiting handoff or cleanup; do not mark the task complete.",
+      "should_trigger": true
+    },
+    {
+      "id": "tab-ownership",
+      "prompt": "Give a compact mapping of who may change a Herdr worker tab during normal work, after handing off a PR for user review, after the user-facing task is complete, when the worker is blocked or stopped/superseded, and when the worker is silent. Include each literal status emoji (🚧, ⛔, and ✅), its owner, and the rule that ✅ is allowed only when no user action remains.",
+      "should_trigger": true
+    },
+    {
+      "id": "orchestrator-status-precedence",
+      "prompt": "You are the Herdr orchestrator routing work to several worker agents. A developer reminds you to use shunk031-herdr-tab-status while routing the work. You are coordinating, not doing a worker task yourself. Output the exact current tab label `🤖 Orchestrator` first. Then name each of `🚧`, `✅`, and `⛔` as worker-tab statuses and explain which guidance owns the orchestrator label; preserve it rather than applying a worker status.",
+      "should_trigger": true
+    },
+    {
+      "id": "ordinary-coding-question",
+      "prompt": "Explain in one paragraph why a binary search runs in logarithmic time.",
+      "should_trigger": false
+    }
+  ]
+}
