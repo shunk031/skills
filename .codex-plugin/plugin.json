@@ -1,0 +1,19 @@
+{
+  "name": "shunk031-skills",
+  "version": "0.1.0",
+  "description": "Coding-agent skills for writing, research, repository workflow, and agent orchestration.",
+  "author": {
+    "name": "Shunsuke Kitada",
+    "url": "https://github.com/shunk031"
+  },
+  "homepage": "https://github.com/shunk031/skills",
+  "repository": "https://github.com/shunk031/skills",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "writing",
+    "research",
+    "orchestration"
+  ],
+  "skills": "./skills/"
+}
