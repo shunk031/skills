@@ -1,22 +1,15 @@
 This skill's subject is consulting current third-party documentation and
-implementation code, so its cases cannot be measured offline. Evaluated
-offline, the skill correctly refuses to implement without research and
-produces nothing, losing to a baseline that guesses from memory.
+implementation code, so its behavior cases cannot be measured offline.
+Presence of this file makes scripts/shuhari_staged_targets.sh evaluate them
+with gpt-5.5, medium reasoning, and network access in the isolated sandbox.
 
-The models this repository pins cannot use the web-search tool directly. The
-5.6 family answers
+The repository's default 5.6 models cannot use the web-search tool directly.
+They answer
 
     403 Forbidden: Selected provider is forbidden
 
 and falls back to memory or to a direct API call, often without saying so.
 `gpt-5.5` searches normally, checked with the same question from the same
-empty directory, so the skill uses it as a bounded runtime fallback. That
-fallback still requires a child model call and live web access, so these cases
-remain invalid in the repository's offline evaluation.
-
-Presence of this file makes scripts/shuhari_staged_targets.sh skip this
-skill's behavior cases and say why. The cases stay in evals.json rather
-than being deleted: they are correct, and deleting them would mean nobody
-notices when the constraint lifts. Delete this file to put them back under
-the gate — which is also the check for whether the constraint has lifted,
-since the cases will simply pass once the model can search.
+empty directory, so the skill uses it as both the bounded runtime fallback and
+the behavior-evaluation model. Ordinary behavior cases and all trigger checks
+retain the repository's default offline policy.

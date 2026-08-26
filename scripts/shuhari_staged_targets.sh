@@ -51,13 +51,16 @@ readonly TIMEOUT=600
 #
 # The 5.6 family cannot use the web-search tool: it answers
 # `403 Forbidden: Selected provider is forbidden` and falls back to memory or a
-# direct API call, often without saying so. `gpt-5.5` searches normally, checked
-# from the same empty directory with the same question. Any skill whose subject
-# is reaching the live web therefore cannot be graded on these pins; declare it
-# with `evals/network-required` and expect it to measure nothing until the pins
-# move or the entitlement changes.
+# direct API call, often without saying so. Skills declaring
+# `evals/network-required` therefore use the separate network policy below.
 readonly MODEL=gpt-5.6-luna
 readonly REASONING_EFFORT=high
+
+# Network-required behavior cases use the model that can search successfully.
+# Keep this exception scoped to behavior evaluation; trigger checks remain
+# offline because they measure whether the skill engages, not its research.
+readonly NETWORK_MODEL=gpt-5.5
+readonly NETWORK_REASONING_EFFORT=medium
 
 # The judge is a different model on purpose. Left unset, Shuhari points it at
 # `--model`, so the same model grades its own output. The harness this
@@ -85,6 +88,15 @@ readonly EVAL_MODEL_FLAGS=(
     "${RUN_MODEL_FLAGS[@]}"
     --judge-model "${JUDGE_MODEL}"
     --judge-reasoning-effort "${JUDGE_REASONING_EFFORT}"
+)
+
+# Network-required runs preserve the isolated sandbox while allowing egress.
+readonly NETWORK_EVAL_MODEL_FLAGS=(
+    --model "${NETWORK_MODEL}"
+    --reasoning-effort "${NETWORK_REASONING_EFFORT}"
+    --judge-model "${JUDGE_MODEL}"
+    --judge-reasoning-effort "${JUDGE_REASONING_EFFORT}"
+    --network
 )
 
 # @description Put the pinned `shuhari` on `PATH`, or fail loudly.
@@ -206,7 +218,7 @@ function run_validate() {
     done
 }
 
-# @description Report whether a skill declares that its cases need network egress.
+# @description Report whether a skill declares the network evaluation policy.
 # @description
 #   Runs are offline by default. A skill whose subject is the live network — one
 #   that tells the agent to consult current documentation, for example — cannot
@@ -214,15 +226,9 @@ function run_validate() {
 #   loses to a baseline that simply guesses. Such a skill declares the need with
 #   an `evals/network-required` marker.
 #
-#   The marker currently means "skip", not "run with network". Enabling egress
-#   is not enough on the pinned models: the 5.6 family cannot use the web-search
-#   tool at all, answering `403 Forbidden: Selected provider is forbidden`. A
-#   run would fail for a reason unrelated to the skill.
-#
-#   The cases stay in `evals.json` rather than being deleted. They are correct,
-#   and deleting them would mean nobody notices when the constraint lifts.
-#   Removing the marker puts them back under the gate, which is also how you
-#   check whether it has lifted: they simply pass once the model can search.
+#   The marker selects `gpt-5.5` with medium reasoning and network egress while
+#   preserving Shuhari's default isolated sandbox. Ordinary behavior cases and
+#   every trigger check retain the default offline policy.
 # @arg $1 target Absolute skill directory.
 # @exitcode 0 When the skill declares that its cases need network egress.
 # @exitcode 1 When it does not.
@@ -271,10 +277,8 @@ function record_results() {
 
 # @description Evaluate skills with and without their guidance.
 # @description
-#   A skill declaring `evals/network-required` is skipped, loudly. Its cases
-#   need the live web, and the pinned models cannot reach it; running them
-#   anyway would fail for a reason that has nothing to do with the skill, and a
-#   gate that always fails teaches everyone to ignore it.
+#   Skills declaring `evals/network-required` use the dedicated network model
+#   policy. Other skills retain the default offline model policy.
 # @arg $@ targets Absolute skill directories.
 # @exitcode 1 When an evaluation fails.
 function run_eval() {
@@ -285,10 +289,9 @@ function run_eval() {
     local status=0
     local target
     for target in "${targets[@]}"; do
+        local -a eval_model_flags=("${EVAL_MODEL_FLAGS[@]}")
         if needs_network "${target}"; then
-            printf 'skip %s: evals/network-required, and the pinned model cannot search\n' \
-                "$(basename -- "${target}")" >&2
-            continue
+            eval_model_flags=("${NETWORK_EVAL_MODEL_FLAGS[@]}")
         fi
 
         # Tool declarations are per-run flags, so a skill that declares any is
@@ -296,7 +299,7 @@ function run_eval() {
         local -a tool_flags=()
         read_lines_into tool_flags < <(declared_tool_flags "${target}")
         if shuhari eval skill ${tool_flags[@]+"${tool_flags[@]}"} \
-            "${PROGRESS_FLAG}" "${EVAL_MODEL_FLAGS[@]}" \
+            "${PROGRESS_FLAG}" "${eval_model_flags[@]}" \
             --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
             "${target}"; then
             record_results "${target}"
