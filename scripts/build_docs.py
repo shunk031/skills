@@ -24,6 +24,10 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_ROOT = REPO_ROOT / "skills"
+
+# Hand-written assets. `docs/` is generated and gitignored, so anything meant to
+# be edited by a person lives here and is copied in.
+ASSETS_ROOT = REPO_ROOT / "assets"
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 
 # Every skill directory is prefixed with the owner. In the sidebar that prefix
@@ -240,11 +244,21 @@ def render_skill_page(skill: dict[str, Any]) -> str:
     # as a bare heading. The same icon the navigation uses goes in front of it,
     # so the card reads as this skill's card rather than as a second H1.
     # `/` becomes `-` in an icon shortcode.
+    # The card title is bold text, not a heading, which is what the theme's
+    # card is built around: its own example titles a card with `__Bold__`
+    # followed by `---`. A heading here fights every margin the theme sets —
+    # `h1` alone carries 1.25em below it, which collapses with the rule's own
+    # margin and swallows the space the rule sits in — and leaves the page with
+    # two H1s and a table of contents that skips the body.
+    #
+    # So the body's own `# Title` becomes the card's title line, and its `##`
+    # sections become the top level inside the card.
     icon = ICONS.get(skill["name"], FALLBACK_ICON).replace("/", "-")
     body = skill["body"]
     if body.startswith("# "):
         heading, _, rest = body.partition("\n")
-        body = f"{heading[:2]}:{icon}:{{ .lg .middle }} {heading[2:]}\n{rest}"
+        title = heading[2:].strip()
+        body = f":{icon}:{{ .lg .middle }} __{title}__\n\n---\n{rest}"
 
     # `.card` is only styled as `.grid > .card`, so the wrapper has to be the
     # grid and the body its single child. One child is a one-card grid.
@@ -361,6 +375,14 @@ def main() -> int:
         skill = read_skill(skill_dir)
         if skill:
             skills.append(skill)
+
+    assets = sorted(ASSETS_ROOT.rglob("*")) if ASSETS_ROOT.is_dir() else []
+    for asset in assets:
+        if not asset.is_file():
+            continue
+        destination = output / asset.relative_to(ASSETS_ROOT)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(asset.read_text())
 
     (output / "index.md").write_text(render_index(skills) + "\n")
     pages = 1
