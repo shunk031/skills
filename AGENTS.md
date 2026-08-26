@@ -26,6 +26,7 @@
 - Writing `expected_output`: State the correct outcome in one to three sentences, describing produced behavior rather than the wording of a reply. Do not restate the assertions. Shuhari runs a blind A/B comparator in addition to assertion grading, so assertion wording copied into `expected_output` biases that comparison.
 - Order of work: Run `--validate-only` first, then `shuhari check trigger`, then `shuhari eval skill`. The first is instant and offline, the second runs one arm, and the third runs both arms plus a grader and a comparator.
 - Artifacts: Shuhari writes `skills/<name>-workspace/` next to the evaluated skill. It holds verbatim agent transcripts and is gitignored. Never commit it and never paste its contents into an issue, a pull request, or a report.
+- Published numbers: a passing or failing `shuhari eval skill` writes `skills/<name>/evals/results.json`, which the documentation site reads. The gate does it, not you — the workspace it derives from is gitignored, so it can only be written where the run happened, and leaving that to a person meant it did not happen. Commit the file with the change that produced it.
 - Skills without evals: A skill may ship without `evals/`. The gate wrapper skips it rather than failing. Adding evals to an existing skill is a welcome change on its own.
 
 ## Development Setup
