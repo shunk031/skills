@@ -79,6 +79,34 @@ check-triggers:
 	done
 
 #
+# Documentation
+#
+
+# Zensical is pinned on the command line rather than in mise.toml: it is a
+# Python package, uv is already how this repository runs Python, and the pin
+# stays visible next to the command that uses it. Zensical is pre-1.0 and cuts
+# releases weekly, so an unpinned build would change under us.
+ZENSICAL_VERSION ?= 0.0.56
+ZENSICAL = uv run --python $(PYTHON_VERSION) --no-project --with zensical==$(ZENSICAL_VERSION) --
+
+# `docs/` is generated from the skills, so it is gitignored and rebuilt rather
+# than committed.
+.PHONY: docs
+docs:
+	uv run --python $(PYTHON_VERSION) --no-project -- python scripts/build_docs.py
+
+# `--strict` fails on a broken link. A skill body links to its own references by
+# relative path, and those links only resolve because the generator publishes
+# them beside the page.
+.PHONY: docs-build
+docs-build: docs
+	$(ZENSICAL) zensical build --clean --strict
+
+.PHONY: docs-serve
+docs-serve: docs
+	$(ZENSICAL) zensical serve
+
+#
 # Quality
 #
 

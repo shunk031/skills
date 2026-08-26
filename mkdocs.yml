@@ -1,0 +1,94 @@
+# Zensical reads mkdocs.yml natively, so this file configures the site without
+# MkDocs itself being involved. Material for MkDocs reaches end of life on
+# 2026-11-05; Zensical is its successor from the same author.
+site_name: shunk031 skills
+site_description: Coding-agent skills for Claude Code and Codex, with what each one measurably changes.
+site_url: https://shunk031.github.io/skills/
+repo_url: https://github.com/shunk031/skills
+repo_name: shunk031/skills
+copyright: Copyright © 2026 Shunsuke Kitada
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    # Previous and next links at the bottom of every page. The skills have no
+    # reading order, but the footer is also what carries the copyright.
+    - navigation.footer
+    # Lets a section be its own page, so the section carries the skill's
+    # icon and clicking it opens the skill rather than nothing.
+    - navigation.indexes
+    - navigation.instant
+    - navigation.top
+    - search.highlight
+  icon:
+    tag:
+      default: lucide/hash
+      agents: lucide/bot
+      chezmoi: lucide/settings
+      claude-code: simple/anthropic
+      codex: lucide/bot
+      dotfiles: lucide/file-cog
+      evaluation: lucide/flask-conical
+      git: lucide/git-branch
+      github: simple/github
+      herdr: lucide/network
+      japanese: lucide/languages
+      python: simple/python
+      pytorch: simple/pytorch
+      research: lucide/search-check
+      review: lucide/file-search
+      shell: simple/gnubash
+      skills: lucide/boxes
+      transformers: simple/huggingface
+      uv: simple/uv
+      writing: lucide/pen-line
+
+extra:
+  # Tag identifiers map to the icons above. Zensical does not build tag index
+  # pages yet, so these render on the page rather than as browsable listings.
+  tags:
+    Agents: agents
+    chezmoi: chezmoi
+    Claude Code: claude-code
+    Codex: codex
+    Dotfiles: dotfiles
+    Evaluation: evaluation
+    Git: git
+    GitHub: github
+    Herdr: herdr
+    Japanese: japanese
+    Python: python
+    PyTorch: pytorch
+    Research: research
+    Review: review
+    Shell: shell
+    Skills: skills
+    Transformers: transformers
+    uv: uv
+    Writing: writing
+
+INHERIT: docs/.nav.yml
+
+markdown_extensions:
+  # `emoji` is what turns `:lucide-split:` into an icon. Icons and emoji share
+  # the same shortcode syntax, so navigation labels can carry either.
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true

@@ -9,3 +9,11 @@ skills/*-workspace/
 __pycache__/
 *.py[cod]
 .venv/
+
+# The documentation site is generated from the skills by
+# `scripts/build_docs.py`, and built from that by Zensical. Committing either
+# would mean every skill edit carries a second, mechanical diff that can drift
+# from its source.
+docs/
+site/
+.cache/

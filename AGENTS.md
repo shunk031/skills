@@ -42,6 +42,12 @@
 - Shell scripts a skill ships must run on Bash 3.2. macOS still ships it, and that is the machine an agent works on, so a Bash 4 feature — `declare -A`, `mapfile`, `${var,,}` — runs on Linux and dies where it matters.
 - `tests/bats/` covers those scripts. `make test` runs it alongside the Python tests, and CI runs both on Linux and macOS so the 3.2 path is actually exercised.
 
+## Documentation Site
+
+- The site is generated from the skills by `scripts/build_docs.py` and built by Zensical. `docs/` and `site/` are gitignored: committing generated pages would make every skill edit carry a second, mechanical diff that can drift from its source.
+- `make docs-serve` previews it locally; `make docs-build` is what CI runs, with `--strict` so a broken link fails.
+- A skill page shows what its evaluation measured, from `skills/<name>/evals/results.json`. `scripts/record_eval_results.py` lifts those numbers out of a completed Shuhari run. That file is committed; the workspace it comes from is not, because the workspace holds transcripts and the numbers do not.
+
 ## Comment Policy
 
 - When adding or updating comments for shell scripts or shell-based executables, write them in English using shdoc-compatible format.
