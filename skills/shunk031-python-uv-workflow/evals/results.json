@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "skill_name": "shunk031-python-uv-workflow",
+  "measured_at": "2026-08-26T05:11:17.73417Z",
+  "agent": "codex",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "high",
+  "trials": 3,
+  "network": false,
+  "pass_rate": {
+    "with_skill": 1,
+    "without_skill": 0.75
+  },
+  "tokens": {
+    "with_skill": 190233.1667,
+    "without_skill": 135730.6667
+  },
+  "seconds": {
+    "with_skill": 311.7536,
+    "without_skill": 202.5798
+  },
+  "assertions": [
+    {
+      "case_id": "python-feature-test-first-uv",
+      "assertion": "The response reports running the test before the implementation existed, and that it failed.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    },
+    {
+      "case_id": "python-feature-test-first-uv",
+      "assertion": "The response shows the test being run through `uv run` and reports it passing after the implementation was added.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    },
+    {
+      "case_id": "python-refactor-precommit-gate",
+      "assertion": "The response adds the failing test before changing parse_header, and says so.",
+      "with_skill": 1,
+      "without_skill": 0,
+      "category": "pass_with_fail_without"
+    },
+    {
+      "case_id": "python-refactor-precommit-gate",
+      "assertion": "The response reports the test passing after the change.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    }
+  ]
+}

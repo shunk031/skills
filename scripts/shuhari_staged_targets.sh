@@ -25,6 +25,10 @@ set -Eeuo pipefail
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
 readonly SKILLS_ROOT="${REPO_ROOT}/skills"
+readonly RECORDER="${REPO_ROOT}/scripts/record_eval_results.py"
+
+# Keep in step with the `python` pin in mise.toml.
+readonly PYTHON_VERSION=3.14.6
 
 # Policy values owned by this repository rather than by Shuhari.
 #
@@ -248,6 +252,23 @@ function declared_tool_flags() {
     done < "${manifest}"
 }
 
+# @description Lift a finished run's numbers into the skill's `results.json`.
+# @description
+#   The documentation site reads that file to say what a skill measurably
+#   changes. It can only be written where the run happened, because the
+#   workspace it reads is gitignored, so leaving it to a person means it does
+#   not happen: two gates were run the day the recorder was written and one
+#   `results.json` exists.
+#
+#   A failure here does not fail the gate. The evaluation is the gate; recording
+#   is bookkeeping, and losing a number is not worth rejecting a passing run.
+# @arg $1 target Absolute skill directory.
+function record_results() {
+    uv run --python "${PYTHON_VERSION}" --no-project -- python "${RECORDER}" "$1" || {
+        printf 'warning: could not record results for %s\n' "$(basename -- "$1")" >&2
+    }
+}
+
 # @description Evaluate skills with and without their guidance.
 # @description
 #   A skill declaring `evals/network-required` is skipped, loudly. Its cases
@@ -274,10 +295,18 @@ function run_eval() {
         # evaluated on its own rather than batched with the others.
         local -a tool_flags=()
         read_lines_into tool_flags < <(declared_tool_flags "${target}")
-        shuhari eval skill ${tool_flags[@]+"${tool_flags[@]}"} \
+        if shuhari eval skill ${tool_flags[@]+"${tool_flags[@]}"} \
             "${PROGRESS_FLAG}" "${EVAL_MODEL_FLAGS[@]}" \
             --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
-            "${target}" || status=1
+            "${target}"; then
+            record_results "${target}"
+        else
+            status=1
+            # A failed run still produced numbers, and they are the ones worth
+            # publishing: the site should show what the skill currently does,
+            # not the last time it passed.
+            record_results "${target}"
+        fi
     done
     return "${status}"
 }
