@@ -17,11 +17,6 @@
       "should_trigger": true
     },
     {
-      "id": "live-skill-edit-does-not-stick",
-      "prompt": "I edited ~/.agents/skills/shunk031-humanizer-ja/SKILL.md yesterday and my change is gone. What happened and where should I have made it?",
-      "should_trigger": true
-    },
-    {
       "id": "skills-cli-usage-question",
       "prompt": "What does the --copy flag do in npx skills add, and when would I want it instead of the default? One or two sentences, no changes to anything.",
       "should_trigger": false
@@ -33,7 +28,7 @@
     },
     {
       "id": "ordinary-dotfiles-config-change",
-      "prompt": "Add fd to the pinned CLI tools in the dotfiles mise config and tell me what else needs to change.",
+      "prompt": "In my dotfiles I pin CLI tools with mise. What do I change to add fd, and what else usually has to move with it? Just tell me — no edits.",
       "should_trigger": false
     }
   ]

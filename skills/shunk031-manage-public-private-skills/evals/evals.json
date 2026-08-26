@@ -3,12 +3,18 @@
   "evals": [
     {
       "id": "edit-skill-from-dotfiles-checkout",
-      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-structured-writing skill so it also covers pull request bodies, then get it onto this machine.",
-      "expected_output": "Says the edit does not belong in the checkout the user is standing in, because skill content moved out of both dotfiles repositories, and routes to shunk031/skills since this skill names nothing internal. Works in a task worktree of that repository, runs its gates, and opens a pull request. For getting the change onto the machine, explains that chezmoi apply installs from the merged repository and that its update step is throttled to once a day, so a forced update is needed right after merging.",
+      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-structured-writing skill so it also covers pull request bodies.",
+      "expected_output": "Say the edit does not belong in the checkout the user is standing in, because skill content no longer lives in either dotfiles repository, and do the work in a task worktree of the skill repository that owns it instead.",
       "assertions": [
-        "The response redirects the edit to the skill repository rather than the dotfiles checkout the user is in.",
-        "The response picks the public repository and gives a reason based on the skill's content.",
-        "The response describes reaching the machine through merge and chezmoi apply, not by editing an installed copy."
+        "The response moves the edit to the skill repository rather than the dotfiles checkout the user is standing in."
+      ]
+    },
+    {
+      "id": "skill-edit-reaches-the-machine",
+      "prompt": "I merged a change to the shunk031-structured-writing skill. How do I get it onto this machine?",
+      "expected_output": "Say that `chezmoi apply` installs from the merged repository, and that its update step is throttled to once a day, so a forced update is what applies the change right after merging.",
+      "assertions": [
+        "The response reaches the machine through chezmoi apply with a forced update rather than by editing an installed copy."
       ]
     },
     {
@@ -17,8 +23,7 @@
       "expected_output": "Places it in shunk031/skills-private, because the skill body will name an internal host and a credential. Gives that as the deciding test rather than the fact that the work is job-related. Notes that eval and trigger prompts there are committed in plaintext, so hosts and key material must appear as placeholders.",
       "assertions": [
         "The response chooses the private repository.",
-        "The response justifies it by what the skill body names rather than by the work being work-related.",
-        "The response warns that committed eval prompts must use placeholders instead of real values."
+        "The response justifies it by what the skill body names rather than by the work being work-related."
       ]
     },
     {
@@ -27,7 +32,7 @@
       "expected_output": "Separates the two files: behaviour cases in evals/evals.json with id, prompt, and expected_output, and trigger cases in evals/triggers.json needing at least one positive and one near-miss negative. Warns that expected_output must not repeat the assertions, because a blind comparator runs alongside assertion grading and copied wording tilts it. Warns that an unrelated negative control measures nothing. Gives the run order as validate-only, then trigger check, then the full evaluation.",
       "assertions": [
         "The response assigns behaviour cases and trigger cases to their separate files with the right required fields.",
-        "The response says expected_output must not restate the assertions, and gives the comparator as the reason.",
+        "The response says expected_output must not restate the assertions.",
         "The response requires negative controls to be near misses rather than unrelated prompts."
       ]
     },

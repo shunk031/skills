@@ -1,6 +1,6 @@
 ---
 name: shunk031-manage-public-private-skills
-description: Route and carry out work on coding-agent skills across shunk031/skills and shunk031/skills-private. Use when asked to add, edit, rename, split, or remove a skill; when deciding which repository owns one; when writing or converting eval and trigger cases; or when a skill change has to reach a machine through the dotfiles subscription. Also use when a request names a skill while you are working in a dotfiles repository, because skill content no longer lives there.
+description: Route and carry out work on coding-agent skills. Use when an edit to a skill under ~/.agents/skills or ~/.claude/skills vanished, reverted, or did not take effect; when asked to add, edit, rename, split, or remove a skill; when deciding whether a skill belongs in shunk031/skills or shunk031/skills-private; when writing eval or trigger cases; or when a request names a skill while you are in a dotfiles repository, because skill content no longer lives there.
 ---
 
 # Manage Public and Private Skills
@@ -13,8 +13,8 @@ Skill content lives in two dedicated repositories. Neither dotfiles repository h
 | --------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `shunk031/skills`           | Every publishable skill                                                                                  |
 | `shunk031/skills-private`   | Skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process |
-| `shunk031/dotfiles`         | The subscription allowlist and the reconcile script. No skill content                                    |
-| `shunk031/dotfiles-private` | No skill content                                                                                         |
+| `shunk031/dotfiles`         | The reconcile script and the public subscriptions. No skill content                                      |
+| `shunk031/dotfiles-private` | The private subscriptions. No skill content                                                              |
 
 The deciding test is that single question about the skill body. Being written for work does not make a skill private; naming an internal system does. When a skill is close to the line, prefer private and say why.
 
@@ -47,7 +47,18 @@ edit in the skill repository worktree
 DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply    # or: make skills-update
 ```
 
-Adding or removing a skill from the allowlist is a change to `install/common/skills.sh` in `shunk031/dotfiles`, and it belongs in its own pull request there, separate from the skill's own.
+Adding or removing a skill from the allowlist belongs in its own pull request, separate from the skill's own. Which repository that pull request goes to depends on the skill:
+
+| Skill lives in            | Subscription goes in                                                             |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `shunk031/skills`         | `install/common/skills.sh` in `shunk031/dotfiles`                                |
+| `shunk031/skills-private` | `home/dot_config/agents/skills-private.allowlist` in `shunk031/dotfiles-private` |
+
+**Never write a private skill's name into `shunk031/dotfiles`.** It is a public repository, and the name alone discloses the internal host, service, or process that putting the skill in the private repository was meant to hide. The reconcile script is public and stays public; only the list of private names moves.
+
+The reconciler reads the applied private file at reconcile time and appends its entries to its own public list, so both sets install through one pass. A machine that has only the public source has no such file, which is normal rather than an error.
+
+In that file only a leading `#` starts a comment, because an entry may carry a `#<ref>` suffix pinning a branch or tag.
 
 ## Layout rules that are easy to get wrong
 
@@ -65,6 +76,18 @@ Behavior cases go in `evals/evals.json`, each with `id`, `prompt`, and `expected
 Write `expected_output` as one to three sentences describing the behaviour that should result, not the wording of a good reply, and **do not restate the assertions**. Shuhari runs a blind A/B comparator between the with-skill and without-skill outputs alongside assertion grading, so `expected_output` that echoes assertion text biases that comparison.
 
 Make negative controls near misses. A control that shares the skill's vocabulary while genuinely not calling for it measures the boundary; an unrelated prompt measures nothing.
+
+**An assertion may only test what its own prompt asks for.** To measure something else, write another case whose prompt asks for it. An assertion that demands a warning the prompt never invited, or an outcome the prompt forbade, fails a correct answer: the model answered the question it was given. Such a case reads as a weak skill while it is really a mis-scoped test, and the usual reaction — making the prompt harder or the assertion looser — moves the number without measuring anything.
+
+Assertions multiply, so an unreliable one is worse than it looks. A trial passes only when every assertion in it passes, and the case needs a majority of trials. Three assertions that each hold every time are fine. Three that each hold two times in three leave the case failing about a third of the time purely on which trial each miss lands in, and the verdict then flips between runs with nothing changed — which reads as a flaky skill and is really one case asking several things at once.
+
+When that happens, split the _case_, not the assertion. Splitting one assertion into two tells you which claim failed but leaves the conjunction intact; separate cases are each judged on their own claim. Prefer a case that asks one thing from the start.
+
+Also watch for an assertion that judges execution in a case whose prompt says not to execute. It is unpassable: judge the decision the response states instead.
+
+Judge substance, not wording. An assertion that lists three nouns fails a response covering two of them, and one that demands a particular word fails a response giving the same reason in different words. Both look like a weak skill and are a brittle test.
+
+A case where both arms pass every trial is a finished measurement, not a broken one: it says the model already does this without the skill. Delete the case and keep the rule in `SKILL.md`. Do not sharpen the case until a difference appears — that manufactures the result.
 
 Runs are offline by default. A skill whose subject is the live network cannot be graded offline: it correctly refuses to proceed and loses to a baseline that guesses. Declare the exception with an `evals/network-required` marker.
 
