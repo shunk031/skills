@@ -1,6 +1,6 @@
-# Why this skill's behavior cases do not run
+# Why this skill's behavior cases use the network policy
 
-`evals.json` holds two cases. Neither is graded, and `evals/network-required` is what excludes them.
+`evals.json` holds three cases. The `evals/network-required` marker makes the gate evaluate them with `gpt-5.5`, medium reasoning, and network access in Shuhari's isolated sandbox.
 
 ## They cannot be measured offline
 
@@ -8,7 +8,7 @@ This skill's subject is consulting current third-party documentation and impleme
 
 Run offline, the with-skill arm behaves exactly as the skill instructs: it reports that the research gate cannot be satisfied and declines to implement. The baseline, having no such instruction, guesses from memory and produces something. The comparator scores the baseline higher on every trial.
 
-## They cannot be measured online either
+## Why the network policy uses a different model
 
 Enabling egress does not help, because the pinned models cannot use the web-search tool at all:
 
@@ -24,16 +24,12 @@ Enabling egress does not help, because the pinned models cannot use the web-sear
 | `gpt-5.6-luna` | the 403 above, then answered from memory            |
 | `gpt-5.6-sol`  | the 403 above, then verified through the GitHub API |
 
-`scripts/shuhari_staged_targets.sh` pins `gpt-5.6-luna` for evaluated runs and `gpt-5.6-sol` for grading, so every run in this repository is on the side that cannot search.
+`scripts/shuhari_staged_targets.sh` therefore uses `gpt-5.5` with medium reasoning for behavior cases marked `network-required`. It keeps `gpt-5.6-sol` with medium reasoning as the judge, and ordinary behavior cases remain on `gpt-5.6-luna` with high reasoning and no network access.
+
+The skill delegates this exact failure to one read-only `gpt-5.5` search session during normal use. The evaluation needs the same live-search capability to measure that behavior, so the marker is the explicit harness boundary.
 
 The failure is not always visible. Both 5.6 answers named the correct release tag anyway. A run can look like successful research and not be — which is worth knowing beyond this file, since a skill that tells an agent to check current documentation is, on this model, telling it to do something it will report having done by other means.
 
-## Why the cases stay
+## What remains offline
 
-An earlier round deleted them, on the reasoning that a gate which always fails teaches everyone to ignore it. That part was right; deleting was not.
-
-Deleting left the restore condition in prose — "put them back once the model can search" — with nothing that would ever notice the condition being met. The cases would have stayed missing after the constraint lifted, and nobody would have known to look.
-
-Keeping them costs nothing: the wrapper skips them and prints why. Removing `evals/network-required` puts them back under the gate, and that is also how you check whether the constraint has lifted. If it has, they pass. If it has not, they fail with the 403 and the marker goes back.
-
-`evals/triggers.json` was never affected. Whether the skill engages on a third-party integration task and stays out of the way on a trivial local edit is measurable offline, and it is the part most likely to regress.
+`evals/triggers.json` stays on the default offline `gpt-5.6-luna` policy. Whether the skill engages on a third-party integration task and stays out of the way on a trivial local edit does not require web access.
