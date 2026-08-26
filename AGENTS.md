@@ -46,7 +46,8 @@
 ## Documentation Site
 
 - The site is generated from the skills by `scripts/build_docs.py` and built by Zensical. `docs/` and `site/` are gitignored: committing generated pages would make every skill edit carry a second, mechanical diff that can drift from its source.
-- `make docs-serve` previews it locally; `make docs-build` is what CI runs, with `--strict` so a broken link fails.
+- `make docs-serve` previews it locally; `make docs-build` is what CI runs, with `--strict` so a broken link fails. `--strict` covers links and nothing else: a page whose code blocks render as headings still builds clean, which is how the site shipped for a while with a shebang as an H1.
+- A skill's `SKILL.md` is shown verbatim inside a card, headed by the same icon the navigation uses. It is a quoted artifact written for an agent, not this site's prose, and the card is what draws that line. A card is only styled as `.grid > .card`, so it needs both wrappers; `.card` alone renders as plain text with a class nobody reads.
 - A skill page shows what its evaluation measured, from `skills/<name>/evals/results.json`. `scripts/record_eval_results.py` lifts those numbers out of a completed Shuhari run. That file is committed; the workspace it comes from is not, because the workspace holds transcripts and the numbers do not.
 
 ## Comment Policy

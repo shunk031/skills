@@ -232,7 +232,36 @@ def render_skill_page(skill: dict[str, Any]) -> str:
             "",
         ]
 
-    lines += ["## The skill", "", skill["body"], ""]
+    # The body is a quoted artifact, not this page's prose: it is written for
+    # an agent deciding what to do, and it appears here verbatim. Wrapping it in
+    # a card draws that line, so a reader can see where the page stops talking
+    # and the skill starts.
+    # The body opens with its own `# Title`, which lands at the top of the card
+    # as a bare heading. The same icon the navigation uses goes in front of it,
+    # so the card reads as this skill's card rather than as a second H1.
+    # `/` becomes `-` in an icon shortcode.
+    icon = ICONS.get(skill["name"], FALLBACK_ICON).replace("/", "-")
+    body = skill["body"]
+    if body.startswith("# "):
+        heading, _, rest = body.partition("\n")
+        body = f"{heading[:2]}:{icon}:{{ .lg .middle }} {heading[2:]}\n{rest}"
+
+    # `.card` is only styled as `.grid > .card`, so the wrapper has to be the
+    # grid and the body its single child. One child is a one-card grid.
+    lines += [
+        "## The skill",
+        "",
+        '<div class="grid" markdown>',
+        "",
+        '<div class="card" markdown>',
+        "",
+        body,
+        "",
+        "</div>",
+        "",
+        "</div>",
+        "",
+    ]
     return "\n".join(lines)
 
 
