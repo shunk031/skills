@@ -94,6 +94,14 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - admonition
   - attr_list
+  # Without a fence extension, ``` blocks are not code: their contents are
+  # parsed as Markdown. A skill body that shows a shell script turns its
+  # shebang into an H1, and one that shows Markdown turns its example headings
+  # into real page headings. `superfences` also nests, which the plain
+  # `fenced_code` extension cannot do.
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
   - md_in_html
   - toc:
       permalink: true
