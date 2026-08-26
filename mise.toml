@@ -7,11 +7,17 @@ min_version = "2026.8.2"
 # Language runtimes. `go` builds the Shuhari gate binary below, `node` backs the
 # textlint pre-commit hook, and `python` runs the unit tests for skills that
 # ship executable scripts.
+#
+# `uv` runs the Python tests and `bats` the shell ones. Both are pinned here
+# rather than assumed: a machine may have them from a global mise config, but a
+# fresh clone and the CI runner see only what this file declares.
 go = "1.26.5"
 node = "lts"
 python = "3.14.6"
 
 # Aqua tools
+"aqua:astral-sh/uv" = "0.11.32"
+"aqua:bats-core/bats-core" = "1.14.0"
 "aqua:j178/prek" = "0.4.11"
 "aqua:koalaman/shellcheck" = "0.11.0"
 "aqua:mvdan/sh" = "3.13.1"

@@ -5,6 +5,9 @@ TIMEOUT ?= 600
 # Keep in step with the `go` pin in mise.toml.
 GO_VERSION ?= 1.26.5
 
+# Keep in step with the `python` pin in mise.toml.
+PYTHON_VERSION ?= 3.14.6
+
 #
 # Development
 #
@@ -79,10 +82,22 @@ check-triggers:
 # Quality
 #
 
-# Unit tests for skills that ship executable scripts. Offline, no agent.
+# Unit tests for the shell scripts skills ship. Offline, no agent.
+.PHONY: test-bats
+test-bats:
+	mise exec -- bats tests/bats
+
 .PHONY: test
-test:
-	python -m unittest discover -s tests/python
+test: test-python test-bats
+
+# Unit tests for the Python scripts skills ship. Offline, no agent.
+#
+# `--no-project` keeps this from adopting a pyproject.toml that does not exist,
+# and naming the interpreter keeps a bare `python` on PATH — or an activated
+# virtualenv from another checkout — from deciding which one runs.
+.PHONY: test-python
+test-python:
+	uv run --python $(PYTHON_VERSION) --no-project -- python -m unittest discover -s tests/python
 
 # The same offline hooks CI runs. The live gates are skipped here by design.
 .PHONY: gate

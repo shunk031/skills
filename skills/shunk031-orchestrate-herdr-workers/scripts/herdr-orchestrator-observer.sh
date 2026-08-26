@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 
-# @file home/dot_config/exact_agents/skills/shunk031-orchestrate-herdr-workers/scripts/herdr-orchestrator-observer.sh
+# @file skills/shunk031-orchestrate-herdr-workers/scripts/herdr-orchestrator-observer.sh
 # @brief Observe fixed worker identities and coalesce bounded orchestrator nudges.
 # @description
 #   Scope is supplied as immutable worker, pane, and tab identities. Each sample
 #   reads live Herdr state; alert and rearm memory stays in this process.
+#
+#   Per-worker memory is kept in newline-delimited `key<TAB>value` strings
+#   rather than associative arrays. macOS ships Bash 3.2, which has no
+#   `declare -A`, and this script runs on the machine an agent is working on.
+#   Worker names, pane ids, and tab ids are validated against character classes
+#   that exclude tabs and newlines, so they are safe as keys.
 
 set -Eeuo pipefail
 
@@ -17,7 +23,9 @@ ORCHESTRATOR=''
 INTERVAL_SECONDS=60
 STALE_SAMPLES=3
 declare -a WORKER_SPECS=()
-declare -A previous_fingerprint=() previous_stable=() previous_alerted=()
+previous_fingerprint=''
+previous_stable=''
+previous_alerted=''
 
 if (($# == 0)); then
     printf '%s\n' 'usage: herdr-orchestrator-observer.sh --orchestrator NAME --worker NAME|PANE|TAB [--worker ...] [--interval-seconds N] [--stale-samples N]' >&2
@@ -60,18 +68,21 @@ done
 [[ "${INTERVAL_SECONDS}" =~ ^[1-9][0-9]*$ && "${STALE_SAMPLES}" =~ ^[1-9][0-9]*$ ]] || exit 2
 ((${#WORKER_SPECS[@]} == 0)) && exit 0
 
-declare -A names=() panes=() tabs=()
+seen_names=''
+seen_panes=''
+seen_tabs=''
 for spec in "${WORKER_SPECS[@]}"; do
     IFS='|' read -r name pane tab extra <<< "${spec}"
     [[ -n "${name}" && -n "${pane}" && -n "${tab}" && -z "${extra}" ]] || exit 2
     [[ "${name}" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || exit 2
     [[ "${pane}" =~ ^[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$ && "${tab}" =~ ^[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$ ]] || exit 2
     [[ "${name}" != "${ORCHESTRATOR}" ]] || exit 2
-    key="${name}|${pane}|${tab}"
-    [[ -z "${names[${name}]-}" && -z "${panes[${pane}]-}" && -z "${tabs[${tab}]-}" ]] || exit 2
-    names["${name}"]="${key}"
-    panes["${pane}"]="${key}"
-    tabs["${tab}"]="${key}"
+    printf '%s\n' "${seen_names}" | grep -Fxq -- "${name}" && exit 2
+    printf '%s\n' "${seen_panes}" | grep -Fxq -- "${pane}" && exit 2
+    printf '%s\n' "${seen_tabs}" | grep -Fxq -- "${tab}" && exit 2
+    seen_names="${seen_names}${name}"$'\n'
+    seen_panes="${seen_panes}${pane}"$'\n'
+    seen_tabs="${seen_tabs}${tab}"$'\n'
 done
 
 for command in herdr jq shasum awk sleep; do
@@ -85,13 +96,38 @@ function hash_text() {
     printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
 }
 
+#
+# @description Read one value out of a `key<TAB>value` map.
+# @arg $1 map string Newline-delimited `key<TAB>value` pairs.
+# @arg $2 key string The key to look up.
+# @stdout The value, or nothing when the key is absent.
+#
+function map_get() {
+    printf '%s\n' "$1" | awk -F'\t' -v key="$2" 'NF && $1 == key { print $2; exit }'
+}
+
+#
+# @description Print a `key<TAB>value` map with one key set to a new value.
+# @description
+#   The caller reassigns: `map="$(map_set "${map}" k v)"`. Setting an existing
+#   key replaces it rather than appending, so a key never appears twice.
+# @arg $1 map string Newline-delimited `key<TAB>value` pairs.
+# @arg $2 key string The key to set.
+# @arg $3 value string The value to store.
+# @stdout The resulting map.
+#
+function map_set() {
+    printf '%s\n' "$1" | awk -F'\t' -v key="$2" 'NF && $1 != key'
+    printf '%s\t%s\n' "$2" "$3"
+}
+
 function observe_once() {
     local agents spec name pane tab row status revision state_seq tab_json label transcript transcript_sha
     local normalized_status fingerprint previous stable alerted complete open_pr_wait
     local matched_workers=0
     local nudge
     local -a report_lines=() pending_names=()
-    local -A next_fingerprint=() next_stable=() next_alerted=()
+    local next_fingerprint='' next_stable='' next_alerted=''
 
     agents="$(herdr agent list 2> /dev/null)" || {
         printf '%s\n' 'observer: herdr agent list failed; sample rejected' >&2
@@ -133,17 +169,18 @@ function observe_once() {
         normalized_status="${status}"
         [[ "${normalized_status}" == "done" ]] && normalized_status=idle
         fingerprint="$(hash_text "${name}|${pane}|${tab}|${normalized_status}|${revision}|${state_seq}|${label}|${transcript_sha}")"
-        previous="${previous_fingerprint[${name}]-}"
-        if [[ "${fingerprint}" == "${previous}" ]]; then
-            stable=$((${previous_stable[${name}]-0} + 1))
-            alerted="${previous_alerted[${name}]-0}"
+        previous="$(map_get "${previous_fingerprint}" "${name}")"
+        if [[ -n "${previous}" && "${fingerprint}" == "${previous}" ]]; then
+            stable=$(($(map_get "${previous_stable}" "${name}") + 1))
+            alerted="$(map_get "${previous_alerted}" "${name}")"
+            alerted="${alerted:-0}"
         else
             stable=1
             alerted=0
         fi
-        next_fingerprint["${name}"]="${fingerprint}"
-        next_stable["${name}"]="${stable}"
-        next_alerted["${name}"]="${alerted}"
+        next_fingerprint="$(map_set "${next_fingerprint}" "${name}" "${fingerprint}")"
+        next_stable="$(map_set "${next_stable}" "${name}" "${stable}")"
+        next_alerted="$(map_set "${next_alerted}" "${name}" "${alerted}")"
 
         complete=0
         open_pr_wait=0
@@ -175,20 +212,19 @@ function observe_once() {
             printf '%s\n' 'Reconcile Herdr state/transcript and relevant worktree/PR/CI truth; this observer is read-only and the report is not terminal.'
         )"
         if herdr agent prompt "${ORCHESTRATOR}" "${nudge}" > /dev/null 2>&1; then
-            for name in "${pending_names[@]}"; do next_alerted["${name}"]=1; done
+            for name in "${pending_names[@]}"; do
+                next_alerted="$(map_set "${next_alerted}" "${name}" 1)"
+            done
         else
             printf '%s\n' 'observer: orchestrator nudge failed; episode remains armed' >&2
         fi
     fi
 
-    previous_fingerprint=()
-    previous_stable=()
-    previous_alerted=()
-    for name in "${!next_fingerprint[@]}"; do
-        previous_fingerprint["${name}"]="${next_fingerprint[${name}]}"
-        previous_stable["${name}"]="${next_stable[${name}]}"
-        previous_alerted["${name}"]="${next_alerted[${name}]}"
-    done
+    # The old code cleared each map and copied every key back from its `next_`
+    # counterpart, which is what assignment does.
+    previous_fingerprint="${next_fingerprint}"
+    previous_stable="${next_stable}"
+    previous_alerted="${next_alerted}"
 }
 
 trap 'exit 0' INT TERM
