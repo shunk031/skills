@@ -44,6 +44,14 @@ readonly TIMEOUT=600
 # both arms, which reports a useful skill as useless. A weaker one leaves the
 # baseline room to fail, so the difference is visible. Drop to `medium` if
 # `high` starts passing both arms on everything.
+#
+# The 5.6 family cannot use the web-search tool: it answers
+# `403 Forbidden: Selected provider is forbidden` and falls back to memory or a
+# direct API call, often without saying so. `gpt-5.5` searches normally, checked
+# from the same empty directory with the same question. Any skill whose subject
+# is reaching the live web therefore cannot be graded on these pins; declare it
+# with `evals/network-required` and expect it to measure nothing until the pins
+# move or the entitlement changes.
 readonly MODEL=gpt-5.6-luna
 readonly REASONING_EFFORT=high
 

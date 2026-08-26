@@ -3,7 +3,12 @@
 # 2026-11-05; Zensical is its successor from the same author.
 site_name: shunk031 skills
 site_description: Coding-agent skills for Claude Code and Codex, with what each one measurably changes.
-site_url: https://shunk031.github.io/skills/
+# The user site carries the custom domain `shunk031.me`, and every project
+# page under it is served from there: `shunk031.github.io/skills/` answers 301
+# to this address. `site_url` is what fills `rel=canonical`, `og:url`, and the
+# sitemap, so pointing it at the redirecting host tells search engines the
+# canonical copy lives somewhere the site does not.
+site_url: https://shunk031.me/skills/
 repo_url: https://github.com/shunk031/skills
 repo_name: shunk031/skills
 copyright: Copyright © 2026 Shunsuke Kitada
