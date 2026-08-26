@@ -40,23 +40,18 @@ NAME_PREFIX = "shunk031-"
 # missing: an unfamiliar icon is worse than a consistent generic one.
 FALLBACK_ICON = "lucide/file-text"
 ICONS = {
-    "shunk031-ai-slop-checklist-ja": "lucide/list-checks",
     "shunk031-cgd-dev-identity": "lucide/id-card",
     "shunk031-codex-worker-prompting": "lucide/message-square-code",
-    "shunk031-doc-slop-review": "lucide/file-search",
     "shunk031-gh-comment-attach-files": "lucide/paperclip",
     "shunk031-herdr-tab-status": "lucide/tags",
     "shunk031-high-impact-journal-publishing": "lucide/graduation-cap",
-    "shunk031-humanizer-ja": "lucide/wand-sparkles",
     "shunk031-manage-agent-guidance": "lucide/book-marked",
     "shunk031-manage-public-private-dotfiles": "lucide/folder-git-2",
     "shunk031-manage-public-private-skills": "lucide/split",
     "shunk031-orchestrate-herdr-workers": "lucide/network",
     "shunk031-python-uv-workflow": "lucide/package-open",
     "shunk031-research-before-implementation": "lucide/search-check",
-    "shunk031-research-report-ja": "lucide/newspaper",
     "shunk031-shdoc-shell-docs": "lucide/square-terminal",
-    "shunk031-structured-writing": "lucide/list-tree",
     "shunk031-transformers-convert": "lucide/repeat",
 }
 
@@ -85,23 +80,18 @@ def reference_title(stem: str) -> str:
 # buckets, which is what the alphabetical sidebar already does. Zensical does
 # not build tag index pages yet, so these are labels rather than navigation.
 TAGS = {
-    "shunk031-ai-slop-checklist-ja": ["Writing", "Japanese", "Review"],
     "shunk031-cgd-dev-identity": ["GitHub", "Git"],
     "shunk031-codex-worker-prompting": ["Codex", "Agents", "Herdr"],
-    "shunk031-doc-slop-review": ["Writing", "Review", "Evaluation"],
     "shunk031-gh-comment-attach-files": ["GitHub"],
     "shunk031-herdr-tab-status": ["Herdr", "Agents"],
     "shunk031-high-impact-journal-publishing": ["Research", "Writing"],
-    "shunk031-humanizer-ja": ["Writing", "Japanese"],
     "shunk031-manage-agent-guidance": ["Agents", "Claude Code", "Codex"],
     "shunk031-manage-public-private-dotfiles": ["chezmoi", "Dotfiles", "Git"],
     "shunk031-manage-public-private-skills": ["Agents", "Skills", "Evaluation"],
     "shunk031-orchestrate-herdr-workers": ["Herdr", "Codex", "Agents", "Git"],
     "shunk031-python-uv-workflow": ["Python", "uv"],
     "shunk031-research-before-implementation": ["Research"],
-    "shunk031-research-report-ja": ["Research", "Writing", "Japanese"],
     "shunk031-shdoc-shell-docs": ["Shell", "Writing"],
-    "shunk031-structured-writing": ["Writing"],
     "shunk031-transformers-convert": ["Python", "PyTorch", "Transformers"],
 }
 
@@ -327,7 +317,7 @@ def render_nav(skills: list[dict[str, Any]]) -> str:
     """Render the navigation tree for mkdocs.yml to include.
 
     Without this, a section's label comes from its directory name, which turns
-    `shunk031-ai-slop-checklist-ja` into "Shunk031 ai slop checklist ja". A
+    `shunk031-python-uv-workflow` into "Shunk031 python uv workflow". A
     section is not a page, so no frontmatter can correct it — only an explicit
     entry can. Naming each section here also lets the section carry the skill's
     icon, and leaves the page inside it free to say what it is: `SKILL.md`.

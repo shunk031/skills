@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": "edit-skill-from-dotfiles-checkout",
-      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-structured-writing skill so it also covers pull request bodies.",
+      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-research-before-implementation skill so it also covers pull request bodies.",
       "expected_output": "Say the edit does not belong in the checkout the user is standing in, because skill content no longer lives in either dotfiles repository, and do the work in a task worktree of the skill repository that owns it instead.",
       "assertions": [
         "The response moves the edit to the skill repository rather than the dotfiles checkout the user is standing in."
@@ -11,7 +11,7 @@
     },
     {
       "id": "skill-edit-reaches-the-machine",
-      "prompt": "I merged a change to the shunk031-structured-writing skill. How do I get it onto this machine?",
+      "prompt": "I merged a change to the shunk031-research-before-implementation skill. How do I get it onto this machine?",
       "expected_output": "Say that `chezmoi apply` installs from the merged repository, and that its update step is throttled to once a day, so a forced update is what applies the change right after merging.",
       "assertions": [
         "The response reaches the machine through chezmoi apply with a forced update rather than by editing an installed copy."
@@ -38,7 +38,7 @@
     },
     {
       "id": "live-skill-edit-does-not-stick",
-      "prompt": "I edited ~/.agents/skills/shunk031-humanizer-ja/SKILL.md yesterday and my change is gone. What happened and where should I have made it?",
+      "prompt": "I edited ~/.agents/skills/shunk031-python-uv-workflow/SKILL.md yesterday and my change is gone. What happened and where should I have made it?",
       "expected_output": "Explains that the path is a copy written by the skills CLI rather than a link to any source, so an update overwrote the edit. Sends the user to a worktree of the owning skill repository, and describes the route back to the machine as merge followed by chezmoi apply. Does not suggest re-editing the installed copy or protecting it from updates.",
       "assertions": [
         "The response identifies the installed path as a CLI-managed copy that updates overwrite.",
