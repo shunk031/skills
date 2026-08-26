@@ -1,23 +1,23 @@
 {
   "schema_version": "1",
   "skill_name": "shunk031-manage-public-private-skills",
-  "measured_at": "2026-08-25T17:05:36.175258Z",
+  "measured_at": "2026-08-26T03:50:03.628693Z",
   "agent": "codex",
   "model": "gpt-5.6-luna",
   "reasoning_effort": "high",
   "trials": 3,
   "network": false,
   "pass_rate": {
-    "with_skill": 0.9333,
-    "without_skill": 0.2667
+    "with_skill": 0.9111,
+    "without_skill": 0.4444
   },
   "tokens": {
-    "with_skill": 156034.8,
-    "without_skill": 200136.1333
+    "with_skill": 171720.6,
+    "without_skill": 163151.0667
   },
   "seconds": {
-    "with_skill": 88.2801,
-    "without_skill": 121.1327
+    "with_skill": 204.8799,
+    "without_skill": 167.3749
   },
   "assertions": [
     {
@@ -31,15 +31,15 @@
       "case_id": "author-eval-cases",
       "assertion": "The response requires negative controls to be near misses rather than unrelated prompts.",
       "with_skill": 1,
-      "without_skill": 0.3333333333333333,
-      "category": "mixed"
+      "without_skill": 1,
+      "category": "always_pass_both"
     },
     {
       "case_id": "author-eval-cases",
       "assertion": "The response says expected_output must not restate the assertions.",
-      "with_skill": 1,
+      "with_skill": 0.6666666666666666,
       "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "category": "mixed"
     },
     {
       "case_id": "classify-new-skill-visibility",
@@ -59,29 +59,29 @@
       "case_id": "edit-skill-from-dotfiles-checkout",
       "assertion": "The response moves the edit to the skill repository rather than the dotfiles checkout the user is standing in.",
       "with_skill": 0.6666666666666666,
-      "without_skill": 0,
+      "without_skill": 0.3333333333333333,
       "category": "mixed"
     },
     {
       "case_id": "live-skill-edit-does-not-stick",
       "assertion": "The response directs the edit to the owning skill repository instead.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.3333333333333333,
+      "category": "mixed"
     },
     {
       "case_id": "live-skill-edit-does-not-stick",
       "assertion": "The response does not propose editing or preserving the installed copy as the fix.",
       "with_skill": 1,
-      "without_skill": 0.3333333333333333,
+      "without_skill": 0.6666666666666666,
       "category": "mixed"
     },
     {
       "case_id": "live-skill-edit-does-not-stick",
       "assertion": "The response identifies the installed path as a CLI-managed copy that updates overwrite.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.3333333333333333,
+      "category": "mixed"
     },
     {
       "case_id": "skill-edit-reaches-the-machine",

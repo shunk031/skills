@@ -81,6 +81,8 @@ Make negative controls near misses. A control that shares the skill's vocabulary
 
 Assertions multiply, so an unreliable one is worse than it looks. A trial passes only when every assertion in it passes, and the case needs a majority of trials. Three assertions that each hold every time are fine. Three that each hold two times in three leave the case failing about a third of the time purely on which trial each miss lands in, and the verdict then flips between runs with nothing changed — which reads as a flaky skill and is really one case asking several things at once.
 
+Three trials decide a gate, not a question. An assertion scoring worse with the skill than without is a reason to re-measure at five, not a finding: three such assertions once read as the skill hurting, and at five trials two were flat and the third had reversed into the skill's largest single gain. Do not act on a sign you have seen once.
+
 When that happens, split the _case_, not the assertion. Splitting one assertion into two tells you which claim failed but leaves the conjunction intact; separate cases are each judged on their own claim. Prefer a case that asks one thing from the start.
 
 Also watch for an assertion that judges execution in a case whose prompt says not to execute. It is unpassable: judge the decision the response states instead.
@@ -89,7 +91,9 @@ Judge substance, not wording. An assertion that lists three nouns fails a respon
 
 A case where both arms pass every trial is a finished measurement, not a broken one: it says the model already does this without the skill. Delete the case and keep the rule in `SKILL.md`. Do not sharpen the case until a difference appears — that manufactures the result.
 
-Runs are offline by default. A skill whose subject is the live network cannot be graded offline: it correctly refuses to proceed and loses to a baseline that guesses. Declare the exception with an `evals/network-required` marker.
+Runs are offline by default. A skill whose subject is the live network cannot be graded offline: it correctly refuses to proceed and loses to a baseline that guesses. Declare the exception with an `evals/network-required` marker, which makes the gate skip those cases and say why.
+
+It skips rather than enabling egress because the pinned models cannot use the web-search tool at all — they answer `403 Forbidden: Selected provider is forbidden` and fall back to memory or a direct API call, often without saying so. Leave such cases in `evals.json` rather than deleting them: they are correct, and a deleted case leaves the restore condition in prose with nothing to notice when it is met. Removing the marker is both how you put them back and how you test whether the constraint has lifted.
 
 Order of work is `--validate-only`, then `shuhari check trigger`, then `shuhari eval skill`. The first is instant and offline; the last runs both arms plus a grader and a comparator.
 

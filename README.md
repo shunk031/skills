@@ -1,8 +1,10 @@
 # skills
 
+[![CI](https://github.com/shunk031/skills/actions/workflows/ci.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/ci.yaml)
+[![Docs](https://github.com/shunk031/skills/actions/workflows/docs.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/docs.yaml)
 [![skills.sh](https://skills.sh/b/shunk031/skills)](https://skills.sh/shunk031/skills)
 
-Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Each skill is a single `SKILL.md` that both agents read, and the ones that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari) — a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
+Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Browsable at **[shunk031.me/skills](https://shunk031.me/skills/)**, where each skill's page shows what its evaluation measured. Each skill is a single `SKILL.md` that both agents read, and the ones that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari) — a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
 
 ## Install
 
