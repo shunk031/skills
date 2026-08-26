@@ -3,7 +3,7 @@
   "cases": [
     {
       "id": "gate-contract-and-conflict",
-      "prompt": "Write a task prompt for a Codex worker that must inspect exact commit SHA abc1234, run `uv run pytest tests/test_cli.py`, and stop if `git ls-remote origin refs/heads/task` does not match the expected remote head. Pair the test gate with what it does not measure, and require a stop-and-report response if any gate conflicts with another instead of silently satisfying one gate.",
+      "prompt": "Draft a task prompt for a worker handling a repository change. The handoff records revision `abc1234`, focused check `uv run pytest tests/test_component.py`, and remote ref `refs/heads/feature` whose current head may differ from the expected revision before a retry; the focused check covers only its own scope, and another gate may conflict or be unavailable. Return the dispatch text, not an implementation.",
       "should_trigger": true
     },
     {

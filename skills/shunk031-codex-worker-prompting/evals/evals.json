@@ -3,10 +3,10 @@
   "evals": [
     {
       "id": "gate-contract-and-conflict",
-      "prompt": "Write a task prompt for a Codex worker that must inspect exact commit SHA abc1234, run `uv run pytest tests/test_cli.py`, and stop if `git ls-remote origin refs/heads/task` does not match the expected remote head. Pair the test gate with what it does not measure, and require a stop-and-report response if any gate conflicts with another instead of silently satisfying one gate.",
-      "expected_output": "Produces a task prompt carrying the literal SHA abc1234, the exact command `uv run pytest tests/test_cli.py`, and the `git ls-remote origin refs/heads/task` comparison with an explicit condition for stopping. States what passing that test does not establish, so the gate is not read as broader evidence than it is. Instructs the worker to stop and report rather than choose when two gates conflict or one cannot be evaluated.",
+      "prompt": "Draft a task prompt for a worker handling a repository change. The handoff records revision `abc1234`, focused check `uv run pytest tests/test_component.py`, and remote ref `refs/heads/feature` whose current head may differ from the expected revision before a retry; the focused check covers only its own scope, and another gate may conflict or be unavailable. Return the dispatch text, not an implementation.",
+      "expected_output": "Produces a dispatch with a bounded precondition for retrying and a clear distinction between the focused check and broader acceptance. Conflicting or unavailable gates lead to a stop-and-report outcome.",
       "assertions": [
-        "The prompt includes the exact SHA, exact test command, remote-head comparison, and an explicit stop condition.",
+        "The prompt names a concrete revision and focused test command, compares the remote head with the expected value, and states an explicit stop condition.",
         "The prompt states what the test gate does not measure.",
         "The prompt requires stopping and reporting when gates conflict or a gate is impossible."
       ]
