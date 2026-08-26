@@ -37,6 +37,11 @@
 - The live gates make real model calls through Codex, so they run in pre-commit only. CI is limited to schema validation, layout checks, linting, and unit tests.
 - `SKIP=shuhari-check-trigger,shuhari-eval-skill git commit` is the authorized escape hatch when the model path is unavailable. Report the skip in the pull request body; do not treat a skipped gate as a passing gate.
 
+## Shell Policy
+
+- Shell scripts a skill ships must run on Bash 3.2. macOS still ships it, and that is the machine an agent works on, so a Bash 4 feature — `declare -A`, `mapfile`, `${var,,}` — runs on Linux and dies where it matters.
+- `tests/bats/` covers those scripts. `make test` runs it alongside the Python tests, and CI runs both on Linux and macOS so the 3.2 path is actually exercised.
+
 ## Comment Policy
 
 - When adding or updating comments for shell scripts or shell-based executables, write them in English using shdoc-compatible format.

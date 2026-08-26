@@ -47,7 +47,16 @@ jobs:
         run: make validate
 
   test:
-    runs-on: ubuntu-latest
+    # macOS is here for the shell tests, not for coverage. It ships Bash 3.2,
+    # and a script that uses a Bash 4 feature runs fine on Linux and dies on the
+    # machine an agent actually works on. That is how a `declare -A` reached
+    # this repository unnoticed.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
@@ -55,6 +64,9 @@ jobs:
       - uses: jdx/mise-action@v3
         with:
           cache: true
+
+      - name: Report the Bash the shell tests will use
+        run: bash --version | head -1
 
       - name: Run unit tests
         run: make test
