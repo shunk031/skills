@@ -18,7 +18,7 @@
 # @exitcode 1 A Shuhari gate failed.
 # @exitcode 2 Invalid usage, or `shuhari` is not installed.
 # @example
-#   scripts/shuhari_staged_targets.sh eval skills/shunk031-doc-slop-review/SKILL.md
+#   scripts/shuhari_staged_targets.sh eval skills/shunk031-python-uv-workflow/SKILL.md
 
 set -Eeuo pipefail
 

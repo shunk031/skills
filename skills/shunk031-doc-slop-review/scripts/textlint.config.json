@@ -1,8 +1,0 @@
-{
-  "rules": {
-    "@cffnpwr/textlint-rule-no-arbitrary-line-break": true,
-    "ja-space-between-half-and-full-width": {
-      "space": ["alphabets", "numbers"]
-    }
-  }
-}

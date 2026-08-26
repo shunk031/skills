@@ -3,7 +3,7 @@
   "cases": [
     {
       "id": "edit-skill-from-dotfiles-checkout",
-      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-structured-writing skill so it also covers pull request bodies, then get it onto this machine.",
+      "prompt": "I'm in ~/.local/share/chezmoi. Update the shunk031-research-before-implementation skill so it also covers pull request bodies, then get it onto this machine.",
       "should_trigger": true
     },
     {
