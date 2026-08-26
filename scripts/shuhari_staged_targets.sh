@@ -12,6 +12,19 @@
 #
 #   Shuhari owns the evaluation mechanism; this script owns target selection and
 #   policy, per the Shuhari development architecture contract.
+#
+#   The execution environment can be adjusted with `SHUHARI_SANDBOX`,
+#   `SHUHARI_AGENT_EXECUTABLE`, `SHUHARI_JOBS`, `SHUHARI_TIMEOUT`, and
+#   `SHUHARI_ALLOW_TOOLS`. The sandbox and executable variables add their
+#   corresponding flags; an `unsandboxed` sandbox also adds `--network`, as
+#   required by Shuhari. The jobs and timeout variables replace their defaults,
+#   while each whitespace-separated allow-tools entry adds one repeated
+#   `--allow-tool` flag. Leaving all five unset preserves the existing argv byte
+#   for byte.
+#
+#   These are environment-shaped overrides only. Trials, evaluated model,
+#   judge model, and reasoning efforts define measurement and remain pinned
+#   below; they are not overridable.
 # @arg $1 mode One of `validate`, `eval`, or `trigger`.
 # @arg $@ paths Changed file paths supplied by pre-commit.
 # @exitcode 0 Every selected target passed, or nothing was selected.
@@ -37,8 +50,8 @@ readonly PYTHON_VERSION=3.14.6
 # concurrent ones take 71, and eight take 116. Running two at a time made an
 # evaluation nearly serial and cost roughly an hour per skill for no reason.
 readonly TRIALS=3
-readonly JOBS=8
-readonly TIMEOUT=600
+readonly JOBS="${SHUHARI_JOBS:-8}"
+readonly TIMEOUT="${SHUHARI_TIMEOUT:-600}"
 
 # Shuhari defaults the model to whatever the Codex configuration carries, which
 # is not a decision this repository should inherit silently. Pin it.
@@ -242,20 +255,47 @@ function needs_network() {
 #   installed elsewhere measures the sandbox rather than the skill: the agent
 #   reports the tool as unavailable and loses to a baseline that improvises. A
 #   skill declares what it needs in `evals/tools-required`, one name per line,
-#   with `#` comments ignored.
+#   with `#` comments ignored. `SHUHARI_ALLOW_TOOLS` appends its
+#   whitespace-separated entries to the same flags.
 # @arg $1 target Absolute skill directory.
 # @stdout Alternating `--allow-tool <name>` arguments, one pair per line.
 function declared_tool_flags() {
     local manifest="$1/evals/tools-required"
-    [ -f "${manifest}" ] || return 0
+    if [ -f "${manifest}" ]; then
+        local line
+        while IFS= read -r line || [ -n "${line}" ]; do
+            line="${line%%#*}"
+            line="$(printf '%s' "${line}" | tr -d '[:space:]')"
+            [ -n "${line}" ] || continue
+            printf -- '--allow-tool\n%s\n' "${line}"
+        done < "${manifest}"
+    fi
 
-    local line
-    while IFS= read -r line || [ -n "${line}" ]; do
-        line="${line%%#*}"
-        line="$(printf '%s' "${line}" | tr -d '[:space:]')"
-        [ -n "${line}" ] || continue
-        printf -- '--allow-tool\n%s\n' "${line}"
-    done < "${manifest}"
+    local tool
+    while IFS= read -r tool || [ -n "${tool}" ]; do
+        [ -n "${tool}" ] || continue
+        printf -- '--allow-tool\n%s\n' "${tool}"
+    done < <(printf '%s\n' "${SHUHARI_ALLOW_TOOLS:-}" | tr -s '[:space:]' '\012')
+}
+
+# @description Print flags for execution-environment overrides.
+# @stdout Alternating environment flag names and values, with `--network` for
+#   an `unsandboxed` sandbox.
+# @arg $1 network_already_allowed Whether the command already includes
+#   `--network`.
+function declared_environment_flags() {
+    local network_already_allowed="${1:-false}"
+    if [ -n "${SHUHARI_SANDBOX:-}" ]; then
+        printf -- '--sandbox\n%s\n' "${SHUHARI_SANDBOX}"
+        if [ "${SHUHARI_SANDBOX}" = unsandboxed ] &&
+            [ "${network_already_allowed}" != true ]; then
+            printf '%s\n' '--network'
+        fi
+    fi
+
+    if [ -n "${SHUHARI_AGENT_EXECUTABLE:-}" ]; then
+        printf -- '--agent-executable\n%s\n' "${SHUHARI_AGENT_EXECUTABLE}"
+    fi
 }
 
 # @description Lift a finished run's numbers into the skill's `results.json`.
@@ -290,15 +330,22 @@ function run_eval() {
     local target
     for target in "${targets[@]}"; do
         local -a eval_model_flags=("${EVAL_MODEL_FLAGS[@]}")
+        local network_already_allowed=false
         if needs_network "${target}"; then
             eval_model_flags=("${NETWORK_EVAL_MODEL_FLAGS[@]}")
+            network_already_allowed=true
         fi
+
+        local -a environment_flags=()
+        read_lines_into environment_flags < \
+            <(declared_environment_flags "${network_already_allowed}")
 
         # Tool declarations are per-run flags, so a skill that declares any is
         # evaluated on its own rather than batched with the others.
         local -a tool_flags=()
         read_lines_into tool_flags < <(declared_tool_flags "${target}")
         if shuhari eval skill ${tool_flags[@]+"${tool_flags[@]}"} \
+            ${environment_flags[@]+"${environment_flags[@]}"} \
             "${PROGRESS_FLAG}" "${eval_model_flags[@]}" \
             --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
             "${target}"; then
@@ -323,12 +370,16 @@ function run_trigger() {
     read_lines_into targets < <(filter_by_eval_file triggers.json "$@")
     [ "${#targets[@]}" -gt 0 ] || return 0
 
+    local -a environment_flags=()
+    read_lines_into environment_flags < <(declared_environment_flags false)
+
     local target
     local status=0
     for target in "${targets[@]}"; do
         local -a tool_flags=()
         read_lines_into tool_flags < <(declared_tool_flags "${target}")
         shuhari check trigger "${target}" ${tool_flags[@]+"${tool_flags[@]}"} \
+            ${environment_flags[@]+"${environment_flags[@]}"} \
             "${PROGRESS_FLAG}" "${RUN_MODEL_FLAGS[@]}" \
             --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" || status=1
     done
