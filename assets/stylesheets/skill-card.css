@@ -1,0 +1,29 @@
+/* The card holding a skill's SKILL.md.
+ *
+ * The body is a quoted artifact: written for an agent, reproduced verbatim,
+ * not this site's prose. The default card is a hairline border, which reads as
+ * a box rather than as a change of voice. A tinted surface says it plainly.
+ *
+ * Every colour here is a theme variable, so the tint follows the palette
+ * instead of fighting it: a fixed colour that works in light mode is
+ * unreadable in dark.
+ */
+
+.md-typeset .grid > .card {
+  background-color: var(--md-code-bg-color);
+  border-radius: 0.4rem;
+  padding: 1.2rem 1.4rem;
+
+  /* No border. The theme's hairline is `--md-default-fg-color--lightest`,
+   * which is 5% black; over the card's own #f5f5f5 that resolves to #e9e9e9,
+   * 12/255 from the surface it sits on. It reads as nothing. The tint is
+   * already doing the separating, so a line that faint only adds noise. */
+  border: none;
+}
+
+/* Inside the card, code needs to separate from the card itself. The card has
+ * taken the surface that code blocks normally use, so give them the page's. */
+.md-typeset .grid > .card pre > code,
+.md-typeset .grid > .card .highlight {
+  background-color: var(--md-default-bg-color);
+}

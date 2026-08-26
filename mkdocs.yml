@@ -86,6 +86,11 @@ extra:
 
 INHERIT: docs/.nav.yml
 
+# Copied into `docs/` by scripts/build_docs.py from `assets/`, since `docs/` is
+# generated and not a place to keep hand-written files.
+extra_css:
+  - stylesheets/skill-card.css
+
 markdown_extensions:
   # `emoji` is what turns `:lucide-split:` into an icon. Icons and emoji share
   # the same shortcode syntax, so navigation labels can carry either.
