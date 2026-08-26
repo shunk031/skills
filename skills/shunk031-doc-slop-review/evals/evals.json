@@ -4,30 +4,33 @@
     {
       "id": "training-doc-draft",
       "prompt": "I need to add a TRAINING.md to a package in this repository describing how to reproduce our training runs. Draft it and tell me how you would finish the job before I publish it.",
-      "expected_output": "Drafts the TRAINING.md, then treats the draft as unpublished until it has been reviewed. Names the skill's own document slop review script, scripts/doc_slop_review.py, as the tool to run on the draft file. States that a failing review is fixed and re-run, or waived with a reason recorded by the user, before the document is published.",
+      "expected_output": "Drafts the TRAINING.md, then treats the draft as unpublished until it has been reviewed. Names the skill's own document slop review script, scripts/doc_slop_review.py, and selects the repository-documentation artifact for it rather than leaving the artifact unstated. States that a failing review is fixed and re-run, or waived with a reason recorded by the user, before the document is published.",
       "assertions": [
         "The response reviews the drafted document before treating it as ready to publish.",
         "The response names the skill's document slop review script as the tool to run on the draft.",
+        "The response selects the repository-documentation profile for the review rather than leaving the artifact type unstated.",
         "The response says a failing review is fixed, or waived with a recorded reason, before publication."
       ]
     },
     {
       "id": "issue-body-draft",
       "prompt": "Write the issue body for a bug where our nightly job silently skips half its inputs, then open it. Tell me what you do before it goes up, and tell me what you will do if the review reports findings before you open the issue.",
-      "expected_output": "Writes the issue body, then runs the skill's document slop review script on that body before the issue is created rather than after. States that reported findings are addressed and the review re-run, or waived with a reason recorded by the user, before the issue is opened.",
+      "expected_output": "Writes the issue body, then runs the skill's document slop review script on that body before the issue is created rather than after, naming the change artifact so the body is not judged against report rules. States that reported findings are addressed and the review re-run, or waived with a reason recorded by the user, before the issue is opened.",
       "assertions": [
         "The response reviews the issue body before the issue is created rather than after.",
         "The response names the skill's document slop review script as the tool to run on the body.",
+        "The response selects the change profile, so the body is judged as a change description rather than as a research report.",
         "The response says a failing review is fixed, or waived with a recorded reason, before the issue is opened."
       ]
     },
     {
       "id": "pull-request-body-draft",
       "prompt": "I am about to open a pull request for a change that reworks our retry logic. Write the pull request description and explain how you check it before publishing, and tell me what you will do if the review reports findings before you publish it.",
-      "expected_output": "Writes the pull request description, then runs the skill's document slop review script on it before the pull request is created or updated. States that reported findings are addressed and the review re-run, or waived with a reason recorded by the user, before publishing.",
+      "expected_output": "Writes the pull request description, then runs the skill's document slop review script on it before the pull request is created or updated, naming the change artifact so conventional sections such as What Changed and Verification are not treated as defects. States that reported findings are addressed and the review re-run, or waived with a reason recorded by the user, before publishing.",
       "assertions": [
         "The response checks the pull request description before the pull request is created or updated.",
         "The response names the skill's document slop review script as the tool to run on the description.",
+        "The response selects the change profile, so the body is judged as a change description rather than as a research report.",
         "The response says a failing review is fixed, or waived with a recorded reason, before publishing."
       ]
     },
@@ -40,6 +43,17 @@
         "The response blocks publication after the deterministic-only PASS and does not treat --skip-model or a regex PASS as a complete review.",
         "The response requires a successful complete review PASS before publication, or an explicit user waiver that records the failed gate and reason; the worker cannot grant the waiver itself.",
         "The response recognizes that undefined terms and units may require manual or model review because the deterministic tier cannot infer their meaning."
+      ]
+    },
+    {
+      "id": "pull-request-body-keeps-its-register",
+      "prompt": "Here is a pull request body I am about to publish:\n\n## What Changed\n\n- Added `npm:textlint` to the mise-managed tools.\n\n## Verification\n\n- `make setup`\n- `mise exec -- textlint --version`\n\nA document review reported that `## What Changed` and `## Verification` are uninformative headings, that the body does not open with the question being tested, its method, its result, and its consequence, and that the listed commands are an evidence dump. Tell me what you would do with those findings before I publish.",
+      "expected_output": "Recognizes the findings as report-document rules applied to a change description, keeps the conventional pull-request sections and the command list, and rejects the findings in the report with the reason instead of restructuring the body into a report. Re-runs the review against the change artifact rather than accepting a verdict produced for the wrong one.",
+      "assertions": [
+        "The response does not restructure the pull request body into a question, method, result, and consequence opening.",
+        "The response keeps `What Changed` and `Verification` as acceptable sections for a pull request body.",
+        "The response treats the listed validation commands as acceptable evidence for a verification section.",
+        "The response explains that the findings came from reviewing the body as the wrong artifact type, and re-runs or rejects them on that basis rather than silently ignoring them."
       ]
     }
   ]
