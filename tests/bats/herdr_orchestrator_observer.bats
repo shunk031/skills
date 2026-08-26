@@ -104,13 +104,7 @@ EOF
         grep -Fq 'observer: malformed herdr agent list; sample rejected' "${launch_log}" && break
         sleep 0.1
     done
-    if ! grep -Fq 'observer: malformed herdr agent list; sample rejected' "${launch_log}"; then
-        echo "--- launch log ---" >&3
-        cat "${launch_log}" >&3
-        echo "--- samples ---" >&3
-        cat "${HERDR_OBSERVER_STUB_STATE}/samples" >&3 2>/dev/null || true
-        false
-    fi
+    grep -Fq 'observer: malformed herdr agent list; sample rejected' "${launch_log}"
     [ ! -s "${HERDR_OBSERVER_STUB_STATE}/prompts" ]
     printf '%s\n' valid > "${HERDR_OBSERVER_STUB_STATE}/agents_mode"
 
