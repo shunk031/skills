@@ -209,8 +209,18 @@ function run_validate() {
 #   be measured offline: it correctly refuses to proceed, produces nothing, and
 #   loses to a baseline that simply guesses. Such a skill declares the need with
 #   an `evals/network-required` marker.
+#
+#   The marker currently means "skip", not "run with network". Enabling egress
+#   is not enough on the pinned models: the 5.6 family cannot use the web-search
+#   tool at all, answering `403 Forbidden: Selected provider is forbidden`. A
+#   run would fail for a reason unrelated to the skill.
+#
+#   The cases stay in `evals.json` rather than being deleted. They are correct,
+#   and deleting them would mean nobody notices when the constraint lifts.
+#   Removing the marker puts them back under the gate, which is also how you
+#   check whether it has lifted: they simply pass once the model can search.
 # @arg $1 target Absolute skill directory.
-# @exitcode 0 When the skill declares that it needs network egress.
+# @exitcode 0 When the skill declares that its cases need network egress.
 # @exitcode 1 When it does not.
 function needs_network() {
     [ -f "$1/evals/network-required" ]
@@ -240,8 +250,10 @@ function declared_tool_flags() {
 
 # @description Evaluate skills with and without their guidance.
 # @description
-#   `shuhari eval skill` takes network access as a whole-run flag, so skills that
-#   need it are evaluated in a separate invocation from those that do not.
+#   A skill declaring `evals/network-required` is skipped, loudly. Its cases
+#   need the live web, and the pinned models cannot reach it; running them
+#   anyway would fail for a reason that has nothing to do with the skill, and a
+#   gate that always fails teaches everyone to ignore it.
 # @arg $@ targets Absolute skill directories.
 # @exitcode 1 When an evaluation fails.
 function run_eval() {
@@ -249,42 +261,23 @@ function run_eval() {
     read_lines_into targets < <(filter_by_eval_file evals.json "$@")
     [ "${#targets[@]}" -gt 0 ] || return 0
 
-    local -a offline=()
-    local -a online=()
+    local status=0
     local target
     for target in "${targets[@]}"; do
         if needs_network "${target}"; then
-            online+=("${target}")
-        else
-            offline+=("${target}")
+            printf 'skip %s: evals/network-required, and the pinned model cannot search\n' \
+                "$(basename -- "${target}")" >&2
+            continue
         fi
-    done
 
-    local status=0
-    local -a group_flags=()
-    local group
-    for group in offline online; do
-        local -a members=()
-        if [ "${group}" = "offline" ]; then
-            members=(${offline[@]+"${offline[@]}"})
-            group_flags=()
-        else
-            members=(${online[@]+"${online[@]}"})
-            group_flags=(--network=true)
-        fi
-        [ "${#members[@]}" -gt 0 ] || continue
-
-        local member
-        for member in "${members[@]}"; do
-            # Tool declarations are per-run flags, so a skill that declares any
-            # is evaluated on its own rather than batched with the others.
-            local -a tool_flags=()
-            read_lines_into tool_flags < <(declared_tool_flags "${member}")
-            shuhari eval skill ${group_flags[@]+"${group_flags[@]}"} ${tool_flags[@]+"${tool_flags[@]}"} \
-                "${PROGRESS_FLAG}" "${EVAL_MODEL_FLAGS[@]}" \
-                --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
-                "${member}" || status=1
-        done
+        # Tool declarations are per-run flags, so a skill that declares any is
+        # evaluated on its own rather than batched with the others.
+        local -a tool_flags=()
+        read_lines_into tool_flags < <(declared_tool_flags "${target}")
+        shuhari eval skill ${tool_flags[@]+"${tool_flags[@]}"} \
+            "${PROGRESS_FLAG}" "${EVAL_MODEL_FLAGS[@]}" \
+            --trials "${TRIALS}" --jobs "${JOBS}" --timeout "${TIMEOUT}" \
+            "${target}" || status=1
     done
     return "${status}"
 }

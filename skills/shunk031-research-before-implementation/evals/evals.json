@@ -1,0 +1,22 @@
+{
+  "skill_name": "shunk031-research-before-implementation",
+  "evals": [
+    {
+      "id": "research-before-third-party-implementation",
+      "prompt": "In this empty repository, add a minimal GitHub Actions workflow that uses the current supported jdx/mise-action syntax to install tools from mise.toml and run a simple version check. Add only the necessary files, do not run the workflow, and do not merely explain the solution.",
+      "expected_output": "Consult the current official documentation and a representative implementation on GitHub before writing anything, then add the workflow files that follow from what was read, naming the sources consulted.",
+      "assertions": [
+        "The final response names current non-GitHub web documentation and representative GitHub implementation code inspected before implementation.",
+        "The final response reports concrete files added for a plausible jdx/mise-action workflow rather than only describing a hypothetical solution."
+      ]
+    },
+    {
+      "id": "trivial-local-edit",
+      "prompt": "Create hello.txt containing exactly the word hello, then briefly report completion.",
+      "expected_output": "Create the file and report it. A one-line local edit needs no research, so no documentation or repository is consulted first.",
+      "assertions": [
+        "The response briefly reports that hello.txt was created."
+      ]
+    }
+  ]
+}
