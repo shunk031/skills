@@ -111,7 +111,9 @@
       "expected_output": "Deal with both reports and the user's question within this single turn. orch-build's DONE, with its diff, production-path trace, and review link, goes through source-of-truth acceptance rather than being taken at face value or deferred; orch-data's 8-versus-16-GPU question is answered directly or escalated to the user, whichever is appropriate for who owns that call; and the answer to whether things are on track is given now, not after the queue clears. Each of the three carries either a concrete routing action or a stated report-driven wait reason.",
       "assertions": [
         "The response handles both worker reports in the same user turn while also answering the user's status question.",
-        "The response performs or routes the DONE source-of-truth acceptance, answers or escalates the BLOCKED question, and answers the user's status question without deferring any of them."
+        "The response routes the DONE report into source-of-truth acceptance rather than taking the worker's claim at face value.",
+        "The response answers the 8-versus-16-GPU question outright or escalates it to the user with both options named.",
+        "The response answers whether things are on track in this turn rather than postponing it until the queue clears."
       ]
     },
     {
@@ -133,16 +135,6 @@
         "The response moves the returned pane only after the deliverable workspace exists, using `herdr pane move <pane-id> --new-tab --workspace <returned-deliverable-workspace-id>` for the destination tab, starts the worker in the returned destination pane, and keeps the orchestrator workspace separate.",
         "The response does not construct the worktree workspace with `herdr pane move <pane-id> --new-workspace`.",
         "Workspace labels use emoji-free WIP/Issue#/PR# forms, while status emojis appear only on tab labels such as the `herdr pane move ... --new-tab --label` example."
-      ]
-    },
-    {
-      "id": "cross-stream-failure-synthesis",
-      "prompt": "Following the `shunk031-orchestrate-herdr-workers` skill, you are orchestrator agent orch264 in a Herdr session. Two independent worker streams report the same failure signature in separate tasks. This is an offline dry run; describe the coordination response and what durable follow-up you create, without executing commands.",
-      "expected_output": "Read the repeated signature as one cause spanning both streams rather than two coincidental task-local defects. Carry whatever diagnosis or diagnostic method one stream produced across to the other through the ordinary quoted `herdr agent prompt <worker-name> \"$prompt\"` path so both owners stay current, and open a generalized meta issue for the shared failure so the outcome is more than two isolated fixes recorded separately.",
-      "assertions": [
-        "The response recognizes the matching signature as a cross-stream pattern rather than treating the failures as unrelated task-local defects.",
-        "The response transfers the useful diagnosis or diagnostic method from one stream to the other and keeps both owners informed through the normal routing path.",
-        "The response considers a generalized meta issue for the shared failure instead of recording only two isolated fixes."
       ]
     },
     {
