@@ -17,6 +17,16 @@
       "assertions": [
         "The response briefly reports that hello.txt was created."
       ]
+    },
+    {
+      "id": "provider-forbidden-fallback",
+      "prompt": "You are researching current official documentation before implementing a third-party integration. The native web-search tool returned exactly `403 Forbidden: Selected provider is forbidden`. Continue the task if a trustworthy research route remains available; do not edit files until the research gate is satisfied.",
+      "expected_output": "Retry the failed research stage once through an isolated read-only Codex session using gpt-5.5 at medium reasoning with live search. Continue only when that session shows actual web-search activity and returns usable direct sources; otherwise stop and report the remaining limitation.",
+      "assertions": [
+        "The response uses or clearly commits to one gpt-5.5 medium live-search fallback instead of immediately asking the user whether to retry.",
+        "The response requires evidence of actual web-search activity and usable direct sources before implementation continues.",
+        "The fallback is bounded to one attempt and does not weaken the research gate if it fails."
+      ]
     }
   ]
 }

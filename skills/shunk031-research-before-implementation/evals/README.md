@@ -8,7 +8,7 @@ This skill's subject is consulting current third-party documentation and impleme
 
 Run offline, the with-skill arm behaves exactly as the skill instructs: it reports that the research gate cannot be satisfied and declines to implement. The baseline, having no such instruction, guesses from memory and produces something. The comparator scores the baseline higher on every trial.
 
-## They cannot be measured online either
+## The fallback does not make the evaluation offline
 
 Enabling egress does not help, because the pinned models cannot use the web-search tool at all:
 
@@ -25,6 +25,8 @@ Enabling egress does not help, because the pinned models cannot use the web-sear
 | `gpt-5.6-sol`  | the 403 above, then verified through the GitHub API |
 
 `scripts/shuhari_staged_targets.sh` pins `gpt-5.6-luna` for evaluated runs and `gpt-5.6-sol` for grading, so every run in this repository is on the side that cannot search.
+
+The skill now delegates this exact failure to one read-only `gpt-5.5` search session during normal use. That fallback still requires a child model call and live web access, so it does not make the repository's offline evaluation meaningful. The `evals/network-required` marker therefore remains the harness boundary.
 
 The failure is not always visible. Both 5.6 answers named the correct release tag anyway. A run can look like successful research and not be — which is worth knowing beyond this file, since a skill that tells an agent to check current documentation is, on this model, telling it to do something it will report having done by other means.
 

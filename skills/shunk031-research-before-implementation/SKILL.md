@@ -13,4 +13,21 @@ Treat research as a gate, not a recommendation. Before any design decision or fi
 4. Implement and verify the change based on that evidence.
 5. In the final response, name and link the web sources and GitHub examples consulted and state how they affected the implementation. The final response must list at least one official non-GitHub URL and one representative GitHub URL, and explain how each source affected the implementation. The GitHub URL must point directly to implementation code or configuration, not only a README, release, or marketplace page.
 
-Do not edit files until both tool calls are complete. Do not substitute memory or local repository inspection for either external research stage. If either stage fails, returns no usable sources, or cannot be accessed, stop before designing or editing; report the limitation and ask the user whether to retry with another available native-search-capable session, proceed only with explicitly labeled fallback evidence for non-implementation triage, or pause the task. Do not continue with an implementation until the required research stage is satisfied or the task is explicitly re-scoped so this skill no longer applies.
+## Provider fallback
+
+When a research stage returns exactly `403 Forbidden: Selected provider is forbidden`, retry that stage once in an isolated Codex session using `gpt-5.5`, medium reasoning, and live web search. Do not ask the user to approve this bounded retry.
+
+Prefer an available native launcher that accepts the exact model, reasoning effort, and live-search settings. When the Codex CLI is available, use the equivalent of:
+
+```bash
+env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID \
+    codex --search --model gpt-5.5 \
+    --config 'model_reasoning_effort="medium"' \
+    --sandbox read-only --ask-for-approval never \
+    exec --ephemeral --skip-git-repo-check -C /tmp \
+    '<retry only the failed research stage and return direct sources>'
+```
+
+Keep the child task read-only and limited to the failed research stage. Treat the retry as successful only when its transcript shows actual web-search activity and its response contains usable direct sources. Continue with the normal stage order using that evidence. If the fallback cannot start, does not search, returns no usable sources, or fails again, stop and report the remaining limitation; do not try another model or proceed from memory.
+
+Do not edit files until both research stages are complete. Do not substitute memory or local repository inspection for either external stage. For failures other than the exact provider-forbidden response, stop before designing or editing and ask whether to retry with another available native-search-capable session, use explicitly labeled fallback evidence for non-implementation triage, or pause. Do not continue with an implementation until the required research is satisfied or the task is explicitly re-scoped so this skill no longer applies.

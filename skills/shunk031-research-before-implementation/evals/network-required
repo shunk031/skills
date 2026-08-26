@@ -3,14 +3,16 @@ implementation code, so its cases cannot be measured offline. Evaluated
 offline, the skill correctly refuses to implement without research and
 produces nothing, losing to a baseline that guesses from memory.
 
-They cannot be measured online either, on the models this repository pins.
-The 5.6 family cannot use the web-search tool: it answers
+The models this repository pins cannot use the web-search tool directly. The
+5.6 family answers
 
     403 Forbidden: Selected provider is forbidden
 
 and falls back to memory or to a direct API call, often without saying so.
 `gpt-5.5` searches normally, checked with the same question from the same
-empty directory, so this is the model rather than the account.
+empty directory, so the skill uses it as a bounded runtime fallback. That
+fallback still requires a child model call and live web access, so these cases
+remain invalid in the repository's offline evaluation.
 
 Presence of this file makes scripts/shuhari_staged_targets.sh skip this
 skill's behavior cases and say why. The cases stay in evals.json rather
