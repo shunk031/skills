@@ -22,6 +22,12 @@
 #   entry adds one repeated `--allow-tool` flag. Leaving all six unset preserves
 #   the existing argv byte for byte.
 #
+#   Schema validation is exempt from all of these. It never executes an agent,
+#   so there is no execution environment for them to describe, and Shuhari reads
+#   `SHUHARI_SANDBOX` from the environment on its own: an exported
+#   `unsandboxed` would reject a `--validate-only` run that touches no sandbox
+#   at all.
+#
 #   These are environment-shaped overrides only. Trials, evaluated model,
 #   judge model, and reasoning efforts define measurement and remain pinned
 #   below; they are not overridable.
@@ -224,6 +230,11 @@ function read_lines_into() {
 }
 
 # @description Validate eval and trigger schemas without invoking an agent.
+# @description
+#   Both invocations are stripped of the execution-environment variables
+#   Shuhari reads directly. Validation parses files; it starts no agent and
+#   enters no sandbox, so an exported `SHUHARI_SANDBOX=unsandboxed` would fail
+#   the gate over an execution environment this run never establishes.
 # @arg $@ targets Absolute skill directories.
 # @exitcode 1 When a schema is invalid.
 function run_validate() {
@@ -232,8 +243,12 @@ function run_validate() {
     read_lines_into eval_targets < <(filter_by_eval_file evals.json "$@")
     read_lines_into trigger_targets < <(filter_by_eval_file triggers.json "$@")
 
+    local -a offline=(
+        env -u SHUHARI_SANDBOX -u SHUHARI_I_UNDERSTAND_NO_CREDENTIAL_BOUNDARY
+    )
+
     if [ "${#eval_targets[@]}" -gt 0 ]; then
-        shuhari eval skill --validate-only "${eval_targets[@]}"
+        "${offline[@]}" shuhari eval skill --validate-only "${eval_targets[@]}"
     fi
 
     # Bash 3.2 treats expanding an empty array as an unbound variable under
@@ -242,7 +257,7 @@ function run_validate() {
 
     local target
     for target in "${trigger_targets[@]}"; do
-        shuhari check trigger --validate-only "${target}"
+        "${offline[@]}" shuhari check trigger --validate-only "${target}"
     done
 }
 
