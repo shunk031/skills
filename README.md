@@ -94,8 +94,8 @@ make bump-shuhari     # re-pin shuhari, which publishes no tagged releases
 
 ## Related repositories
 
-- [`shunk031/skills-private`](https://github.com/shunk031/skills-private) — skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process.
-- [`shunk031/dotfiles`](https://github.com/shunk031/dotfiles) — subscribes to these skills through a declarative allowlist reconciled on every `chezmoi apply`.
+- [`shunk031/skills-private`](https://github.com/shunk031/skills-private): skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process.
+- [`shunk031/dotfiles`](https://github.com/shunk031/dotfiles): subscribes to these skills through a declarative allowlist reconciled on every `chezmoi apply`.
 
 ## License
 
