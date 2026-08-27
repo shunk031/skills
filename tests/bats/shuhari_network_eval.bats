@@ -1,14 +1,42 @@
 #!/usr/bin/env bats
 
-readonly WRAPPER="./scripts/shuhari_staged_targets.sh"
-readonly NETWORK_TARGET="skills/shunk031-research-before-implementation/SKILL.md"
-readonly OFFLINE_TARGET="skills/shunk031-cgd-dev-identity/SKILL.md"
+# The wrapper resolves every target against the repository root derived from
+# its own location, so setup copies it into a disposable repository populated
+# with synthetic skills. That keeps these tests valid no matter which real
+# skills currently carry evals/evals.json.
 
-# @description Install fake mise, Shuhari, and uv commands that record evaluation policy without making model calls.
+# @description Create a synthetic eval-bearing skill inside the fixture repository.
+# @description
+#   The wrapper only tests that `evals/evals.json` exists, and the Shuhari
+#   stub never reads it, so a minimal file is enough.
+# @arg $1 fixture_root Fixture repository root.
+# @arg $2 name Skill directory name.
+# @stdout The absolute path of the created skill's `SKILL.md`.
+function make_fixture_skill() {
+    local fixture_root="$1"
+    local name="$2"
+    local skill_dir="${fixture_root}/skills/${name}"
+    mkdir -p "${skill_dir}/evals"
+    printf '# %s\n' "${name}" > "${skill_dir}/SKILL.md"
+    printf '{"skill_name": "%s", "evals": []}\n' "${name}" > "${skill_dir}/evals/evals.json"
+    printf '%s\n' "${skill_dir}/SKILL.md"
+}
+
+# @description Build the fixture repository and install fake mise, Shuhari, and uv commands that record evaluation policy without making model calls.
 function setup() {
     local fake_bin="${BATS_TEST_TMPDIR}/bin"
     mkdir -p "${fake_bin}"
     export SHUHARI_POLICY_LOG="${BATS_TEST_TMPDIR}/policy"
+
+    local fixture_root="${BATS_TEST_TMPDIR}/repo"
+    mkdir -p "${fixture_root}/scripts"
+    cp "${BATS_TEST_DIRNAME}/../../scripts/shuhari_staged_targets.sh" \
+        "${fixture_root}/scripts/shuhari_staged_targets.sh"
+    WRAPPER="${fixture_root}/scripts/shuhari_staged_targets.sh"
+
+    NETWORK_TARGET="$(make_fixture_skill "${fixture_root}" network-required-fixture)"
+    touch "${NETWORK_TARGET%/SKILL.md}/evals/network-required"
+    OFFLINE_TARGET="$(make_fixture_skill "${fixture_root}" offline-fixture)"
 
     cat > "${fake_bin}/mise" << EOF
 #!/usr/bin/env bash

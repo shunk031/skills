@@ -1,11 +1,28 @@
 #!/usr/bin/env bats
 
-readonly WRAPPER="./scripts/shuhari_staged_targets.sh"
-readonly TARGET_RELATIVE="skills/shunk031-cgd-dev-identity/SKILL.md"
+# The wrapper resolves every target against the repository root derived from
+# its own location, so setup copies it into a disposable repository populated
+# with a synthetic skill. That keeps these tests valid no matter which real
+# skills currently carry evals/evals.json or evals/triggers.json. The wrapper
+# only tests that those files exist, and the Shuhari stub never reads them, so
+# minimal files are enough.
 
 setup() {
     local stub_bin="${BATS_TEST_TMPDIR}/bin"
     mkdir -p "${stub_bin}"
+
+    local fixture_root="${BATS_TEST_TMPDIR}/repo"
+    mkdir -p "${fixture_root}/scripts"
+    cp "${BATS_TEST_DIRNAME}/../../scripts/shuhari_staged_targets.sh" \
+        "${fixture_root}/scripts/shuhari_staged_targets.sh"
+    WRAPPER="${fixture_root}/scripts/shuhari_staged_targets.sh"
+
+    local skill_dir="${fixture_root}/skills/override-fixture"
+    mkdir -p "${skill_dir}/evals"
+    printf '# override-fixture\n' > "${skill_dir}/SKILL.md"
+    printf '{"skill_name": "override-fixture", "evals": []}\n' > "${skill_dir}/evals/evals.json"
+    printf '{"skill_name": "override-fixture", "cases": []}\n' > "${skill_dir}/evals/triggers.json"
+    TARGET="${skill_dir}/SKILL.md"
 
     SHUHARI_ARGV_LOG="${BATS_TEST_TMPDIR}/shuhari-argv"
     SHUHARI_STUB_PATH="${stub_bin}/shuhari"
@@ -33,9 +50,7 @@ EOF
 }
 
 function target_path() {
-    local repo_root
-    repo_root="$(cd -- "${BATS_TEST_DIRNAME}/../.." && pwd)"
-    printf '%s/%s\n' "${repo_root}" "${TARGET_RELATIVE}"
+    printf '%s\n' "${TARGET}"
 }
 
 @test "unset overrides preserve the trigger argv" {
