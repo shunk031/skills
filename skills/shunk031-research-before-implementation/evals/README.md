@@ -6,7 +6,7 @@
 
 This skill's subject is consulting current third-party documentation and implementation code before writing anything. Grading that requires the evaluated agent to reach the web.
 
-Run offline, the with-skill arm behaves exactly as the skill instructs: it reports that the research gate cannot be satisfied and declines to implement. The baseline, having no such instruction, guesses from memory and produces something. The comparator scores the baseline higher on every trial.
+Run offline, the with-skill arm behaves exactly as the skill instructs: it keeps the research stage incomplete and investigates the failed research path without implementing from memory. The baseline, having no such instruction, guesses from memory and produces something. The comparator scores the baseline higher on every trial.
 
 ## Why the network policy uses a different model
 
