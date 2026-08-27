@@ -14,8 +14,9 @@
 #      `description`.
 #   4. The frontmatter `name` equals the skill directory name.
 #   5. `evals/evals.json` and `evals/triggers.json` agree with that name.
-#   6. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
-#   7. No Shuhari workspace directory is tracked by git.
+#   6. Each `shunk031-` skill names an allowed domain right after the prefix.
+#   7. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
+#   8. No Shuhari workspace directory is tracked by git.
 # @exitcode 0 When every check passes.
 # @exitcode 1 When any check fails.
 # @example
@@ -27,6 +28,14 @@ shopt -s nullglob
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
 readonly SKILLS_ROOT="${REPO_ROOT}/skills"
+
+# The prefix every skill this repository owns carries, and the domains allowed
+# to follow it. A skill is named `shunk031-<domain>-<topic>` so that the list
+# sorts by subject instead of by whichever verb its author reached for first.
+# Widening this list is a deliberate edit, which is the point: it is the only
+# place a new domain can be introduced.
+readonly OWNED_PREFIX="shunk031-"
+readonly ALLOWED_DOMAINS="codex github herdr manage python research shellscript"
 
 failures=()
 
@@ -104,6 +113,39 @@ function assert_no_nested_skill_files() {
     done < <(find "${SKILLS_ROOT}" -type d -name '*-workspace' -prune -o -name 'SKILL.md' -print 2> /dev/null)
 }
 
+# @description Verify that an owned skill is named `shunk031-<domain>-<topic>`.
+# @description
+#   Only skills carrying the owner prefix are in scope; a vendored or
+#   third-party directory is named by whoever owns it.
+# @arg $1 name The skill directory name.
+function check_domain_prefix() {
+    local name="$1"
+
+    case "${name}" in
+    "${OWNED_PREFIX}"*) ;;
+    *) return 0 ;;
+    esac
+
+    local remainder="${name#"${OWNED_PREFIX}"}"
+    local domain="${remainder%%-*}"
+    # With no separator left, `#*-` yields the whole string: there is no topic.
+    local topic="${remainder#*-}"
+
+    if [ -z "${domain}" ] || [ -z "${topic}" ] || [ "${topic}" = "${remainder}" ]; then
+        fail "skills/${name} is not named ${OWNED_PREFIX}<domain>-<topic>"
+        return 0
+    fi
+
+    local allowed
+    for allowed in ${ALLOWED_DOMAINS}; do
+        if [ "${domain}" = "${allowed}" ]; then
+            return 0
+        fi
+    done
+
+    fail "skills/${name} uses domain ${domain}, which is not one of: ${ALLOWED_DOMAINS}"
+}
+
 # @description Verify frontmatter and eval-file naming for one skill.
 # @arg $1 skill_dir The absolute skill directory.
 function check_skill() {
@@ -111,6 +153,8 @@ function check_skill() {
     local name
     name="$(basename -- "${skill_dir}")"
     local skill_file="${skill_dir}/SKILL.md"
+
+    check_domain_prefix "${name}"
 
     if [ ! -f "${skill_file}" ]; then
         fail "skills/${name} has no SKILL.md"

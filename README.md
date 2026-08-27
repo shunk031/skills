@@ -42,21 +42,21 @@ Both read the same `skills/` directory, so the two channels deliver identical co
 
 ## Skills
 
-| Skill                                                                                        | What it does                                                                                                                      |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [`shunk031-cgd-dev-identity`](skills/shunk031-cgd-dev-identity/)                             | Performs GitHub writes in `creative-graphic-design` repositories as the machine user rather than the personal account.            |
-| [`shunk031-codex-worker-prompting`](skills/shunk031-codex-worker-prompting/)                 | Writes task prompts, follow-ups, and authorizations aimed at Codex-family worker models.                                          |
-| [`shunk031-gh-comment-attach-files`](skills/shunk031-gh-comment-attach-files/)               | Uploads local files into a GitHub issue or pull request comment and returns the hosted URLs without posting the comment.          |
-| [`shunk031-herdr-tab-status`](skills/shunk031-herdr-tab-status/)                             | Chooses the leading status emoji and name for the current Herdr tab.                                                              |
-| [`shunk031-high-impact-journal-publishing`](skills/shunk031-high-impact-journal-publishing/) | Advises on study design, manuscript structure, journal selection, and peer review responses.                                      |
-| [`shunk031-manage-agent-guidance`](skills/shunk031-manage-agent-guidance/)                   | Decides where a persistent agent rule belongs and keeps one source of truth behind thin adapters.                                 |
-| [`shunk031-manage-public-private-dotfiles`](skills/shunk031-manage-public-private-dotfiles/) | Works across the public and private dotfiles sources, changing only the repository that owns the setting.                         |
-| [`shunk031-manage-public-private-skills`](skills/shunk031-manage-public-private-skills/)     | Routes skill work between this repository and `shunk031/skills-private`, including evals and the dotfiles subscription.           |
-| [`shunk031-orchestrate-herdr-workers`](skills/shunk031-orchestrate-herdr-workers/)           | Runs parallel Codex workers in Herdr worktree tabs and routes their reports, reviews, and pull-request lifecycles.                |
-| [`shunk031-python-uv-workflow`](skills/shunk031-python-uv-workflow/)                         | Applies a uv-first, test-first Python workflow with pre-commit quality gates.                                                     |
-| [`shunk031-research-before-implementation`](skills/shunk031-research-before-implementation/) | Reads current official documentation and real implementations before designing anything that depends on a third-party tool.       |
-| [`shunk031-shdoc-shell-docs`](skills/shunk031-shdoc-shell-docs/)                             | Adds and repairs shdoc annotations in shell scripts and shell executables.                                                        |
-| [`shunk031-transformers-convert`](skills/shunk031-transformers-convert/)                     | Converts a custom PyTorch model into Hugging Face Transformers format, through to Hub upload.                                     |
+| Skill                                                                                                          | What it does                                                                                                                |
+| -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [`shunk031-codex-worker-prompting`](skills/shunk031-codex-worker-prompting/)                                   | Writes task prompts, follow-ups, and authorizations aimed at Codex-family worker models.                                    |
+| [`shunk031-github-cgd-identity`](skills/shunk031-github-cgd-identity/)                                         | Performs GitHub writes in `creative-graphic-design` repositories as the machine user rather than the personal account.      |
+| [`shunk031-github-comment-attach-files`](skills/shunk031-github-comment-attach-files/)                         | Uploads local files into a GitHub issue or pull request comment and returns the hosted URLs without posting the comment.    |
+| [`shunk031-herdr-orchestrate-workers`](skills/shunk031-herdr-orchestrate-workers/)                             | Runs parallel Codex workers in Herdr worktree tabs and routes their reports, reviews, and pull-request lifecycles.          |
+| [`shunk031-herdr-tab-status`](skills/shunk031-herdr-tab-status/)                                               | Chooses the leading status emoji and name for the current Herdr tab.                                                        |
+| [`shunk031-manage-agent-guidance`](skills/shunk031-manage-agent-guidance/)                                     | Decides where a persistent agent rule belongs and keeps one source of truth behind thin adapters.                           |
+| [`shunk031-manage-public-private-dotfiles`](skills/shunk031-manage-public-private-dotfiles/)                   | Works across the public and private dotfiles sources, changing only the repository that owns the setting.                   |
+| [`shunk031-manage-public-private-skills`](skills/shunk031-manage-public-private-skills/)                       | Routes skill work between this repository and `shunk031/skills-private`, including evals and the dotfiles subscription.     |
+| [`shunk031-python-transformers-convert`](skills/shunk031-python-transformers-convert/)                         | Converts a custom PyTorch model into Hugging Face Transformers format, through to Hub upload.                               |
+| [`shunk031-python-uv-workflow`](skills/shunk031-python-uv-workflow/)                                           | Applies a uv-first, test-first Python workflow with pre-commit quality gates.                                               |
+| [`shunk031-research-before-implementation`](skills/shunk031-research-before-implementation/)                   | Reads current official documentation and real implementations before designing anything that depends on a third-party tool. |
+| [`shunk031-research-high-impact-journal-publishing`](skills/shunk031-research-high-impact-journal-publishing/) | Advises on study design, manuscript structure, journal selection, and peer review responses.                                |
+| [`shunk031-shellscript-shdoc-docs`](skills/shunk031-shellscript-shdoc-docs/)                                   | Adds and repairs shdoc annotations in shell scripts and shell executables.                                                  |
 
 ## Layout
 

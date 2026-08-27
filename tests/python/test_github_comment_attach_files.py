@@ -12,7 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = (
-    REPO_ROOT / "skills/shunk031-gh-comment-attach-files/scripts/attach_comment_files.py"
+    REPO_ROOT / "skills/shunk031-github-comment-attach-files/scripts/attach_comment_files.py"
 )
 
 

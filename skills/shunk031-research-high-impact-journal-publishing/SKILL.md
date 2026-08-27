@@ -1,5 +1,5 @@
 ---
-name: shunk031-high-impact-journal-publishing
+name: shunk031-research-high-impact-journal-publishing
 description: Guidance and workflow for planning, writing, submitting, revising, and publishing scientific manuscripts in high-impact journals. Use when Claude needs to advise on research quality, study design, manuscript structure, journal selection, peer review responses, or publication strategy.
 ---
 

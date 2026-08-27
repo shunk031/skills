@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# @file skills/shunk031-orchestrate-herdr-workers/scripts/herdr-orchestrator-observer.sh
+# @file skills/shunk031-herdr-orchestrate-workers/scripts/herdr-orchestrator-observer.sh
 # @brief Observe fixed worker identities and coalesce bounded orchestrator nudges.
 # @description
 #   Scope is supplied as immutable worker, pane, and tab identities. Each sample

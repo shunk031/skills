@@ -15,6 +15,7 @@
 
 - Location: Every skill is a directory at `skills/<name>/` containing `SKILL.md`. Optional siblings are `agents/`, `references/`, `scripts/`, and `evals/`.
 - Naming: The `name` field in `SKILL.md` frontmatter must equal the directory name. Shuhari refuses to load a skill whose name and directory disagree, and the `skills` CLI installs by directory name.
+- Domain-first names: A skill owned here is named `shunk031-<domain>-<topic>`, where `<domain>` is one of the domains `scripts/check_skill_layout.sh` allows. Skills sort and read by the subject they belong to rather than by the verb that happens to start their name, so adding a domain means changing that allowlist deliberately rather than inventing a prefix at commit time.
 - Never place a `SKILL.md` at the repository root. The `skills` CLI stops discovery at a root-level `SKILL.md` and returns only that one skill, which makes every other skill in this repository invisible to installers.
 - Never nest a skill deeper than `skills/<name>/`. Discovery walks a bounded number of levels, and a deeper `SKILL.md` is not reliably found.
 - Do not add `AGENTS.evals.json` to this repository. `shuhari eval instructions` resolves its eval file as `<file-without-extension>.evals.json`, so that file would create a second instructions gate here. The shared instructions gate belongs to `shunk031/dotfiles`.
