@@ -101,6 +101,8 @@ Order of work is `--validate-only`, then `shuhari check trigger`, then `shuhari 
 
 Write one `SKILL.md`. Do not create per-agent variants: a global install keeps a single canonical copy at `~/.agents/skills/<name>` and points each agent at it.
 
+In shared skill prose, eval prompts, and cross-agent guidance, refer to another skill as `<skill-name> skill`. Do not use Codex's `$skill-name` or Claude Code's `/skill-name` invocation syntax as a general reference. Use those forms only when documenting invocation syntax for that specific agent.
+
 Review the draft with both agents' skill-creation skills, because they disagree usefully:
 
 - Claude Code: `/skill-creator`

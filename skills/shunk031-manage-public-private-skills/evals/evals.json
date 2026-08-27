@@ -1,0 +1,10 @@
+{
+  "skill_name": "shunk031-manage-public-private-skills",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "A shared skill's prose and eval prompt both refer to `$shunk031-research-before-implementation`. Rewrite the reference so the same files work for Codex and Claude Code, while preserving any section that explicitly documents each agent's invocation syntax.",
+      "expected_output": "The response proposes `shunk031-research-before-implementation skill` as the portable reference for shared prose and eval prompts. It keeps agent-specific `$skill-name` and `/skill-name` forms only in sections that explicitly document Codex or Claude Code invocation syntax."
+    }
+  ]
+}
