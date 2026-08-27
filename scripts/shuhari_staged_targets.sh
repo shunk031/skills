@@ -14,13 +14,13 @@
 #   policy, per the Shuhari development architecture contract.
 #
 #   The execution environment can be adjusted with `SHUHARI_SANDBOX`,
-#   `SHUHARI_AGENT_EXECUTABLE`, `SHUHARI_JOBS`, `SHUHARI_TIMEOUT`, and
-#   `SHUHARI_ALLOW_TOOLS`. The sandbox and executable variables add their
-#   corresponding flags; an `unsandboxed` sandbox also adds `--network`, as
-#   required by Shuhari. The jobs and timeout variables replace their defaults,
-#   while each whitespace-separated allow-tools entry adds one repeated
-#   `--allow-tool` flag. Leaving all five unset preserves the existing argv byte
-#   for byte.
+#   `SHUHARI_AGENT_EXECUTABLE`, `SHUHARI_MODE`, `SHUHARI_JOBS`,
+#   `SHUHARI_TIMEOUT`, and `SHUHARI_ALLOW_TOOLS`. The sandbox, mode, and
+#   executable variables add their corresponding flags; an `unsandboxed`
+#   sandbox also adds `--network`, as required by Shuhari. The jobs and timeout
+#   variables replace their defaults, while each whitespace-separated allow-tools
+#   entry adds one repeated `--allow-tool` flag. Leaving all six unset preserves
+#   the existing argv byte for byte.
 #
 #   These are environment-shaped overrides only. Trials, evaluated model,
 #   judge model, and reasoning efforts define measurement and remain pinned
@@ -139,6 +139,21 @@ function require_shuhari() {
 
     printf 'shuhari not found. Run "make setup" in %s.\n' "${REPO_ROOT}" >&2
     exit 2
+}
+
+# @description Validate the optional Shuhari evaluation mode override.
+# @exitcode 2 When `SHUHARI_MODE` is set to an unsupported value.
+function validate_shuhari_mode() {
+    if [ "${SHUHARI_MODE+x}" = x ]; then
+        case "${SHUHARI_MODE}" in
+        agentic | completion) ;;
+        *)
+            printf "Invalid SHUHARI_MODE '%s'; expected agentic or completion.\n" \
+                "${SHUHARI_MODE}" >&2
+            exit 2
+            ;;
+        esac
+    fi
 }
 
 # @description Resolve a changed path to its skill directory name.
@@ -280,7 +295,7 @@ function declared_tool_flags() {
 
 # @description Print flags for execution-environment overrides.
 # @stdout Alternating environment flag names and values, with `--network` for
-#   an `unsandboxed` sandbox.
+#   an `unsandboxed` sandbox and `--mode <value>` when requested.
 # @arg $1 network_already_allowed Whether the command already includes
 #   `--network`.
 function declared_environment_flags() {
@@ -291,6 +306,10 @@ function declared_environment_flags() {
             [ "${network_already_allowed}" != true ]; then
             printf '%s\n' '--network'
         fi
+    fi
+
+    if [ "${SHUHARI_MODE+x}" = x ]; then
+        printf -- '--mode\n%s\n' "${SHUHARI_MODE}"
     fi
 
     if [ -n "${SHUHARI_AGENT_EXECUTABLE:-}" ]; then
@@ -401,6 +420,7 @@ function main() {
         ;;
     esac
 
+    validate_shuhari_mode
     require_shuhari
 
     local -a targets=()
