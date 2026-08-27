@@ -4,7 +4,7 @@
 [![Docs](https://github.com/shunk031/skills/actions/workflows/docs.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/docs.yaml)
 [![skills.sh](https://skills.sh/b/shunk031/skills)](https://skills.sh/shunk031/skills)
 
-Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Browsable at **[shunk031.me/skills](https://shunk031.me/skills/)**, where each skill's page shows what its evaluation measured. Each skill is a directory whose `SKILL.md` both agents read, and the ones that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari), a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
+Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Browse them at [shunk031.me/skills](https://shunk031.me/skills/), where each skill's page shows what its evaluation measured.
 
 ## Install
 
@@ -78,6 +78,8 @@ skills/<name>/
 Nothing may sit deeper than `skills/<name>/SKILL.md`, and no `SKILL.md` may sit at the repository root: the CLI stops discovery at a root-level one and returns only that skill. Anything a skill needs at runtime belongs inside its own directory, because the CLI copies that directory and nothing else.
 
 ## Development
+
+Skills that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari), a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
 
 ```bash
 make setup            # install the pinned toolchain and the pre-commit hooks
