@@ -77,3 +77,10 @@ EOF
     run grep -F 'record_eval_results.py' "${WRAPPER}"
     [ "${status}" -eq 0 ]
 }
+
+@test "[common] pre-commit evaluates without rewriting recorded results" {
+    run grep -F \
+        'entry: env SHUHARI_RECORD_RESULTS=false scripts/shuhari_staged_targets.sh eval' \
+        .pre-commit-config.yaml
+    [ "${status}" -eq 0 ]
+}
