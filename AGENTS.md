@@ -6,6 +6,7 @@
 ## Repository Context
 
 - Purpose: This repository is the source of truth for the publicly shareable coding-agent skills used across `shunk031`'s environments. It is consumed with the [`skills`](https://github.com/vercel-labs/skills) CLI, not by cloning it into place.
+- Format: Skills here follow the open Agent Skills format described at https://agentskills.io/home: a directory holding a `SKILL.md` whose frontmatter carries at least `name` and `description`, with bundled scripts and reference files optional. The Skill Layout rules below narrow that format for this repository; they do not replace it.
 - Private counterpart: Skills that name an internal host, a credential, an internal endpoint, or an org-internal process live in `shunk031/skills-private` instead. Treat the two repositories as separate management domains.
 - Dotfiles boundary: `shunk031/dotfiles` and `shunk031/dotfiles-private` subscribe to these skills through a declarative allowlist. They no longer hold skill content. Do not add chezmoi source state, `symlink_*.tmpl` adapters, or `home/` trees here.
 - Coordination: Use the `shunk031-manage-public-private-skills` skill when a change spans this repository and either dotfiles repository, or when deciding which repository owns a skill.
@@ -21,6 +22,7 @@
 ## Evaluation Policy
 
 - Harness: Quality gates run through [`shuhari`](https://github.com/shunk031/shuhari). This repository owns target selection and policy values; shuhari owns the evaluation mechanism.
+- Reference: Eval work returns to https://agentskills.io/skill-creation/evaluating-skills for how cases, assertions, and grading are meant to work. Where that guidance and the rules below differ, follow these: shuhari, not a hand-run loop, is what executes them here.
 - Behavior cases: `skills/<name>/evals/evals.json` holds cases that measure what the agent does when the skill applies. Each case requires `id`, `prompt`, and `expected_output`; `assertions`, `files`, and `required_actions` are optional.
 - Trigger cases: `skills/<name>/evals/triggers.json` holds positive cases and near-miss negative controls. Shuhari requires at least one of each. An obviously irrelevant negative control tests nothing.
 - Writing `expected_output`: State the correct outcome in one to three sentences, describing produced behavior rather than the wording of a reply. Do not restate the assertions. Shuhari runs a blind A/B comparator in addition to assertion grading, so assertion wording copied into `expected_output` biases that comparison.
