@@ -15,12 +15,13 @@
 #
 #   The execution environment can be adjusted with `SHUHARI_SANDBOX`,
 #   `SHUHARI_AGENT_EXECUTABLE`, `SHUHARI_MODE`, `SHUHARI_JOBS`,
-#   `SHUHARI_TIMEOUT`, and `SHUHARI_ALLOW_TOOLS`. The sandbox, mode, and
-#   executable variables add their corresponding flags; an `unsandboxed`
+#   `SHUHARI_TIMEOUT`, `SHUHARI_ALLOW_TOOLS`, and `SHUHARI_RECORD_RESULTS`.
+#   The sandbox, mode, and executable variables add their corresponding flags; an `unsandboxed`
 #   sandbox also adds `--network`, as required by Shuhari. The jobs and timeout
 #   variables replace their defaults, while each whitespace-separated allow-tools
-#   entry adds one repeated `--allow-tool` flag. Leaving all six unset preserves
-#   the existing argv byte for byte.
+#   entry adds one repeated `--allow-tool` flag. Set `SHUHARI_RECORD_RESULTS=false`
+#   when the caller must keep a successful evaluation read-only, as pre-commit
+#   requires. Leaving the execution overrides unset preserves the existing argv.
 #
 #   Schema validation is exempt from all of these. It never executes an agent,
 #   so there is no execution environment for them to describe, and Shuhari reads
@@ -58,6 +59,7 @@ readonly PYTHON_VERSION=3.14.6
 readonly TRIALS=3
 readonly JOBS="${SHUHARI_JOBS:-8}"
 readonly TIMEOUT="${SHUHARI_TIMEOUT:-600}"
+readonly RECORD_RESULTS="${SHUHARI_RECORD_RESULTS:-true}"
 
 # Shuhari defaults the model to whatever the Codex configuration carries, which
 # is not a decision this repository should inherit silently. Pin it.
@@ -342,8 +344,13 @@ function declared_environment_flags() {
 #
 #   A failure here does not fail the gate. The evaluation is the gate; recording
 #   is bookkeeping, and losing a number is not worth rejecting a passing run.
+#   Pre-commit sets `SHUHARI_RECORD_RESULTS=false` because it must reject any
+#   file mutation; the already-reviewed snapshot remains staged for that run.
 # @arg $1 target Absolute skill directory.
 function record_results() {
+    if [ "${RECORD_RESULTS}" = false ]; then
+        return 0
+    fi
     uv run --python "${PYTHON_VERSION}" --no-project -- python "${RECORDER}" "$1" || {
         printf 'warning: could not record results for %s\n' "$(basename -- "$1")" >&2
     }

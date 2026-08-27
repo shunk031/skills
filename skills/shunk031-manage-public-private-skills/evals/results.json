@@ -1,0 +1,31 @@
+{
+  "schema_version": "1",
+  "skill_name": "shunk031-manage-public-private-skills",
+  "measured_at": "2026-08-27T14:16:20.562093806Z",
+  "agent": "codex",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "high",
+  "trials": 3,
+  "network": false,
+  "pass_rate": {
+    "with_skill": 1,
+    "without_skill": 0.6667
+  },
+  "tokens": {
+    "with_skill": 13086.6667,
+    "without_skill": 11259.3333
+  },
+  "seconds": {
+    "with_skill": 5.504,
+    "without_skill": 7.5549
+  },
+  "assertions": [
+    {
+      "case_id": "1",
+      "assertion": "The response proposes `shunk031-research-before-implementation skill` as the portable reference for shared prose and eval prompts. It keeps agent-specific `$skill-name` and `/skill-name` forms only in sections that explicitly document Codex or Claude Code invocation syntax.",
+      "with_skill": 1,
+      "without_skill": 0.6666666666666666,
+      "category": "mixed"
+    }
+  ]
+}
