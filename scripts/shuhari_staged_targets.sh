@@ -19,8 +19,10 @@
 #   executable variables add their corresponding flags; an `unsandboxed`
 #   sandbox also adds `--network`, as required by Shuhari. The jobs and timeout
 #   variables replace their defaults, while each whitespace-separated allow-tools
-#   entry adds one repeated `--allow-tool` flag. Leaving all six unset preserves
-#   the existing argv byte for byte.
+#   entry adds one repeated `--allow-tool` flag. An empty per-skill
+#   `evals/completion-mode` marker selects prompt-only completion mode when the
+#   global mode override is unset. Leaving all six overrides and that marker
+#   unset preserves the existing argv byte for byte.
 #
 #   Schema validation is exempt from all of these. It never executes an agent,
 #   so there is no execution environment for them to describe, and Shuhari reads
@@ -238,6 +240,13 @@ function read_lines_into() {
 # @arg $@ targets Absolute skill directories.
 # @exitcode 1 When a schema is invalid.
 function run_validate() {
+    local target
+    local marker_status=0
+    for target in "$@"; do
+        validate_completion_marker "${target}" || marker_status=1
+    done
+    [ "${marker_status}" -eq 0 ] || return 1
+
     local -a eval_targets=()
     local -a trigger_targets=()
     read_lines_into eval_targets < <(filter_by_eval_file evals.json "$@")
@@ -255,7 +264,6 @@ function run_validate() {
     # `set -u`, so every array expansion here is guarded by a count check.
     [ "${#trigger_targets[@]}" -gt 0 ] || return 0
 
-    local target
     for target in "${trigger_targets[@]}"; do
         "${offline[@]}" shuhari check trigger --validate-only "${target}"
     done
@@ -277,6 +285,82 @@ function run_validate() {
 # @exitcode 1 When it does not.
 function needs_network() {
     [ -f "$1/evals/network-required" ]
+}
+
+# @description Select the execution mode declared for one skill target.
+# @description
+#   `SHUHARI_MODE` remains a developer override. Without it, an empty
+#   `evals/completion-mode` marker opts the target into Shuhari completion mode;
+#   absent that marker, agentic execution remains the repository default.
+# @arg $1 target Absolute skill directory.
+# @stdout `agentic` or `completion`.
+function mode_for_target() {
+    local target="$1"
+    if [ "${SHUHARI_MODE+x}" = x ]; then
+        printf '%s\n' "${SHUHARI_MODE}"
+    elif [ -f "${target}/evals/completion-mode" ]; then
+        printf '%s\n' completion
+    else
+        printf '%s\n' agentic
+    fi
+}
+
+# @description Reject a completion declaration that conflicts with execution requirements.
+# @description
+#   Completion mode has no tools, sandbox, network, or workspace. An explicit
+#   marker can therefore describe only prompt-only evals and trigger decisions.
+# @arg $1 target Absolute skill directory.
+# @exitcode 1 When the marker is not empty or conflicts with execution requirements.
+function validate_completion_marker() {
+    local target="$1"
+    local marker="${target}/evals/completion-mode"
+    [ -f "${marker}" ] || return 0
+    if [ -s "${marker}" ]; then
+        printf 'invalid %s: completion-mode marker must be empty\n' "${marker}" >&2
+        return 1
+    fi
+    validate_completion_requirements "${target}" completion-mode
+}
+
+# @description Reject declarations that cannot be represented by completion mode.
+# @arg $1 target Absolute skill directory.
+# @arg $2 label The selected completion policy shown in diagnostics.
+# @exitcode 1 When the target declares network or host-tool requirements.
+function validate_completion_requirements() {
+    local target="$1"
+    local label="$2"
+    if needs_network "${target}"; then
+        printf 'invalid %s: %s cannot be combined with evals/network-required\n' "$(basename -- "${target}")" "${label}" >&2
+        return 1
+    fi
+    if [ -e "${target}/evals/tools-required" ]; then
+        printf 'invalid %s: %s cannot be combined with evals/tools-required\n' "$(basename -- "${target}")" "${label}" >&2
+        return 1
+    fi
+}
+
+# @description Reject environment execution overrides that conflict with completion mode.
+# @arg $1 target Absolute skill directory.
+# @exitcode 1 When the selected completion mode requests a sandbox or host tools.
+function validate_mode_for_target() {
+    local target="$1"
+    local mode
+    if ! validate_completion_marker "${target}"; then
+        return 1
+    fi
+    mode="$(mode_for_target "${target}")"
+    [ "${mode}" = completion ] || return 0
+    if [ ! -f "${target}/evals/completion-mode" ] && ! validate_completion_requirements "${target}" "completion mode"; then
+        return 1
+    fi
+    if [ -n "${SHUHARI_SANDBOX:-}" ]; then
+        printf 'invalid %s: completion mode cannot be combined with SHUHARI_SANDBOX\n' "$(basename -- "${target}")" >&2
+        return 1
+    fi
+    if [ -n "${SHUHARI_ALLOW_TOOLS:-}" ]; then
+        printf 'invalid %s: completion mode cannot be combined with SHUHARI_ALLOW_TOOLS\n' "$(basename -- "${target}")" >&2
+        return 1
+    fi
 }
 
 # @description Print the `--allow-tool` flags a skill declares.
@@ -311,10 +395,14 @@ function declared_tool_flags() {
 # @description Print flags for execution-environment overrides.
 # @stdout Alternating environment flag names and values, with `--network` for
 #   an `unsandboxed` sandbox and `--mode <value>` when requested.
-# @arg $1 network_already_allowed Whether the command already includes
+# @arg $1 target Absolute skill directory.
+# @arg $2 network_already_allowed Whether the command already includes
 #   `--network`.
 function declared_environment_flags() {
-    local network_already_allowed="${1:-false}"
+    local target="$1"
+    local network_already_allowed="${2:-false}"
+    local mode
+    mode="$(mode_for_target "${target}")"
     if [ -n "${SHUHARI_SANDBOX:-}" ]; then
         printf -- '--sandbox\n%s\n' "${SHUHARI_SANDBOX}"
         if [ "${SHUHARI_SANDBOX}" = unsandboxed ] &&
@@ -323,8 +411,8 @@ function declared_environment_flags() {
         fi
     fi
 
-    if [ "${SHUHARI_MODE+x}" = x ]; then
-        printf -- '--mode\n%s\n' "${SHUHARI_MODE}"
+    if [ "${SHUHARI_MODE+x}" = x ] || [ "${mode}" = completion ]; then
+        printf -- '--mode\n%s\n' "${mode}"
     fi
 
     if [ -n "${SHUHARI_AGENT_EXECUTABLE:-}" ]; then
@@ -363,6 +451,10 @@ function run_eval() {
     local status=0
     local target
     for target in "${targets[@]}"; do
+        if ! validate_mode_for_target "${target}"; then
+            status=1
+            continue
+        fi
         local -a eval_model_flags=("${EVAL_MODEL_FLAGS[@]}")
         local network_already_allowed=false
         if needs_network "${target}"; then
@@ -372,7 +464,7 @@ function run_eval() {
 
         local -a environment_flags=()
         read_lines_into environment_flags < \
-            <(declared_environment_flags "${network_already_allowed}")
+            <(declared_environment_flags "${target}" "${network_already_allowed}")
 
         # Tool declarations are per-run flags, so a skill that declares any is
         # evaluated on its own rather than batched with the others.
@@ -404,12 +496,15 @@ function run_trigger() {
     read_lines_into targets < <(filter_by_eval_file triggers.json "$@")
     [ "${#targets[@]}" -gt 0 ] || return 0
 
-    local -a environment_flags=()
-    read_lines_into environment_flags < <(declared_environment_flags false)
-
     local target
     local status=0
     for target in "${targets[@]}"; do
+        if ! validate_mode_for_target "${target}"; then
+            status=1
+            continue
+        fi
+        local -a environment_flags=()
+        read_lines_into environment_flags < <(declared_environment_flags "${target}" false)
         local -a tool_flags=()
         read_lines_into tool_flags < <(declared_tool_flags "${target}")
         shuhari check trigger "${target}" ${tool_flags[@]+"${tool_flags[@]}"} \

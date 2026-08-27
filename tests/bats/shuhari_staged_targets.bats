@@ -160,6 +160,92 @@ function target_path() {
     [ "${output}" -eq 1 ]
 }
 
+@test "completion-mode marker selects completion for both gates" {
+    local target
+    target="$(target_path)"
+    touch "${target%/SKILL.md}/evals/completion-mode"
+
+    run env -u SHUHARI_MODE "${WRAPPER}" trigger "${target}"
+    [ "${status}" -eq 0 ]
+    run grep -Fx -- '--mode' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+    run grep -Fx -- 'completion' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+
+    run env -u SHUHARI_MODE "${WRAPPER}" eval "${target}"
+    [ "${status}" -eq 0 ]
+    run grep -Fx -- '--mode' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+    run grep -Fx -- 'completion' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+}
+
+@test "SHUHARI_MODE overrides the completion-mode marker" {
+    local target
+    target="$(target_path)"
+    touch "${target%/SKILL.md}/evals/completion-mode"
+
+    run env SHUHARI_MODE=agentic "${WRAPPER}" trigger "${target}"
+    [ "${status}" -eq 0 ]
+    run grep -Fx -- 'agentic' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+    ! grep -Fx -- 'completion' "${SHUHARI_ARGV_LOG}" > /dev/null
+}
+
+@test "SHUHARI_MODE agentic does not bypass an invalid completion-mode marker" {
+    local target
+    target="$(target_path)"
+    touch "${target%/SKILL.md}/evals/completion-mode"
+    printf 'git\n' > "${target%/SKILL.md}/evals/tools-required"
+
+    run env SHUHARI_MODE=agentic "${WRAPPER}" trigger "${target}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *"completion-mode cannot be combined with evals/tools-required"* ]]
+}
+
+@test "completion-mode marker rejects network-required evaluation" {
+    local target
+    target="$(target_path)"
+    touch "${target%/SKILL.md}/evals/completion-mode"
+    touch "${target%/SKILL.md}/evals/network-required"
+
+    run env -u SHUHARI_MODE "${WRAPPER}" eval "${target}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *"completion-mode cannot be combined with evals/network-required"* ]]
+}
+
+@test "completion-mode marker rejects declared host tools" {
+    local target
+    target="$(target_path)"
+    touch "${target%/SKILL.md}/evals/completion-mode"
+    printf 'git\n' > "${target%/SKILL.md}/evals/tools-required"
+
+    run env -u SHUHARI_MODE "${WRAPPER}" trigger "${target}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *"completion-mode cannot be combined with evals/tools-required"* ]]
+}
+
+@test "SHUHARI_MODE completion rejects a network-required target" {
+    local target
+    target="$(target_path)"
+    touch "${target%/SKILL.md}/evals/network-required"
+
+    run env SHUHARI_MODE=completion "${WRAPPER}" eval "${target}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *"completion mode cannot be combined with evals/network-required"* ]]
+}
+
+@test "validation rejects an invalid completion-mode marker before an agent runs" {
+    local target
+    target="$(target_path)"
+    touch "${target%/SKILL.md}/evals/completion-mode"
+    touch "${target%/SKILL.md}/evals/network-required"
+
+    run "${WRAPPER}" validate "${target}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *"completion-mode cannot be combined with evals/network-required"* ]]
+}
+
 @test "invalid SHUHARI_MODE fails clearly" {
     local target
     target="$(target_path)"

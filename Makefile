@@ -54,8 +54,7 @@ validate:
 	./scripts/check_skill_layout.sh
 	@set -e; \
 	for dir in skills/*/; do \
-	    if [ -f "$$dir/evals/evals.json" ]; then shuhari eval skill --validate-only "$$dir"; fi; \
-	    if [ -f "$$dir/evals/triggers.json" ]; then shuhari check trigger --validate-only "$$dir"; fi; \
+	    ./scripts/shuhari_staged_targets.sh validate "$$dir/SKILL.md"; \
 	done
 
 # Live model calls against every skill. Deliberately a manual, occasional run;
@@ -74,7 +73,7 @@ check-triggers:
 	@set -e; \
 	for dir in skills/*/; do \
 	    if [ -f "$$dir/evals/triggers.json" ]; then \
-	        shuhari check trigger --trials $(TRIALS) --jobs $(JOBS) --timeout $(TIMEOUT) "$$dir"; \
+	        SHUHARI_JOBS=$(JOBS) SHUHARI_TIMEOUT=$(TIMEOUT) ./scripts/shuhari_staged_targets.sh trigger "$$dir/SKILL.md"; \
 	    fi; \
 	done
 
