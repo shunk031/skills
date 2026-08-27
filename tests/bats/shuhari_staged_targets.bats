@@ -54,12 +54,46 @@ function target_path() {
         --timeout 600 > "${expected}"
 
     run env -u SHUHARI_SANDBOX -u SHUHARI_AGENT_EXECUTABLE -u SHUHARI_JOBS \
-        -u SHUHARI_ALLOW_TOOLS \
+        -u SHUHARI_ALLOW_TOOLS -u SHUHARI_MODE \
         -u SHUHARI_TIMEOUT "${WRAPPER}" trigger "${target}"
     [ "${status}" -eq 0 ]
 
     run diff -u "${expected}" "${SHUHARI_ARGV_LOG}"
     [ "${status}" -eq 0 ]
+
+    ! grep -Fx -- '--mode' "${SHUHARI_ARGV_LOG}" > /dev/null
+}
+
+@test "SHUHARI_MODE completion reaches both gates" {
+    local target
+    target="$(target_path)"
+
+    run env SHUHARI_MODE=completion "${WRAPPER}" trigger "${target}"
+    [ "${status}" -eq 0 ]
+    run grep -cFx -- '--mode' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+    [ "${output}" -eq 1 ]
+    run grep -cFx -- 'completion' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+    [ "${output}" -eq 1 ]
+
+    run env SHUHARI_MODE=completion "${WRAPPER}" eval "${target}"
+    [ "${status}" -eq 0 ]
+    run grep -cFx -- '--mode' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+    [ "${output}" -eq 1 ]
+    run grep -cFx -- 'completion' "${SHUHARI_ARGV_LOG}"
+    [ "${status}" -eq 0 ]
+    [ "${output}" -eq 1 ]
+}
+
+@test "invalid SHUHARI_MODE fails clearly" {
+    local target
+    target="$(target_path)"
+
+    run env SHUHARI_MODE=invalid "${WRAPPER}" trigger "${target}"
+    [ "${status}" -eq 2 ]
+    [[ "${output}" == *"Invalid SHUHARI_MODE 'invalid'; expected agentic or completion."* ]]
 }
 
 @test "environment overrides add trigger flags and network for unsandboxed runs" {
