@@ -4,7 +4,7 @@
 [![Docs](https://github.com/shunk031/skills/actions/workflows/docs.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/docs.yaml)
 [![skills.sh](https://skills.sh/b/shunk031/skills)](https://skills.sh/shunk031/skills)
 
-Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Browsable at **[shunk031.me/skills](https://shunk031.me/skills/)**, where each skill's page shows what its evaluation measured. Each skill is a single `SKILL.md` that both agents read, and the ones that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari) — a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
+Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Browsable at **[shunk031.me/skills](https://shunk031.me/skills/)**, where each skill's page shows what its evaluation measured. Each skill is a directory whose `SKILL.md` both agents read, and the ones that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari), a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
 
 ## Install
 
@@ -38,7 +38,7 @@ codex plugin marketplace add shunk031/skills
 codex plugin add shunk031-skills@shunk031
 ```
 
-Both read the same `skills/` directory, so the two channels deliver identical content — pick the plugin when you want all of it and the `skills` CLI when you want a few. Neither manifest lists the skills individually, so an installed plugin picks up whatever `skills/` currently holds; refresh with `claude plugin update shunk031-skills` or `codex plugin marketplace upgrade`.
+Both read the same `skills/` directory, so the two channels deliver identical content. Pick the plugin when you want all of it and the `skills` CLI when you want a few. Neither manifest lists the skills individually, so an installed plugin picks up whatever `skills/` currently holds; refresh with `claude plugin update shunk031-skills` or `codex plugin marketplace upgrade`.
 
 ## Skills
 
@@ -90,7 +90,7 @@ make format           # shfmt diff for shell scripts
 make bump-shuhari     # re-pin shuhari, which publishes no tagged releases
 ```
 
-`make check-triggers` and `make eval` make real model calls through Codex, so they run locally rather than in CI, and both are whole-repository sweeps. Day to day the pre-commit hooks cover the same ground incrementally, evaluating only the skills a commit touches. See [`AGENTS.md`](AGENTS.md) for the evaluation policy and the authorized way to skip a gate.
+`make check-triggers` and `make eval` make real model calls through Codex, so they run locally rather than in CI, and both are whole-repository sweeps. Day to day the pre-commit hooks cover the same ground incrementally, evaluating only the skills a commit touches. See [`AGENTS.md`](AGENTS.md) for the evaluation policy.
 
 ## Related repositories
 
