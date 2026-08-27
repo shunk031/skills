@@ -2,7 +2,7 @@
 
 The case asked what an orchestrator does when two independent worker streams report the same failure signature. At five trials per arm the two arms were identical on every assertion: recognizing the cross-stream pattern passed 5/5 against 5/5, opening a generalized meta issue passed 5/5 against 5/5, and carrying the diagnosis across passed 4/5 against 4/5.
 
-Its prompt opened with "Following the `shunk031-orchestrate-herdr-workers` skill", which names the skill to the arm that does not have it and was the obvious suspect for lifting the baseline. Removing that opening changed nothing: the baseline still passed every trial.
+Its prompt opened with "Following the `shunk031-herdr-orchestrate-workers` skill", which names the skill to the arm that does not have it and was the obvious suspect for lifting the baseline. Removing that opening changed nothing: the baseline still passed every trial.
 
 So the evaluated model already treats a repeated signature as one cause and already reaches for a shared follow-up. On this point the skill changes nothing, which is a finished measurement rather than a broken case. The case was removed instead of being sharpened, because tuning a case until a difference appears measures the tuning.
 

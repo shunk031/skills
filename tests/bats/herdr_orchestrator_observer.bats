@@ -4,7 +4,7 @@
 # live in shunk031/dotfiles, and its test stayed behind when the skill moved,
 # leaving the script untested. It is tested here, next to what it belongs to.
 
-readonly OBSERVER_SCRIPT_PATH="./skills/shunk031-orchestrate-herdr-workers/scripts/herdr-orchestrator-observer.sh"
+readonly OBSERVER_SCRIPT_PATH="./skills/shunk031-herdr-orchestrate-workers/scripts/herdr-orchestrator-observer.sh"
 
 function setup() {
     export HOME="${BATS_TEST_TMPDIR}/home"

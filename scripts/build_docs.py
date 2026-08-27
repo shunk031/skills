@@ -40,19 +40,19 @@ NAME_PREFIX = "shunk031-"
 # missing: an unfamiliar icon is worse than a consistent generic one.
 FALLBACK_ICON = "lucide/file-text"
 ICONS = {
-    "shunk031-cgd-dev-identity": "lucide/id-card",
     "shunk031-codex-worker-prompting": "lucide/message-square-code",
-    "shunk031-gh-comment-attach-files": "lucide/paperclip",
+    "shunk031-github-cgd-identity": "lucide/id-card",
+    "shunk031-github-comment-attach-files": "lucide/paperclip",
+    "shunk031-herdr-orchestrate-workers": "lucide/network",
     "shunk031-herdr-tab-status": "lucide/tags",
-    "shunk031-high-impact-journal-publishing": "lucide/graduation-cap",
     "shunk031-manage-agent-guidance": "lucide/book-marked",
     "shunk031-manage-public-private-dotfiles": "lucide/folder-git-2",
     "shunk031-manage-public-private-skills": "lucide/split",
-    "shunk031-orchestrate-herdr-workers": "lucide/network",
+    "shunk031-python-transformers-convert": "lucide/repeat",
     "shunk031-python-uv-workflow": "lucide/package-open",
     "shunk031-research-before-implementation": "lucide/search-check",
-    "shunk031-shdoc-shell-docs": "lucide/square-terminal",
-    "shunk031-transformers-convert": "lucide/repeat",
+    "shunk031-research-high-impact-journal-publishing": "lucide/graduation-cap",
+    "shunk031-shellscript-shdoc-docs": "lucide/square-terminal",
 }
 
 
@@ -72,7 +72,9 @@ def reference_title(stem: str) -> str:
     """Title a reference file from its name, keeping known initialisms upright."""
     words = stem.replace("_", "-").split("-")
     upper = {"ja", "ai", "uv", "cli", "api", "pr", "gh"}
-    return " ".join(word.upper() if word.lower() in upper else word.capitalize() for word in words)
+    return " ".join(
+        word.upper() if word.lower() in upper else word.capitalize() for word in words
+    )
 
 
 # Tags shown on each skill page. They name what a skill is actually about — the
@@ -80,19 +82,19 @@ def reference_title(stem: str) -> str:
 # buckets, which is what the alphabetical sidebar already does. Zensical does
 # not build tag index pages yet, so these are labels rather than navigation.
 TAGS = {
-    "shunk031-cgd-dev-identity": ["GitHub", "Git"],
     "shunk031-codex-worker-prompting": ["Codex", "Agents", "Herdr"],
-    "shunk031-gh-comment-attach-files": ["GitHub"],
+    "shunk031-github-cgd-identity": ["GitHub", "Git"],
+    "shunk031-github-comment-attach-files": ["GitHub"],
+    "shunk031-herdr-orchestrate-workers": ["Herdr", "Codex", "Agents", "Git"],
     "shunk031-herdr-tab-status": ["Herdr", "Agents"],
-    "shunk031-high-impact-journal-publishing": ["Research", "Writing"],
     "shunk031-manage-agent-guidance": ["Agents", "Claude Code", "Codex"],
     "shunk031-manage-public-private-dotfiles": ["chezmoi", "Dotfiles", "Git"],
     "shunk031-manage-public-private-skills": ["Agents", "Skills", "Evaluation"],
-    "shunk031-orchestrate-herdr-workers": ["Herdr", "Codex", "Agents", "Git"],
+    "shunk031-python-transformers-convert": ["Python", "PyTorch", "Transformers"],
     "shunk031-python-uv-workflow": ["Python", "uv"],
     "shunk031-research-before-implementation": ["Research"],
-    "shunk031-shdoc-shell-docs": ["Shell", "Writing"],
-    "shunk031-transformers-convert": ["Python", "PyTorch", "Transformers"],
+    "shunk031-research-high-impact-journal-publishing": ["Research", "Writing"],
+    "shunk031-shellscript-shdoc-docs": ["Shell", "Writing"],
 }
 
 
@@ -128,7 +130,11 @@ def read_skill(skill_dir: Path) -> dict[str, Any] | None:
             if separator:
                 fields[key.strip()] = value.strip().strip("\"'")
 
-    references = sorted((skill_dir / "references").glob("*.md")) if (skill_dir / "references").is_dir() else []
+    references = (
+        sorted((skill_dir / "references").glob("*.md"))
+        if (skill_dir / "references").is_dir()
+        else []
+    )
 
     results_path = skill_dir / "evals" / "results.json"
     results = json.loads(results_path.read_text()) if results_path.is_file() else None
@@ -337,7 +343,9 @@ def render_nav(skills: list[dict[str, Any]]) -> str:
         lines.append(f"      - {skill['name']}/index.md")
         for reference in skill["references"]:
             title = reference_title(reference.stem)
-            lines.append(f"      - {title}: {skill['name']}/references/{reference.name}")
+            lines.append(
+                f"      - {title}: {skill['name']}/references/{reference.name}"
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -394,7 +402,9 @@ def main() -> int:
             # title. Without one the sidebar falls back to the first heading,
             # which several of these do not have.
             body = "\n".join(
-                frontmatter(title=reference_title(reference.stem), icon="lucide/book-open")
+                frontmatter(
+                    title=reference_title(reference.stem), icon="lucide/book-open"
+                )
             )
             destination.write_text(body + reference.read_text())
             pages += 1

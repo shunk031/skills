@@ -1,5 +1,5 @@
 ---
-name: shunk031-gh-comment-attach-files
+name: shunk031-github-comment-attach-files
 description: Attach local files to a GitHub issue or pull request comment via Playwright CLI and return the hosted attachment URLs without submitting the comment. Use when you need GitHub-hosted image or document URLs on github.com or GitHub Enterprise Server.
 ---
 
@@ -7,7 +7,7 @@ description: Attach local files to a GitHub issue or pull request comment via Pl
 
 ## Read Acknowledgement
 
-- After reading this skill, say: `🐙 I read shunk031-gh-comment-attach-files.`
+- After reading this skill, say: `🐙 I read shunk031-github-comment-attach-files.`
 
 ## When To Use
 
@@ -41,7 +41,7 @@ Do not use this skill when the task is to actually post, edit, or rewrite a comm
 Direct URL:
 
 ```bash
-uv run python ~/.agents/skills/shunk031-gh-comment-attach-files/scripts/attach_comment_files.py \
+uv run python ~/.agents/skills/shunk031-github-comment-attach-files/scripts/attach_comment_files.py \
   --url https://github.com/OWNER/REPO/pull/123 \
   docs/report.md assets/chart.png
 ```
@@ -49,7 +49,7 @@ uv run python ~/.agents/skills/shunk031-gh-comment-attach-files/scripts/attach_c
 Resolve the page with `gh`:
 
 ```bash
-uv run python ~/.agents/skills/shunk031-gh-comment-attach-files/scripts/attach_comment_files.py \
+uv run python ~/.agents/skills/shunk031-github-comment-attach-files/scripts/attach_comment_files.py \
   --repo OWNER/REPO \
   --pr 123 \
   results/report.md results/chart.png
@@ -58,7 +58,7 @@ uv run python ~/.agents/skills/shunk031-gh-comment-attach-files/scripts/attach_c
 Large uploads that may need multiple runs:
 
 ```bash
-uv run python ~/.agents/skills/shunk031-gh-comment-attach-files/scripts/attach_comment_files.py \
+uv run python ~/.agents/skills/shunk031-github-comment-attach-files/scripts/attach_comment_files.py \
   --repo OWNER/REPO \
   --pr 123 \
   --resume-manifest attachments.jsonl \

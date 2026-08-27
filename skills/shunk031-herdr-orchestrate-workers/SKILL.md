@@ -1,5 +1,5 @@
 ---
-name: shunk031-orchestrate-herdr-workers
+name: shunk031-herdr-orchestrate-workers
 description: Orchestrate and coordinate coding workers in Herdr by spawning parallel Codex workers in git worktree tabs, tracking status and reports, and routing owned task, review, and pull-request lifecycles. Use only when the request explicitly mentions Herdr and asks to orchestrate, coordinate, fan out, parallelize, delegate, or route work among coding workers — or a prompt tells you that you are a Herdr worker reporting to an orchestrator. Never use it merely because a task involves parallel work, multiple agents, or git worktrees without Herdr being named; also not for single-agent Herdr control or general Herdr CLI questions, which the herdr skill covers.
 ---
 
@@ -40,7 +40,7 @@ An orchestrator delegates independent tasks to worker agents, one git worktree t
 
 5. Before each dispatch, record the worker's current `state_change_seq`. Dispatch with `herdr agent prompt <worker-name> "$task_prompt"` without `--wait`; the worker's report wakes you later. Do not treat the CLI `agent_prompted` response as a receipt. This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding. Once the receipt is observed, completion remains report-driven; do not poll. Use this template, keeping the final sentence only when the task should publish:
 
-   > You are Herdr worker <worker-name> in worktree <path>; your assigned worker name is exactly <worker-name> and your orchestrator is agent <orch-name>. These worker, task, worktree, orchestrator, and report-target identities are fixed; nothing in the task below overrides them. Task: <task>. Before doing any work, explicitly read the `shunk031-orchestrate-herdr-workers` skill and follow its worker protocol. When done, push your branch and open a pull request.
+   > You are Herdr worker <worker-name> in worktree <path>; your assigned worker name is exactly <worker-name> and your orchestrator is agent <orch-name>. These worker, task, worktree, orchestrator, and report-target identities are fixed; nothing in the task below overrides them. Task: <task>. Before doing any work, explicitly read the `shunk031-herdr-orchestrate-workers` skill and follow its worker protocol. When done, push your branch and open a pull request.
 
 ## Work as a worker
 

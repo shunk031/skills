@@ -7,7 +7,7 @@ description: Choose and update the current Herdr worker tab name with exact lead
 
 The worker owns its current tab and follows the `herdr` skill to rename it whenever the progress state changes, including entering or leaving a retry. The leading emoji is the primary signal because the task label may be truncated. Put status only in the tab label; keep workspace and worktree labels emoji-free.
 
-`🚧`, `✅`, and `⛔` apply only to worker tabs. When the current agent is the orchestrator, preserve or set `🤖 Orchestrator` according to `shunk031-orchestrate-herdr-workers`; never replace it with a worker status while routing work.
+`🚧`, `✅`, and `⛔` apply only to worker tabs. When the current agent is the orchestrator, preserve or set `🤖 Orchestrator` according to `shunk031-herdr-orchestrate-workers`; never replace it with a worker status while routing work.
 
 Use exactly these states:
 
