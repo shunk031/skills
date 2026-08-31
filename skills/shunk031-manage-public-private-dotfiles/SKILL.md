@@ -14,8 +14,8 @@ Skill content is not one of those domains any more. It lives in `shunk031/skills
 1. Read the applicable instructions before investigating.
 
    - Read `~/.agents/AGENTS.md`, then read `~/.agents/AGENTS-private.md` when it is readable.
-   - Treat `~/.agents/AGENTS-private.md` as the stable user-level path. Its canonical content is `~/.local/share/chezmoi-private/home/dot_config/codex/AGENTS-private.md`, while its symlink wiring is managed by the public dotfiles source.
-   - Keep the private content in `home/dot_config/codex/AGENTS-private.md` and change the public repository only for its symlink wiring. Do not duplicate the content.
+   - Treat `~/.agents/AGENTS-private.md` as the stable user-level path. Its canonical content is `~/.local/share/chezmoi-private/.agents/AGENTS-private.md`, while its symlink wiring is managed by the public dotfiles source.
+   - Edit the private repository for content changes and the public repository only for symlink wiring changes. Do not duplicate or move the private content into either `home/` tree.
    - Read the root `AGENTS.md` in both dotfiles repositories. Follow each repository's rules for changes made there.
 
 2. Inspect both repositories before choosing an edit target.
