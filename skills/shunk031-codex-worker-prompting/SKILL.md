@@ -3,6 +3,9 @@ name: shunk031-codex-worker-prompting
 description: Write task prompts, follow-ups, and authorizations for Codex-family worker models. Use whenever an orchestrator dispatches work to Codex workers in Herdr or another harness.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🤖 私は shunk031-codex-worker-prompting を読みました。 / I read shunk031-codex-worker-prompting.`
+
 # Codex Worker Prompting
 
 Write prompts that make worker decisions and stop conditions explicit.

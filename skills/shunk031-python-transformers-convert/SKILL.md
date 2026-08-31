@@ -3,6 +3,9 @@ name: shunk031-python-transformers-convert
 description: "Use this skill when converting custom PyTorch models to Hugging Face Transformers format. Helps with: (1) Creating PretrainedConfig and PreTrainedModel classes, (2) Writing ImageProcessor/Tokenizer, (3) Compatibility testing, (4) Hub upload preparation. Use when the user wants to make their model compatible with transformers library."
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🤗 私は shunk031-python-transformers-convert を読みました。 / I read shunk031-python-transformers-convert.`
+
 # Hugging Face Transformers Model Conversion
 
 Convert custom PyTorch models to Hugging Face Transformers format while maintaining exact compatibility with the original implementation.

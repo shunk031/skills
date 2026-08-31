@@ -3,6 +3,9 @@ name: shunk031-manage-public-private-dotfiles
 description: Coordinate work across the public dotfiles source at ~/.local/share/chezmoi and the private dotfiles source at ~/.local/share/chezmoi-private. Use when a request explicitly mentions public and private dotfiles, or when configuration ownership may be split across them, especially for agent guidance, Codex or Claude configuration, shell setup, authentication helpers, profiles, launchers, and shared versus internal settings. Inspect both repositories before deciding where to change files, then update only the authoritative source or sources.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🏠 私は shunk031-manage-public-private-dotfiles を読みました。 / I read shunk031-manage-public-private-dotfiles.`
+
 # Manage Public and Private Dotfiles
 
 Treat the public and private chezmoi sources as related but separate management domains. Establish their current ownership boundary before proposing or making changes.

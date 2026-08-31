@@ -3,6 +3,9 @@ name: shunk031-manage-public-private-skills
 description: Route and carry out work on coding-agent skills. Use when an edit to a skill under ~/.agents/skills or ~/.claude/skills vanished, reverted, or did not take effect; when asked to add, edit, rename, split, or remove a skill; when deciding whether a skill belongs in shunk031/skills or shunk031/skills-private; when writing eval or trigger cases; or when a request names a skill while you are in a dotfiles repository, because skill content no longer lives there.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🧰 私は shunk031-manage-public-private-skills を読みました。 / I read shunk031-manage-public-private-skills.`
+
 # Manage Public and Private Skills
 
 Skill content lives in two dedicated repositories. Neither dotfiles repository holds it any more, so a request to change a skill is a request to change one of these, not the checkout you are probably standing in.

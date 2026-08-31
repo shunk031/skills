@@ -3,6 +3,9 @@ name: shunk031-research-high-impact-journal-publishing
 description: Guidance and workflow for planning, writing, submitting, revising, and publishing scientific manuscripts in high-impact journals. Use when Claude needs to advise on research quality, study design, manuscript structure, journal selection, peer review responses, or publication strategy.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🔬 私は shunk031-research-high-impact-journal-publishing を読みました。 / I read shunk031-research-high-impact-journal-publishing.`
+
 # High-impact journal publishing skill
 
 Provide structured, practical guidance for publishing a scientific manuscript in a high-impact journal. Assume the user is a clinician or researcher preparing, submitting, revising, or resubmitting a manuscript.

@@ -3,6 +3,9 @@ name: shunk031-herdr-tab-status
 description: Choose and update the current Herdr worker tab name with exact leading status emojis for active work, blocked work, user handoffs, and completion. Use whenever a Herdr tab label or its status meaning must be chosen or updated.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🚦 私は shunk031-herdr-tab-status を読みました。 / I read shunk031-herdr-tab-status.`
+
 # Herdr Tab Status
 
 The worker owns its current tab and follows the `herdr` skill to rename it whenever the progress state changes, including entering or leaving a retry. The leading emoji is the primary signal because the task label may be truncated. Put status only in the tab label; keep workspace and worktree labels emoji-free.
