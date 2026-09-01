@@ -3,6 +3,9 @@ name: shunk031-research-before-implementation
 description: Research current official web documentation and representative GitHub implementation code before designing or editing non-trivial work involving third-party tools, libraries, platforms, APIs, configuration formats, or version-dependent behavior. Use for implementation, migration, integration, and configuration tasks where local files or memory alone cannot establish current supported behavior.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🔎 I read shunk031-research-before-implementation.`
+
 # Research Before Implementation
 
 Treat research as a gate, not a recommendation. Before any design decision or file edit, complete these tool stages in order:

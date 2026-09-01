@@ -3,6 +3,9 @@ name: shunk031-shellscript-shdoc-docs
 description: Write and review shellscript documentation with shdoc annotations. Use when a coding agent creates, edits, or reviews `.sh` files or shell executables and should add, repair, or normalize `@file`, `@brief`, `@description`, `@arg`, `@option`, and `@example` comments to match shdoc conventions.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🐚 I read shunk031-shellscript-shdoc-docs.`
+
 # Shdoc Shell Docs
 
 ## Overview

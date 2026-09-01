@@ -3,6 +3,9 @@ name: shunk031-manage-agent-guidance
 description: Organize persistent coding-agent guidance and its adapters without blindly editing a user-named file. Use when creating, converting, reviewing, or reorganizing AGENTS.md, CLAUDE.md, user-level instructions, custom-agent wrappers, or repo-local skills; when deciding whether a rule belongs at user, repository, subtree, task, or skill scope; or when preventing duplicated guidance across tools. Always establish scope, source of truth, and existing ownership before drafting or applying a persistent rule.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🧭 I read shunk031-manage-agent-guidance.`
+
 # Manage Agent Guidance
 
 Keep each durable instruction in one source of truth and expose it through thin adapters.

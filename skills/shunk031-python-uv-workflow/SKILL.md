@@ -3,6 +3,9 @@ name: shunk031-python-uv-workflow
 description: Apply Python development policy using uv-first execution, test-first behavior validation, and pre-commit quality gates. Use when implementing or refactoring Python code.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🐍 I read shunk031-python-uv-workflow.`
+
 # Python UV Workflow
 
 ## Overview

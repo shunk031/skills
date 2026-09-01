@@ -3,6 +3,9 @@ name: shunk031-github-comment-attach-files
 description: Attach local files to a GitHub issue or pull request comment via Playwright CLI and return the hosted attachment URLs without submitting the comment. Use when you need GitHub-hosted image or document URLs on github.com or GitHub Enterprise Server.
 ---
 
+> [!NOTE]
+> After reading this `SKILL.md`, say: `📎 I read shunk031-github-comment-attach-files.`
+
 # GitHub Comment Attach Files
 
 ## Read Acknowledgement
