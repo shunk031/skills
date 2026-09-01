@@ -1,31 +1,31 @@
 {
   "schema_version": "1",
   "skill_name": "shunk031-research-structured-bullet-writing",
-  "measured_at": "2026-09-01T17:18:31.252792Z",
+  "measured_at": "2026-09-01T18:11:48.088612Z",
   "agent": "codex",
   "model": "gpt-5.6-luna",
   "reasoning_effort": "high",
   "trials": 3,
   "network": false,
   "pass_rate": {
-    "with_skill": 0.963,
-    "without_skill": 0.5833
+    "with_skill": 1,
+    "without_skill": 0.5556
   },
   "tokens": {
-    "with_skill": 69802.4444,
-    "without_skill": 51316.5556
+    "with_skill": 77565.3333,
+    "without_skill": 58761.8889
   },
   "seconds": {
-    "with_skill": 51.9173,
-    "without_skill": 43.2634
+    "with_skill": 42.7339,
+    "without_skill": 28.8426
   },
   "assertions": [
     {
       "case_id": "compose-from-notes",
-      "assertion": "Each top-level bullet summarizes a local group, and nested bullets supply the concrete details such as 3 people, Tuesday morning, 5.5 hours, 8 weeks, 3 formula-copy misses, and 1 metric-name mix-up.",
-      "with_skill": 0.6666666666666666,
+      "assertion": "Each top-level bullet summarizes a local group, the outline uses nested support bullets, and the response preserves concrete details such as 3 people, Tuesday morning, 5.5 hours, 8 weeks, 3 formula-copy misses, and 1 metric-name mix-up.",
+      "with_skill": 1,
       "without_skill": 1,
-      "category": "mixed"
+      "category": "always_pass_both"
     },
     {
       "case_id": "compose-from-notes",
@@ -71,9 +71,9 @@
     },
     {
       "case_id": "rewrite-long-prose",
-      "assertion": "The response is a Markdown bullet outline with top-level bullets that read as topic sentences rather than one-word labels.",
+      "assertion": "The response is a Markdown bullet outline with top-level bullets that read as genuine topic sentences and nested support bullets under the local groups.",
       "with_skill": 1,
-      "without_skill": 0.6666666666666666,
+      "without_skill": 0.3333333333333333,
       "category": "mixed"
     },
     {

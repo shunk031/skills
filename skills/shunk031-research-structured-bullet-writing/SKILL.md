@@ -1,44 +1,91 @@
 ---
 name: shunk031-research-structured-bullet-writing
-description: Create or rewrite arbitrary-domain content as a structured bullet outline, also called 骨子箇条書き. Use when the user asks for 骨子を書いて, 箇条書きで論点整理, structured bullet outline, スライド風に箇条書き, or asks to turn supplied material into concise topic bullets with nested support. Do not use for simple shopping lists, task checklists, or requests that only format existing Markdown without changing structure.
+description: 日本語を既定に、任意領域の文章・議事メモ・下書き・調査メモを骨子箇条書き / structured bullet outline として作成・書き換える。骨子を書いて、箇条書きで論点整理、経営会議向けに論点が追える箇条書き、スライド風の本文箇条書き、topic bullets with nested support など、supplied material を論点文と根拠の階層に整理する依頼で使う。買い物リスト、持ち物リスト、キャンプ用品リスト、TODO、作業チェックリスト、単なる分類リスト、Markdown 整形だけ、PowerPoint やスライドの作成・デザイン・レイアウト依頼では使わない。
 ---
 
-# Structured Bullet Outline
+> [!NOTE]
+> この `SKILL.md` を読んだら、`🧱 私は shunk031-research-structured-bullet-writing を読みました。` と言う。
 
-Create Markdown outlines that carry an argument or explanation through top-level topic sentences and nested support. Support both new composition from supplied material and rewriting existing prose or notes.
+# 骨子箇条書き
 
-## Output contract
+- 骨子箇条書きは、与えられた素材を「論点文」と「支える事実」の階層に整理する。
+  - 既存の文章を書き換える依頼にも、メモから新しく構成する依頼にも使う。
+  - 出力は Markdown を既定とする。
+  - 見出しは任意で、読み取りやすくなる場合だけ使う。
 
-- Output Markdown.
-- Use headings only when they make the outline easier to scan.
-- Start with 3 or 4 top-level bullet items when the material supports that shape.
-- Make each top-level bullet a topic sentence for its local group, not a label. Taken together, the top-level bullets should summarize the whole piece.
-- Add roughly 2 or 3 nested support bullets under a top-level item when the local group needs evidence, examples, causes, tradeoffs, or next actions.
-- Keep one topic per local group. Split a crowded group rather than hiding two claims under one bullet.
-- Add a local conclusion only when the reasoning needs one. Do not invent a closing bullet just to fill a pattern.
+- 出力言語は日本語を既定にし、ユーザーや入力が別言語を明確に選んだ場合だけそれに従う。
+  - 英語で `structured bullet outline` と頼まれた場合など、依頼言語が明確ならその言語で書く。
+  - 引用、論文名、資料名、人名、組織名、製品名、固有の表記、引用文は原文の言語と表記を保つ。
+  - 出典名を勝手に日本語化しない。
 
-## Source fidelity
+- 先頭の階層は、全体を要約する 3〜4 本の論点文にする。
+  - 各トップレベル箇条書きはラベルではなく、そのまとまりの主張や要点を一文で述べる。
+  - 各トップレベル箇条書きを上から読むだけで、全体の流れが追えるようにする。
+  - 詳細な時刻、回数、期間、担当者数は、原則として下位の支えに置く。
+  - 素材が少ない、または構造上不自然な場合は、3〜4 本に無理に合わせない。
 
-- Preserve source facts. Reorder, split, and compress, but do not add unsupported claims, facts, numbers, causal links, recommendations, or conclusions.
-- Keep evidence and numbers close to the claim they support.
-- Preserve every citation and source URL supplied in the input.
-- Preserve an existing citation style. Normalize only otherwise bare URLs to Markdown links.
-- Place each citation immediately after the smallest textual unit it supports. For a cited term or entity, write `- 対象A [出典] は ...`; for a cited number or clause, put `[出典]` immediately after that number or clause; for multiple supported items, attach each source to its own item; for a whole bullet supported by one source, and only then, place the citation at the bullet end.
-- Use footnotes only when a long URL or source note would disrupt the bullet, and keep the note directly under the relevant block.
-- Use standalone reference bullets only when the user asks for a references section or bibliographic detail must be preserved.
-- Use only user-supplied sources unless the user explicitly asks for web research.
-- Never invent, upgrade, or silently drop a source. If the output needs evidence that the supplied material lacks, state the gap instead of fabricating a citation.
-- Distinguish source-backed claims from the writer's inference when both appear in the material. Label non-source-backed interpretation as `推論:` or `示唆:`.
-- If the user asks for a conclusion that the material does not support, qualify the conclusion or state that the evidence is missing.
-- Ask a question only when missing information would materially change the result. Otherwise, produce the best outline from the supplied material and mark gaps briefly.
+- 各論点の下には、必要な範囲で 2〜3 本程度の支えを置く。
+  - 根拠、数値、例、原因、制約、未決事項、次の行動を近くに置く。
+  - 一つのまとまりには一つの論点だけを入れる。
+  - 論点が混ざる場合は、短く押し込まずに分ける。
+  - 局所的な結論は、推論の流れを閉じる必要がある場合だけ加える。
 
-## Wording
+- 事実保持は文体より優先し、素材にないことを補わない。
+  - 事実、数値、因果、評価、結論、提案を勝手に足さない。
+  - 並べ替え、分割、圧縮はしてよい。
+  - 数値や根拠は、それが支える主張の近くに置く。
+  - 成功、失敗、効果、定着、原因、主因などの結論を求められても、素材が足りない場合は不足を明示する。
 
-- Use concise, deck-derived wording where it reads naturally.
-- Keep local bullets grammatically parallel when that improves scan speed.
-- Prefer concrete verbs and plain nouns. Do not force noun endings, equal line lengths, sentence fragments, or slogan-like phrasing when clarity suffers.
-- Do not copy deck-specific wording or reproduce source corpus excerpts.
+- 引用と URL は、出典が支える最小の単位に付ける。
+  - 入力にある引用形式は保つ。
+  - 裸の URL だけは Markdown リンクに直す。
+  - 引用された用語や対象には、`対象A [出典]` のように対象の直後へ置く。
+  - 引用された数値や節には、その数値や節の直後へ置く。
+  - 複数の対象を比較する場合は、それぞれの対象にそれぞれの出典を付ける。
+  - 箇条書き全体を一つの出典が支える場合だけ、箇条書き末尾に引用を置く。
+  - 長い URL や出典注が本文を壊す場合だけ脚注にし、該当ブロックの直下に置く。
+  - 参考文献セクションや書誌情報が必要な場合だけ、独立した参考文献箇条書きを作る。
 
-## Provenance
+- 出典の扱いでは、ユーザーが渡した素材を超えない。
+  - ユーザーが Web 調査を明示した場合を除き、ユーザー提供の出典だけを使う。
+  - 出典を作らない、格上げしない、黙って落とさない。
+  - 出典のない解釈や評価は `推論:` または `示唆:` と明示し、出典が述べた事実のように引用を付けない。
+  - 不足情報で結果が大きく変わる場合だけ質問する。それ以外は、不足を短く示して骨子を書く。
 
-This skill's structure is based on the public outline-writing article at https://shunk031.hatenablog.com/entry/lets-write-outline. Its style constraints are informed by the public Speaker Deck corpus at https://speakerdeck.com/shunk031, cited as provenance only. Do not reproduce the corpus or large excerpts from it.
+- 文体は簡潔にしつつ、型を優先して不自然にしない。
+  - 具体的な動詞と平易な名詞を使う。
+  - 同じまとまりの中では、文法や粒度をできるだけそろえる。
+  - 体言止め、同じ文字数、断片的なスライド文体を無理にそろえない。
+  - デッキ由来の簡潔さは参考にするが、特定デッキの言い回しやコーパス本文は写さない。
+
+## 入出力例
+
+入力:
+
+```markdown
+8月1日に新料金プランを公開。価格ページ訪問は公開後7日で[アクセスログ]1,920件。告知メール開封率は42%で、ログURLは https://example.com/mail-log 。問い合わせは76件[問い合わせ集計]で、主な内容は既存契約からの移行条件。有料転換率、解約率、売上影響は未集計。担当者の見立てでは、関心は高いが成功判断はまだ早い。
+```
+
+出力:
+
+```markdown
+- 新料金プランは公開後の反応を確認できるが、成功判断には成果指標が足りない。
+  - 8月1日に新料金プランを公開した。
+  - 価格ページ訪問は公開後7日で1,920件[アクセスログ]だった。
+  - 告知メール開封率は42%[mail-log](https://example.com/mail-log)だった。
+
+- 問い合わせは移行条件に集中しており、既存顧客への説明が次の論点になる。
+  - 問い合わせは76件[問い合わせ集計]だった。
+  - 主な内容は既存契約からの移行条件だった。
+
+- 成功を裏づける成果指標は未集計のため、結論は保留する。
+  - 有料転換率、解約率、売上影響は未集計。
+  - 示唆: 担当者は関心が高いと見ているが、成功とは断定できない。
+  - 当面の結論: 成果指標の集計後に成功判断を行う。
+```
+
+## 来歴
+
+- 構造の考え方は、公開記事 https://shunk031.hatenablog.com/entry/lets-write-outline に基づく。
+  - 文体上の制約は、公開 Speaker Deck コーパス https://speakerdeck.com/shunk031 を参考にしている。
+  - どちらも来歴として示すだけで、本文や大きな抜粋は再利用しない。
