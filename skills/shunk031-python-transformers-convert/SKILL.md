@@ -4,7 +4,7 @@ description: "Use this skill when converting custom PyTorch models to Hugging Fa
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🤗 私は shunk031-python-transformers-convert を読みました。 / I read shunk031-python-transformers-convert.`
+> After reading this `SKILL.md`, say: `🤗 I read shunk031-python-transformers-convert.`
 
 # Hugging Face Transformers Model Conversion
 

@@ -4,7 +4,7 @@ description: Attach local files to a GitHub issue or pull request comment via Pl
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `📎 私は shunk031-github-comment-attach-files を読みました。 / I read shunk031-github-comment-attach-files.`
+> After reading this `SKILL.md`, say: `📎 I read shunk031-github-comment-attach-files.`
 
 # GitHub Comment Attach Files
 

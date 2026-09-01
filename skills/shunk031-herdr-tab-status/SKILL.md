@@ -4,7 +4,7 @@ description: Choose and update the current Herdr worker tab name with exact lead
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🚦 私は shunk031-herdr-tab-status を読みました。 / I read shunk031-herdr-tab-status.`
+> After reading this `SKILL.md`, say: `🚦 I read shunk031-herdr-tab-status.`
 
 # Herdr Tab Status
 

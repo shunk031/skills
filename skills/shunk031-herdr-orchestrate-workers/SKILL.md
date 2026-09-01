@@ -4,7 +4,7 @@ description: Orchestrate and coordinate coding workers in Herdr by spawning para
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🐑 私は shunk031-herdr-orchestrate-workers を読みました。 / I read shunk031-herdr-orchestrate-workers.`
+> After reading this `SKILL.md`, say: `🐑 I read shunk031-herdr-orchestrate-workers.`
 
 # Orchestrate Herdr Workers
 

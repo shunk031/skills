@@ -4,7 +4,7 @@ description: Coordinate work across the public dotfiles source at ~/.local/share
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🏠 私は shunk031-manage-public-private-dotfiles を読みました。 / I read shunk031-manage-public-private-dotfiles.`
+> After reading this `SKILL.md`, say: `🏠 I read shunk031-manage-public-private-dotfiles.`
 
 # Manage Public and Private Dotfiles
 

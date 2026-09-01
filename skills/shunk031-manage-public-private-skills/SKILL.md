@@ -4,7 +4,7 @@ description: Route and carry out work on coding-agent skills. Use when an edit t
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🧰 私は shunk031-manage-public-private-skills を読みました。 / I read shunk031-manage-public-private-skills.`
+> After reading this `SKILL.md`, say: `🧰 I read shunk031-manage-public-private-skills.`
 
 # Manage Public and Private Skills
 

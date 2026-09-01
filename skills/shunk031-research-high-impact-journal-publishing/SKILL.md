@@ -4,7 +4,7 @@ description: Guidance and workflow for planning, writing, submitting, revising, 
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🔬 私は shunk031-research-high-impact-journal-publishing を読みました。 / I read shunk031-research-high-impact-journal-publishing.`
+> After reading this `SKILL.md`, say: `🔬 I read shunk031-research-high-impact-journal-publishing.`
 
 # High-impact journal publishing skill
 

@@ -4,7 +4,7 @@ description: Use this skill for all GitHub write operations in creative-graphic-
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🎨 私は shunk031-github-cgd-identity を読みました。 / I read shunk031-github-cgd-identity.`
+> After reading this `SKILL.md`, say: `🎨 I read shunk031-github-cgd-identity.`
 
 # CGD Dev Identity
 

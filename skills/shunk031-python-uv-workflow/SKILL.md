@@ -4,7 +4,7 @@ description: Apply Python development policy using uv-first execution, test-firs
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🐍 私は shunk031-python-uv-workflow を読みました。 / I read shunk031-python-uv-workflow.`
+> After reading this `SKILL.md`, say: `🐍 I read shunk031-python-uv-workflow.`
 
 # Python UV Workflow
 

@@ -4,7 +4,7 @@ description: Organize persistent coding-agent guidance and its adapters without 
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🧭 私は shunk031-manage-agent-guidance を読みました。 / I read shunk031-manage-agent-guidance.`
+> After reading this `SKILL.md`, say: `🧭 I read shunk031-manage-agent-guidance.`
 
 # Manage Agent Guidance
 

@@ -4,7 +4,7 @@ description: Research current official web documentation and representative GitH
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🔎 私は shunk031-research-before-implementation を読みました。 / I read shunk031-research-before-implementation.`
+> After reading this `SKILL.md`, say: `🔎 I read shunk031-research-before-implementation.`
 
 # Research Before Implementation
 

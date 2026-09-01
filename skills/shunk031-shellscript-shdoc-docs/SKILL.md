@@ -4,7 +4,7 @@ description: Write and review shellscript documentation with shdoc annotations. 
 ---
 
 > [!NOTE]
-> After reading this `SKILL.md`, say: `🐚 私は shunk031-shellscript-shdoc-docs を読みました。 / I read shunk031-shellscript-shdoc-docs.`
+> After reading this `SKILL.md`, say: `🐚 I read shunk031-shellscript-shdoc-docs.`
 
 # Shdoc Shell Docs
 
