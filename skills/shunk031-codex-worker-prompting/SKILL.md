@@ -10,6 +10,10 @@ description: Write task prompts, follow-ups, and authorizations for Codex-family
 
 Write prompts that make worker decisions and stop conditions explicit.
 
+**Premise.** Codex-family workers tend to over-engineer cross-cutting edits into bulk mechanical transforms such as `sed`, regex, or scripted rewrites, even when each occurrence requires individual judgment. When dispatching a judgment-bearing cross-cutting edit, explicitly forbid bulk find-and-replace and require editing one occurrence at a time with per-hunk diff review before committing.
+
+**Premise.** Codex workers do not discover or read skills on their own initiative. A dispatch that expects a worker to follow a skill must name each required skill explicitly with its readable path and say "read the file" when invocation is not intended; an unstated skill is an unread skill.
+
 For public/private dotfiles or Codex configuration work, tell the worker to use the `shunk031-manage-public-private-dotfiles` skill. That skill requires reading `~/.agents/AGENTS-private.md` when it is readable, as well as the root `AGENTS.md` files in both dotfiles repositories. Refer to this stable private-instructions path instead of inventing a Codex-specific private `AGENTS.md`.
 
 ## Eight principles
