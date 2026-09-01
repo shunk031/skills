@@ -1,0 +1,36 @@
+{
+  "skill_name": "shunk031-research-structured-bullet-writing",
+  "evals": [
+    {
+      "id": "rewrite-long-prose",
+      "prompt": "次の長い文章を、意思決定者向けの骨子箇条書きに書き換えてください。Markdownで、必要なら見出しを付けてください。引用とURLは残してください。\\n\\n2026年4月に始めた社内ナレッジ検索の試験運用は、当初は問い合わせ削減が目的だった。対象はサポート部門の34名で、FAQ、仕様書、過去チケットの3種類を検索対象にした。5月末時点で1日あたりの検索回数は平均112回、自己解決率は[運用ログA]61%だった。ログの参照先は https://example.com/internal-search/log-a である。6月は対象を営業企画にも広げたが、営業企画では仕様書の命名が古く、検索語と文書タイトルが一致しないことが多かった。そのため検索回数は増えた一方で、自己解決率は[営業企画ヒアリング]48%まで下がった。サポート部門だけを見ると自己解決率は64%まで上がっている。利用者ヒアリングでは、回答が速いことより、回答根拠のリンクがすぐ確認できることが評価された（https://example.com/interviews/source-links）。課題は更新漏れで、古いFAQが残っていると正しい仕様書より上に出る場合があった。7月にFAQの棚卸しを終える予定で、営業企画向けには文書タイトルの別名辞書を作る案が出ている。費用は月額18万円で、有人問い合わせの削減効果はまだ金額換算していない。私の見立てでは、営業企画の低下は文書名の問題が主因だが、この因果はまだログだけでは確定していない。比較すると、検索対象はFAQ[対象資料]、仕様書[対象資料]、過去チケット[対象資料]の3種類である。",
+      "expected_output": "The response turns the prose into a Markdown outline that an executive can scan. It preserves the supplied facts and sources while separating rollout results, evidence, problems, next actions, and unsupported inference.",
+      "assertions": [
+        "The response is a Markdown bullet outline with top-level bullets that read as topic sentences rather than one-word labels.",
+        "The response keeps the supplied numbers and time references near the claims they support, including 34 members, average 112 daily searches, 61%, 48%, 64%, July, and 180,000 yen per month.",
+        "The response preserves the input citations and source URLs at the smallest supported unit, including [運用ログA] immediately with the 61% metric, [営業企画ヒアリング] immediately with the 48% metric, [対象資料] attached to each cited FAQ, specification, and past-ticket item, a Markdown link for https://example.com/internal-search/log-a, and the interview source URL.",
+        "The response does not add unsupported ROI, adoption, product, budget, or success conclusions beyond the prompt, and it labels the writer's causal interpretation with 推論: or 示唆: rather than citing it as proven."
+      ]
+    },
+    {
+      "id": "compose-from-notes",
+      "prompt": "以下のメモから、structured bullet outlineを作ってください。まだ文章化していないので、論点の順番も整えてください。\\n\\n- 対象: 既存の週次レポート作成プロセス\\n- 現状: 担当者3人が火曜午前にCSVを集め、スプレッドシートで手作業集計\\n- 所要時間: 1回あたり合計5.5時間\\n- エラー: 直近8週で数式コピー漏れが3回、指標名の取り違えが1回\\n- 変更案: データ取得だけをAPI化し、集計ロジックは当面スプレッドシートに残す\\n- 理由: 指標定義が月1回変わるので、全部をコード化すると修正担当がエンジニアだけになる\\n- 期待効果: CSV収集が不要になり、手作業はチェックとコメント追記に集中できる\\n- 未決: APIトークンの管理者、失敗時のリトライ通知先、初回接続先の優先順位",
+      "expected_output": "The response composes the notes into a coherent outline for planning discussion. It groups the situation, risk, proposed scope, rationale, expected effect, and unresolved decisions without adding facts.",
+      "assertions": [
+        "The response starts with three or four top-level bullet items when counted by the main Markdown bullets.",
+        "Each top-level bullet summarizes a local group, and nested bullets supply the concrete details such as 3 people, Tuesday morning, 5.5 hours, 8 weeks, 3 formula-copy misses, and 1 metric-name mix-up.",
+        "The response preserves the partial automation boundary: API-based data retrieval, with spreadsheet aggregation kept for now because metric definitions change monthly."
+      ]
+    },
+    {
+      "id": "insufficient-information",
+      "prompt": "このメモを使って、『新料金プランのローンチは成功した』という結論の骨子を書いてください。事実が足りなければ、足りないところは無理に埋めずに扱ってください。\\n\\n- 2026年8月1日に新料金プランを公開\\n- 告知メールの開封率は42%\\n- 既存顧客から価格ページへの訪問は公開後7日で1,920件\\n- 問い合わせは76件で、主な内容は既存契約からの移行条件\\n- 有料転換率、解約率、売上影響、顧客満足度はまだ集計していない",
+      "expected_output": "The response creates a cautious outline from the available launch facts and refuses to prove a success conclusion from missing outcome data. It asks only for missing evidence that would materially affect that conclusion.",
+      "assertions": [
+        "The response does not assert that the launch succeeded as a supported conclusion.",
+        "The response names the missing outcome evidence from the prompt, such as paid conversion, churn, revenue impact, or customer satisfaction, instead of inventing values for them.",
+        "The response still organizes the available facts, including August 1, 2026, 42%, 1,920 visits in 7 days, and 76 inquiries."
+      ]
+    }
+  ]
+}
