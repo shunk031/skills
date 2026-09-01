@@ -17,13 +17,13 @@
       "should_trigger": true
     },
     {
-      "id": "skills-cli-usage-question",
-      "prompt": "What does the --copy flag do in npx skills add, and when would I want it instead of the default? One or two sentences, no changes to anything.",
-      "should_trigger": false
+      "id": "normalize-cross-agent-skill-reference",
+      "prompt": "A shared skill says `$research-before-implementation` in its prose. Make that reference portable across Codex and Claude Code without changing the documented invocation examples.",
+      "should_trigger": true
     },
     {
-      "id": "write-skill-body-content",
-      "prompt": "Draft the body text for a skill that teaches an agent to write conventional commit messages. Just the prose — I'll deal with where it goes.",
+      "id": "skills-cli-usage-question",
+      "prompt": "What does the --copy flag do in npx skills add, and when would I want it instead of the default? One or two sentences, no changes to anything.",
       "should_trigger": false
     },
     {

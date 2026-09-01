@@ -31,7 +31,7 @@ repos:
       # Live model calls, two arms per case. The most expensive gate.
       - id: shuhari-eval-skill
         name: evaluate changed skills
-        entry: scripts/shuhari_staged_targets.sh eval
+        entry: env SHUHARI_RECORD_RESULTS=false scripts/shuhari_staged_targets.sh eval
         language: system
         pass_filenames: true
         require_serial: true

@@ -62,10 +62,11 @@ EOF
     TARGET="${skill_dir}/SKILL.md"
 
     SHUHARI_ARGV_LOG="${BATS_TEST_TMPDIR}/shuhari-argv"
+    UV_ARGV_LOG="${BATS_TEST_TMPDIR}/uv-argv"
     # What the stub `mise which shuhari` answers. Tests that need the real
     # binary point it there instead.
     SHUHARI_RESOLVED_PATH="${stub_bin}/shuhari"
-    export SHUHARI_ARGV_LOG SHUHARI_RESOLVED_PATH
+    export SHUHARI_ARGV_LOG SHUHARI_RESOLVED_PATH UV_ARGV_LOG
 
     cat > "${stub_bin}/mise" << 'EOF'
 #!/usr/bin/env bash
@@ -81,6 +82,7 @@ printf '%s\n' "$@" > "${SHUHARI_ARGV_LOG}"
 EOF
     cat > "${stub_bin}/uv" << 'EOF'
 #!/usr/bin/env bash
+printf '%s\n' "$@" > "${UV_ARGV_LOG}"
 exit 0
 EOF
     chmod +x "${stub_bin}/mise" "${stub_bin}/shuhari" "${stub_bin}/uv"
@@ -90,6 +92,15 @@ EOF
 
 function target_path() {
     printf '%s\n' "${TARGET}"
+}
+
+@test "SHUHARI_RECORD_RESULTS false keeps pre-commit evaluation read-only" {
+    local target
+    target="$(target_path)"
+
+    run env SHUHARI_RECORD_RESULTS=false "${WRAPPER}" eval "${target}"
+    [ "${status}" -eq 0 ]
+    [ ! -e "${UV_ARGV_LOG}" ]
 }
 
 @test "validation ignores an exported SHUHARI_SANDBOX" {

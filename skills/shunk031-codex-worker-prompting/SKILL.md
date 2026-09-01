@@ -10,6 +10,8 @@ description: Write task prompts, follow-ups, and authorizations for Codex-family
 
 Write prompts that make worker decisions and stop conditions explicit.
 
+For public/private dotfiles or Codex configuration work, tell the worker to use the `shunk031-manage-public-private-dotfiles` skill. That skill requires reading `~/.agents/AGENTS-private.md` when it is readable, as well as the root `AGENTS.md` files in both dotfiles repositories. Refer to this stable private-instructions path instead of inventing a Codex-specific private `AGENTS.md`.
+
 ## Eight principles
 
 1. **Write contracts, not vibes.** Put machine-checkable conditions in every instruction: exact SHAs, exact commands, exact pass/fail gates, and explicit STOP conditions. Have workers self-check against these gates, and treat pushback that a gate is impossible as signal, not defiance. Pair every gate with a statement of what it does not measure, and treat a gate conflict like an impossible gate: stop and report instead of silently satisfying one gate.
