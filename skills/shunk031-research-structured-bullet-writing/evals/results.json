@@ -1,23 +1,23 @@
 {
   "schema_version": "1",
   "skill_name": "shunk031-research-structured-bullet-writing",
-  "measured_at": "2026-09-01T18:11:48.088612Z",
+  "measured_at": "2026-09-01T18:17:49.933471Z",
   "agent": "codex",
   "model": "gpt-5.6-luna",
   "reasoning_effort": "high",
   "trials": 3,
   "network": false,
   "pass_rate": {
-    "with_skill": 1,
+    "with_skill": 0.963,
     "without_skill": 0.5556
   },
   "tokens": {
-    "with_skill": 77565.3333,
-    "without_skill": 58761.8889
+    "with_skill": 71877,
+    "without_skill": 51436.2222
   },
   "seconds": {
-    "with_skill": 42.7339,
-    "without_skill": 28.8426
+    "with_skill": 32.4654,
+    "without_skill": 48.6687
   },
   "assertions": [
     {
@@ -37,9 +37,9 @@
     {
       "case_id": "compose-from-notes",
       "assertion": "The response starts with three or four top-level bullet items when counted by the main Markdown bullets.",
-      "with_skill": 1,
+      "with_skill": 0.6666666666666666,
       "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "category": "mixed"
     },
     {
       "case_id": "insufficient-information",
