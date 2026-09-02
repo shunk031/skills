@@ -122,7 +122,7 @@ Compare the whole draft with the contract, the section skeleton, any intended sh
 
 ### Editing
 
-Then work the paragraphs and sentences: sentence order, transitions, term use, and every local fix the reading pass named. Finish each revision round with this pass, then run `next`.
+Then work the paragraphs and sentences: sentence order, transitions, term use, and every local fix the reading pass named. Apply judgment-bearing cross-cutting edits one occurrence at a time, inspect the resulting hunk, and then continue; do not use bulk replacement when context can change the right fix. Finish each revision round with this pass, then run `next`.
 
 ### Added evaluation sub-processes
 
