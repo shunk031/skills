@@ -28,7 +28,7 @@
     },
     {
       "id": "status-reconciliation-before-waiting",
-      "prompt": "You are orchestrator agent orch264 in a Herdr session. After bounded reconciliation, the worker's STATUS and readable transcript show that it is still working; its worktree has staged, unpushed changes; and PR/CI is green only for the old head. Should you send any prompt or acknowledgement, or keep the current lifecycle wait running? This is an offline dry run; do not execute commands.",
+      "prompt": "You are orchestrator agent orch264 in a Herdr session. Before answering this worker-state reconciliation question, read the available Herdr worker-orchestration instructions. After bounded reconciliation, the worker's STATUS and readable transcript still show it working; its worktree has staged, unpushed changes, and PR/CI is green only for the old head. What should happen next—send a prompt or acknowledgement, or keep the current lifecycle wait running? This is a dry run; do not execute commands.",
       "should_trigger": true
     },
     {
@@ -48,7 +48,7 @@
     },
     {
       "id": "orchestrator-provenance",
-      "prompt": "You are orchestrator agent orch264 in a Herdr session. Before relaying a worker report, identify whether the added constraint came from the user instruction, the worker prompt, or the orchestrator addition. The user requested only, ‘Run the package-loader acceptance check.’ The worker prompt adds, ‘Compare the production loader with an independent reference,’ and the orchestrator note says, ‘I added this comparison after reviewing the worker report.’ What motive, if any, does the transcript support? This is an offline dry run; do not execute commands.",
+      "prompt": "You are orchestrator agent orch264 in a Herdr session. Before answering this worker-report provenance question, read the available Herdr worker-orchestration instructions. The user asked only, ‘Run the package-loader acceptance check.’ The worker's task prompt says, ‘Compare the production loader with an independent reference,’ and the orchestrator's note says, ‘I added this comparison after reviewing the worker report.’ Which source—user instruction, worker prompt, or orchestrator addition—does the transcript support for the comparison requirement, and what motive, if any, is evidenced? This is a dry run; do not execute commands.",
       "should_trigger": true
     },
     {
