@@ -1,23 +1,23 @@
 {
   "schema_version": "1",
   "skill_name": "shunk031-research-structured-bullet-writing",
-  "measured_at": "2026-09-02T03:55:55.755344Z",
+  "measured_at": "2026-09-02T05:13:44.069336Z",
   "agent": "codex",
   "model": "gpt-5.6-luna",
   "reasoning_effort": "high",
   "trials": 3,
   "network": false,
   "pass_rate": {
-    "with_skill": 0.9722,
-    "without_skill": 0.5648
+    "with_skill": 0.963,
+    "without_skill": 0.5278
   },
   "tokens": {
-    "with_skill": 74779.2222,
-    "without_skill": 60535
+    "with_skill": 78537.5556,
+    "without_skill": 55440.4444
   },
   "seconds": {
-    "with_skill": 27.5378,
-    "without_skill": 27.7153
+    "with_skill": 24.0253,
+    "without_skill": 24.6609
   },
   "assertions": [
     {
@@ -37,16 +37,16 @@
     {
       "case_id": "compose-from-notes",
       "assertion": "The response starts with three or four top-level bullet items when counted by the main Markdown bullets.",
-      "with_skill": 1,
+      "with_skill": 0.6666666666666666,
       "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "category": "mixed"
     },
     {
       "case_id": "insufficient-information",
       "assertion": "The response does not assert that the launch succeeded as a supported conclusion.",
       "with_skill": 1,
-      "without_skill": 0.3333333333333333,
-      "category": "mixed"
+      "without_skill": 0,
+      "category": "pass_with_fail_without"
     },
     {
       "case_id": "insufficient-information",
@@ -86,9 +86,9 @@
     {
       "case_id": "rewrite-long-prose",
       "assertion": "The response preserves the input citations and source URLs at the smallest supported unit, including [運用ログA] immediately with the 61% metric, [営業企画ヒアリング] immediately with the 48% metric, [対象資料] attached to each cited FAQ, specification, and past-ticket item, a Markdown link for https://example.com/internal-search/log-a, and the interview source URL.",
-      "with_skill": 0.6666666666666666,
+      "with_skill": 1,
       "without_skill": 0,
-      "category": "mixed"
+      "category": "pass_with_fail_without"
     }
   ]
 }

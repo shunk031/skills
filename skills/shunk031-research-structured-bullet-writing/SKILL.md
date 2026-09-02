@@ -1,6 +1,6 @@
 ---
 name: shunk031-research-structured-bullet-writing
-description: 日本語を既定に、任意領域の文章・議事メモ・下書き・調査メモを骨子箇条書き / structured bullet outline として作成・書き換える。骨子を書いて、箇条書きで論点整理、経営会議向けに論点が追える箇条書き、topic bullets with nested support など、supplied material を論点文と根拠の階層に整理する依頼で使う。買い物リスト、持ち物リスト、キャンプ用品リスト、TODO、作業チェックリスト、単なる分類リスト、Markdown 整形だけ、PowerPoint やスライドの作成・デザイン・レイアウト依頼では使わない。
+description: 日本語を既定に、任意領域の文章・議事メモ・下書き・調査メモ・research notes を骨子箇条書き / structured bullet outline として作成・書き換える。骨子を書いて、箇条書きで論点整理、経営会議向けに論点が追える箇条書き、topic sentences and supporting points、topic bullets with nested support など、supplied material を論点文と根拠の階層に整理する依頼で使う。買い物リスト、持ち物リスト、キャンプ用品リスト、TODO、作業チェックリスト、単なる分類リスト、Markdown 整形だけ、PowerPoint やスライドの作成・デザイン・レイアウト依頼では使わない。
 ---
 
 > [!NOTE]
