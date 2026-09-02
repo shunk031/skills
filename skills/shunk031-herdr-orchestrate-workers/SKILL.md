@@ -67,6 +67,8 @@ An orchestrator delegates independent tasks to worker agents, one git worktree t
 
    An actionable `REJECT` from an independent review worker is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `herdr agent prompt <owner> "$answer"` path; use the step-5 receipt contract, record the exact rejected head and `re-review pending`, and after the owner publishes a corrected head route that exact head back to the same reviewer with the same contract. Only `ACCEPT` permits a user merge handoff.
 
+   When a user flags one defective passage in a worker-owned deliverable, treat it as an instance of a class, not a spot-fix request. The orchestrator defines the class, quotes the flagged passage as the model case, dispatches a sweep to every owner whose artifact can carry that class, and requires each report to include found and fixed counts.
+
    When a `DONE`, `BLOCKED`, `STATUS`, or `OBSERVER` report arrives, send the answer or next instruction with `herdr agent prompt <worker-name> "$prompt"` in that turn, or state the concrete reason for waiting; this advisory routing does not replace the lifecycle wait or direct collection, and a missing report does not block a settled result. A decision without a prompt or wait reason leaves the turn incomplete.
 
    When explaining a constraint's provenance, check the transcript, distinguish the user instruction, worker prompt, and orchestrator addition, state only the observed origin, and do not infer motive.
