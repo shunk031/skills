@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
   "skill_name": "shunk031-research-structured-bullet-writing",
-  "measured_at": "2026-09-02T05:13:44.069336Z",
+  "measured_at": "2026-09-02T05:20:30.46011Z",
   "agent": "codex",
   "model": "gpt-5.6-luna",
   "reasoning_effort": "high",
@@ -9,23 +9,23 @@
   "network": false,
   "pass_rate": {
     "with_skill": 0.963,
-    "without_skill": 0.5278
+    "without_skill": 0.6204
   },
   "tokens": {
-    "with_skill": 78537.5556,
-    "without_skill": 55440.4444
+    "with_skill": 77868.6667,
+    "without_skill": 55274.3333
   },
   "seconds": {
-    "with_skill": 24.0253,
-    "without_skill": 24.6609
+    "with_skill": 29.505,
+    "without_skill": 23.8755
   },
   "assertions": [
     {
       "case_id": "compose-from-notes",
       "assertion": "Each top-level bullet summarizes a local group, the outline uses nested support bullets, and the response preserves concrete details such as 3 people, Tuesday morning, 5.5 hours, 8 weeks, 3 formula-copy misses, and 1 metric-name mix-up.",
-      "with_skill": 1,
+      "with_skill": 0.6666666666666666,
       "without_skill": 1,
-      "category": "always_pass_both"
+      "category": "mixed"
     },
     {
       "case_id": "compose-from-notes",
@@ -37,16 +37,16 @@
     {
       "case_id": "compose-from-notes",
       "assertion": "The response starts with three or four top-level bullet items when counted by the main Markdown bullets.",
-      "with_skill": 0.6666666666666666,
+      "with_skill": 1,
       "without_skill": 0,
-      "category": "mixed"
+      "category": "pass_with_fail_without"
     },
     {
       "case_id": "insufficient-information",
       "assertion": "The response does not assert that the launch succeeded as a supported conclusion.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.3333333333333333,
+      "category": "mixed"
     },
     {
       "case_id": "insufficient-information",
@@ -73,8 +73,8 @@
       "case_id": "rewrite-long-prose",
       "assertion": "The response is a Markdown bullet outline with top-level bullets that read as genuine topic sentences and nested support bullets under the local groups.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.3333333333333333,
+      "category": "mixed"
     },
     {
       "case_id": "rewrite-long-prose",
@@ -87,8 +87,8 @@
       "case_id": "rewrite-long-prose",
       "assertion": "The response preserves the input citations and source URLs at the smallest supported unit, including [運用ログA] immediately with the 61% metric, [営業企画ヒアリング] immediately with the 48% metric, [対象資料] attached to each cited FAQ, specification, and past-ticket item, a Markdown link for https://example.com/internal-search/log-a, and the interview source URL.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.3333333333333333,
+      "category": "mixed"
     }
   ]
 }
