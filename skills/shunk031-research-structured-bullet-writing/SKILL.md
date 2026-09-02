@@ -1,6 +1,6 @@
 ---
 name: shunk031-research-structured-bullet-writing
-description: 日本語を既定に、任意領域の文章・議事メモ・下書き・調査メモを骨子箇条書き / structured bullet outline として作成・書き換える。骨子を書いて、箇条書きで論点整理、経営会議向けに論点が追える箇条書き、スライド風の本文箇条書き、topic bullets with nested support など、supplied material を論点文と根拠の階層に整理する依頼で使う。買い物リスト、持ち物リスト、キャンプ用品リスト、TODO、作業チェックリスト、単なる分類リスト、Markdown 整形だけ、PowerPoint やスライドの作成・デザイン・レイアウト依頼では使わない。
+description: 日本語を既定に、任意領域の文章・議事メモ・下書き・調査メモを骨子箇条書き / structured bullet outline として作成・書き換える。骨子を書いて、箇条書きで論点整理、経営会議向けに論点が追える箇条書き、topic bullets with nested support など、supplied material を論点文と根拠の階層に整理する依頼で使う。買い物リスト、持ち物リスト、キャンプ用品リスト、TODO、作業チェックリスト、単なる分類リスト、Markdown 整形だけ、PowerPoint やスライドの作成・デザイン・レイアウト依頼では使わない。
 ---
 
 > [!NOTE]
@@ -48,8 +48,7 @@ description: 日本語を既定に、任意領域の文章・議事メモ・下�
 - 文体は簡潔にしつつ、型を優先して不自然にしない。
   - 具体的な動詞と平易な名詞を使う。
   - 同じまとまりの中では、文法や粒度をできるだけそろえる。
-  - 体言止め、同じ文字数、断片的なスライド文体を無理にそろえない。
-  - デッキ由来の簡潔さは参考にするが、特定デッキの言い回しやコーパス本文は写さない。
+  - 体言止め、同じ文字数、断片的な文体を無理にそろえない。
 
 ## 入出力例
 
@@ -77,5 +76,4 @@ description: 日本語を既定に、任意領域の文章・議事メモ・下�
 ## 来歴
 
 - 構造の考え方は、公開記事 https://shunk031.hatenablog.com/entry/lets-write-outline に基づく。
-  - 文体上の制約は、公開 Speaker Deck コーパス https://speakerdeck.com/shunk031 を参考にしている。
-  - どちらも来歴として示すだけで、本文や大きな抜粋は再利用しない。
+  - 来歴として示すだけで、本文や大きな抜粋は再利用しない。

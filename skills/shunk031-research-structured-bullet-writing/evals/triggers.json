@@ -17,8 +17,8 @@
       "should_trigger": true
     },
     {
-      "id": "slide-like-bullets",
-      "prompt": "次の文章をスライド風に箇条書きへ直して。数字は残しつつ、論点ごとにまとめて。",
+      "id": "evidence-linked-outline",
+      "prompt": "次の文章を、数字と根拠が各論点の近くに残る骨子箇条書きへ直してください。",
       "should_trigger": true
     },
     {
