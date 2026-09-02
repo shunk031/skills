@@ -28,7 +28,7 @@
     },
     {
       "id": "status-reconciliation-before-waiting",
-      "prompt": "You are the orchestrator agent orch264 in a Herdr session. A bounded reconciliation is already complete: Herdr state and the readable transcript confirm that the worker is still working; its worktree has staged, unpushed changes; PR/CI is green only for the old head. This is an offline dry run; state whether any prompt or acknowledgement is sent and what is awaited next.",
+      "prompt": "You are orchestrator agent orch264 in a Herdr session. After bounded reconciliation, the worker's STATUS and readable transcript show that it is still working; its worktree has staged, unpushed changes; and PR/CI is green only for the old head. Should you send any prompt or acknowledgement, or keep the current lifecycle wait running? This is an offline dry run; do not execute commands.",
       "should_trigger": true
     },
     {
@@ -48,12 +48,12 @@
     },
     {
       "id": "orchestrator-provenance",
-      "prompt": "Following the `shunk031-herdr-orchestrate-workers` skill, you are orchestrator agent orch264 in a Herdr session. A worker asks why a constraint appears in its task prompt. The supplied transcript excerpt says: User: ‘Run the package-loader acceptance check.’ Worker prompt: ‘Compare the production loader with an independent reference.’ Orchestrator note: ‘I added this comparison constraint after reviewing the worker report.’ Explain the constraint's provenance using those transcript facts, without executing commands or inventing missing context.",
+      "prompt": "You are orchestrator agent orch264 in a Herdr session. Before relaying a worker report, identify whether the added constraint came from the user instruction, the worker prompt, or the orchestrator addition. The user requested only, ‘Run the package-loader acceptance check.’ The worker prompt adds, ‘Compare the production loader with an independent reference,’ and the orchestrator note says, ‘I added this comparison after reviewing the worker report.’ What motive, if any, does the transcript support? This is an offline dry run; do not execute commands.",
       "should_trigger": true
     },
     {
       "id": "queue-over-conversation",
-      "prompt": "You are orchestrator agent orch264 in a Herdr session. During one user turn, the durable queue delivers these reports: orch-build sends DONE, claims the diff and production-path trace are ready for source-of-truth acceptance, and gives a review link; orch-data sends BLOCKED and asks whether to use 8 or 16 GPUs. The user also asks, ‘Are we on track?’ This is an offline dry run; describe the concrete routing actions and wait reasons before ending the same turn, but do not execute commands.",
+      "prompt": "You are the orchestrator for a Herdr session. During one turn, the queue delivers a DONE report with a review link and a diff and production trace ready for validation, while another worker is BLOCKED on an 8-vs-16 GPU choice. The user asks, ‘Are we on track?’ What same-turn routing sequence should you follow before answering the user? This is a dry run; do not execute commands.",
       "should_trigger": true
     },
     {
@@ -68,7 +68,7 @@
     },
     {
       "id": "cross-stream-failure-synthesis",
-      "prompt": "Following the `shunk031-herdr-orchestrate-workers` skill, you are orchestrator agent orch264 in a Herdr session. Two independent worker streams report the same failure signature in separate tasks. This is an offline dry run; describe the coordination response and what durable follow-up you create, without executing commands.",
+      "prompt": "You are the orchestrator for a Herdr session. Before responding, consult the Herdr worker orchestration protocol. Two independent worker streams report the same failure signature. What shared-incident workflow should you follow, including the durable follow-up? This is a dry run; do not execute commands.",
       "should_trigger": true
     },
     {
