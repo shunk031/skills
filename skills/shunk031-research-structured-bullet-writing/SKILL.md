@@ -1,12 +1,14 @@
 ---
 name: shunk031-research-structured-bullet-writing
-description: 日本語を既定に、任意領域の文章・議事メモ・下書き・調査メモ・research notes を骨子箇条書き / structured bullet outline として作成・書き換える。骨子を書いて、箇条書きで論点整理、経営会議向けに論点が追える箇条書き、topic sentences and supporting points、topic bullets with nested support など、supplied material を論点文と根拠の階層に整理する依頼で使う。買い物リスト、持ち物リスト、キャンプ用品リスト、TODO、作業チェックリスト、単なる分類リスト、Markdown 整形だけ、PowerPoint やスライドの作成・デザイン・レイアウト依頼では使わない。
+description: 文章やメモを、論点文とそれを支える根拠からなる骨子箇条書きに構成・書き換える。日本語の「骨子を書いて」「箇条書きで論点整理して」、英語の「structured bullet outline」「topic sentences with supporting points」に該当する依頼で使う。品目の列挙、タスク管理、スライド作成は対象外。出力は日本語を既定とする。
 ---
 
 > [!NOTE]
 > この `SKILL.md` を読んだら、`🧱 私は shunk031-research-structured-bullet-writing を読みました。` と言う。
 
 # 骨子箇条書き
+
+このスキルの本文自体を、骨子箇条書きの見本として構成する。
 
 - 骨子箇条書きは、与えられた素材を「論点文」と「支える事実」の階層に整理する。
   - 既存の文章を書き換える依頼にも、メモから新しく構成する依頼にも使う。
