@@ -73,7 +73,7 @@
     },
     {
       "id": "recompute-report-numbers",
-      "prompt": "Following the `shunk031-herdr-orchestrate-workers` skill, you are orchestrator agent orch264 in a Herdr session. A worker report headline claims 12 passed and 0 skipped, but the attached raw result rows contain 11 passing rows and 1 skipped row. This is an offline dry run; state what you relay and whether you use the report for a decision, without executing commands.",
+      "prompt": "You are coordinating workers in a Herdr session. A worker report headline says 12 passed and 0 skipped, but the attached raw result rows show 11 passing rows and 1 skipped row. Before I relay the update, what numbers should I state?",
       "should_trigger": true
     },
     {

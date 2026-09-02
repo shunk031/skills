@@ -1,6 +1,6 @@
 ---
 name: shunk031-herdr-orchestrate-workers
-description: Orchestrate and coordinate coding workers in Herdr by spawning parallel Codex workers in git worktree tabs, tracking status and reports, and routing owned task, review, and pull-request lifecycles. Use only when the request explicitly mentions Herdr and asks to orchestrate, coordinate, fan out, parallelize, delegate, or route work among coding workers — or a prompt tells you that you are a Herdr worker reporting to an orchestrator. Never use it merely because a task involves parallel work, multiple agents, or git worktrees without Herdr being named; also not for single-agent Herdr control or general Herdr CLI questions, which the herdr skill covers.
+description: Orchestrate and coordinate coding workers in Herdr by spawning parallel Codex workers in git worktree tabs, tracking status, validating worker reports against raw results before relaying or deciding, and routing owned task, review, and pull-request lifecycles. Use only when the request explicitly mentions Herdr and asks to orchestrate, coordinate, fan out, parallelize, delegate, route work among coding workers, or validate a worker report's numeric claims against raw results — or when a prompt tells you that you are a Herdr worker reporting to an orchestrator. Never use it merely because a task involves parallel work, multiple agents, or git worktrees without Herdr being named; also not for single-agent Herdr control or general Herdr CLI questions, which the herdr skill covers.
 ---
 
 > [!NOTE]
@@ -8,7 +8,7 @@ description: Orchestrate and coordinate coding workers in Herdr by spawning para
 
 # Orchestrate Herdr Workers
 
-An orchestrator delegates independent tasks to worker agents, one git worktree tab each. Workers must report back by prompting the orchestrator for attribution and audit, but completion is collected from Herdr lifecycle state and the worker's deliverable and transcript. Read this skill file and the herdr skill first: the herdr skill owns all CLI mechanics, JSON responses, ID handling, and safety rules. This skill adds only the orchestration protocol. Build every peer prompt in a shell variable first (for example, with a quoted heredoc) and pass it as one argument; never let the shell expand task or report text.
+An orchestrator delegates independent tasks to worker agents, one git worktree tab each. Workers must report back by prompting the orchestrator for attribution and audit, but completion is collected from Herdr lifecycle state and the worker's deliverable and transcript. Read this skill file and the herdr skill first: the herdr skill owns all CLI mechanics, JSON responses, ID handling, and safety rules. This skill adds only the orchestration protocol. When writing a Codex worker's task prompt, follow the shunk031-codex-worker-prompting skill. Build every peer prompt in a shell variable first (for example, with a quoted heredoc) and pass it as one argument; never let the shell expand task or report text.
 
 ## Set up the orchestrator
 
