@@ -102,10 +102,10 @@ Translating puts the plan into words on the page. Its sub-process is drafting.
 
 ### Drafting
 
-- Open each prose paragraph with its topic sentence and keep one topic per paragraph. This is the default heuristic for expository and report prose. A medium reference may override it, and proofs, narratives, quotations, legal caveats, reference lists, and some short persuasive passages need not follow it.
+- Open each prose paragraph with a topic sentence stating its one point, and make that sentence carry the point for a skim. Keep following sentences on that point; start a new paragraph for a new point. Merge runs of single-sentence paragraphs created by list-to-prose conversion, and use blank lines only for genuine topic shifts. This is the default heuristic for expository and report prose. A medium reference may override it, and proofs, narratives, quotations, legal caveats, reference lists, and some short persuasive passages need not follow it.
 - Run `next`, then read the heading outline and paragraph-opening sentences printed by `check`. Treat that skim as a diagnostic: when it does not preserve the argument, find out why. It does not by itself fail a draft.
 - Vary paragraph length with the content. `check` reports sentence counts; neither uniform nor varied paragraphs are a failure on their own.
-- Put reasoning and causality in prose. Use bullets only for parallel members.
+- Put reasoning and causality in prose. Describe a procedure in prose when the reader is not executing it, and use a step list only for a procedure the reader must execute. Use bullets only for parallel members.
 - Use outline form for bullets that will become prose: complete sentences, a topic sentence opening each group, roughly two or three supporting bullets when the material supports them, and an optional closing conclusion. The count is guidance, not a check that can fail.
 - Use telegraphic form for bullets that remain visible: a claim first, compressed supporting fragments below it. Follow the selected language and medium references for the exact form.
 - Follow the selected language reference while drafting. Prevent predictable wording problems instead of adding a cleanup pass for them.
@@ -122,7 +122,7 @@ Compare the whole draft with the contract, the section skeleton, any intended sh
 
 ### Editing
 
-Then work the paragraphs and sentences: sentence order, transitions, term use, and every local fix the reading pass named. Apply judgment-bearing cross-cutting edits one occurrence at a time, inspect the resulting hunk, and then continue; do not use bulk replacement when context can change the right fix. Finish each revision round with this pass, then run `next`.
+Before changing a passage, state its purpose in one clause. Let the passage's form serve that purpose. If a style rule conflicts with clarity, accuracy, or the passage's purpose, record and report the conflict with the reasoned choice instead of complying mechanically. Then work the paragraphs and sentences: sentence order, transitions, term use, and every local fix the reading pass named. Apply judgment-bearing cross-cutting edits one occurrence at a time, inspect the resulting hunk, and then continue; do not use bulk replacement when context can change the right fix. Finish each revision round with this pass, then run `next`.
 
 ### Added evaluation sub-processes
 

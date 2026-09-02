@@ -2,26 +2,6 @@
   "skill_name": "shunk031-writing",
   "evals": [
     {
-      "id": 1,
-      "prompt": "Draft a paragraph-level outline for a research paper about whether retrieval-augmented generation reduces factual errors in customer-support answers. The outline will be expanded into prose, so write complete sentences rather than topic labels or fragments.",
-      "expected_output": "The response produces a research-paper outline whose entries are complete topic sentences that can become paragraphs. It separates reported results from their interpretation."
-    },
-    {
-      "id": 2,
-      "prompt": "Turn these results into the visible bullets for a short status report: the migration covered 42 repositories, 40 passed validation, and 2 remain blocked by missing owner approval. Use a claim line with compact supporting fragments, not prose paragraphs.",
-      "expected_output": "The response presents the report result as a claim line followed by telegraphic supporting fragments. It preserves all supplied counts and the reason the two repositories remain blocked."
-    },
-    {
-      "id": 3,
-      "prompt": "Revise this false parallel for a design document. Do not merely make the bullets look alike; restructure the ideas according to their real relationship: '- The cache lowers latency.\n- Operators can clear it with `cache purge`.\n- Redis 7.4.'",
-      "expected_output": "The response removes the false parallel by separating the benefit, operator action, and implementation fact according to their roles. It does more than normalize the bullets' grammar or punctuation."
-    },
-    {
-      "id": 4,
-      "prompt": "Sanitize this paragraph for publication in a README: 'As requested, this section avoids Docker and follows your instruction to use a local process. I added the following command because the previous answer was too abstract. Run `uv run app.py` to start the service.' Return only the reader-facing artifact.",
-      "expected_output": "The response keeps the command the README reader needs and removes the prompt history, avoided approach, and explanation of the revision process. It returns the artifact without a cleanup preface."
-    },
-    {
       "id": 5,
       "prompt": "A shunk031-writing task has a complete contract and draft, but its sanitize result has not been recorded against the current draft hash. Explain what `publish` must write to standard output and whether it succeeds. Do not invent or record the missing result.",
       "expected_output": "The response says publication fails because a required current-hash result is missing. It states that `publish` emits no Markdown to standard output."

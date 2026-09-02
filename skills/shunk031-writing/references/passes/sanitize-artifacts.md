@@ -4,6 +4,8 @@ Remove prompt echoes, conversation history, intermediate reasoning, tool choices
 
 Remove bookkeeping labels and research-session narration such as `VERIFIED`, `HYPOTHESIS`, and `Unverified:`. Express uncertainty with a plain-language hedge, and keep a caveat only when the intended reader needs it, stating its scope or condition instead of describing the research process.
 
+Remove self-assessed artifact size or effort qualifiers such as "small", "thin", "simple", and "lightweight". Omit volatile external facts that are not load-bearing; anchor facts that the artifact must preserve to a repository artifact or commit-pinned snapshot.
+
 Specimen: "Treat the conversation as production context, not automatically as artifact content."
 
 Source: https://github.com/kotek-7/dotfiles/blob/d80c707025bc138ce826917651c046fed232ee18/dot_agents/skills/sanitize-artifacts/SKILL.md
