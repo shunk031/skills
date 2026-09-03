@@ -54,6 +54,8 @@ description: 文章やメモを、論点文とそれを支える根拠からな�
 
 ## 入出力例
 
+### 例: 成果指標が足りない公開後反応
+
 入力:
 
 ```markdown
@@ -73,4 +75,69 @@ description: 文章やメモを、論点文とそれを支える根拠からな�
   - 有料転換率、解約率、売上影響は未集計。
   - 示唆: 担当者は関心が高いと見ているが、成功とは断定できない。
   - 当面の結論: 成果指標の集計後に成功判断を行う。
+```
+
+### 例: 議事メモから意思決定の流れを作る
+
+入力:
+
+```markdown
+社内ヘルプデスクの検索改善会議。参加者は運用担当2人、開発担当1人、カスタマーサポート担当1人。7月の問い合わせ1,180件のうち、FAQで解決できた問い合わせは410件。カスタマーサポート担当は、顧客向け予約サイトのキャンセル手順と領収書再発行の質問が多いと報告。開発担当は検索ログの表記ゆれが多く、同じ質問が「領収証」「領収書」「レシート」で分散していると説明。8月末までに同義語辞書を追加し、9月第1週に上位30件の検索失敗語を見直す。FAQ記事の全面改稿は工数が大きいため今回は見送る。
+```
+
+出力:
+
+```markdown
+- 社内ヘルプデスクでは、FAQで解決できない問い合わせがまだ多い。
+  - 7月の問い合わせ1,180件のうち、FAQで解決できた問い合わせは410件だった。
+  - 参加者は運用担当2人、開発担当1人、カスタマーサポート担当1人だった。
+- 顧客向け予約サイトでは、キャンセル手順と領収書再発行の質問が検索改善の主な対象になる。
+  - カスタマーサポート担当は、キャンセル手順と領収書再発行の質問が多いと報告した。
+  - 開発担当は、「領収証」「領収書」「レシート」の表記ゆれで同じ質問が分散していると説明した。
+- 今回は検索語の整理を先に進め、FAQ記事の全面改稿は見送る。
+  - 8月末までに同義語辞書を追加する。
+  - 9月第1週に上位30件の検索失敗語を見直す。
+  - FAQ記事の全面改稿は工数が大きいため今回は見送る。
+```
+
+### 例: 素材が少ない場合は無理に3本へ増やさない
+
+入力:
+
+```markdown
+新人研修の満足度アンケートは回答者18人、平均4.1点。自由記述では「演習時間が足りない」という声が6件あった。理解度テスト、配属後の成果、講師別評価はまだ集計していない。
+```
+
+出力:
+
+```markdown
+- 新人研修の参加者満足度は確認できるが、理解度や配属後の成果はまだ判断できない。
+  - 満足度アンケートの回答者は18人だった。
+  - 平均点は4.1点だった。
+  - 理解度テスト、配属後の成果、講師別評価はまだ集計していない。
+- 演習時間の不足は、自由記述で見えた具体的な改善候補である。
+  - 自由記述では「演習時間が足りない」という声が6件あった。
+  - 推論: 研修内容の評価を固めるには、理解度テストや配属後の成果の集計が必要になる。
+```
+
+### 例: 英語で依頼された場合は英語で骨子を書く
+
+Input:
+
+```markdown
+Please turn these notes into a structured bullet outline. Notes: The April customer onboarding webinar had 86 registrants and 52 live attendees, according to the Event Report. The follow-up email had a 38% click rate, according to the Email Report. Three enterprise prospects asked for a security checklist, and two startup customers asked whether the onboarding templates work with free plans. Trial activation rate and paid conversion rate are not available yet.
+```
+
+Output:
+
+```markdown
+- The April customer onboarding webinar showed early interest, but conversion results are not available yet.
+  - The webinar had 86 registrants and 52 live attendees, according to the Event Report.
+  - The follow-up email had a 38% click rate, according to the Email Report.
+  - Trial activation rate and paid conversion rate are not available yet.
+- Customer questions split between enterprise security review and startup plan limits.
+  - Three enterprise prospects asked for a security checklist.
+  - Two startup customers asked whether the onboarding templates work with free plans.
+- The next judgment should wait for activation and conversion data.
+  - Inference: Attendance and email clicks show interest, but they do not prove onboarding success.
 ```
