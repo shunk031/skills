@@ -125,7 +125,7 @@ test: test-python test-bats
 # virtualenv from another checkout — from deciding which one runs.
 .PHONY: test-python
 test-python:
-	uv run --python $(PYTHON_VERSION) --no-project -- python -m unittest discover -s tests/python
+	uv run --python $(PYTHON_VERSION) --no-project --with markdown-it-py -- python -m unittest discover -s tests/python
 
 # The same offline hooks CI runs. The live gates are skipped here by design.
 .PHONY: gate
