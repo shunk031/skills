@@ -7,8 +7,8 @@
 
 - Purpose: This repository is the source of truth for the publicly shareable coding-agent skills used across `shunk031`'s environments. It is consumed with the [`skills`](https://github.com/vercel-labs/skills) CLI, not by cloning it into place.
 - Format: Skills here follow the open Agent Skills format described at https://agentskills.io/home: a directory holding a `SKILL.md` whose frontmatter carries at least `name` and `description`, with bundled scripts and reference files optional. The Skill Layout rules below narrow that format for this repository; they do not replace it.
-- Private counterpart: Skills that name an internal host, a credential, an internal endpoint, or an org-internal process live in `shunk031/skills-private` instead. Treat the two repositories as separate management domains.
-- Dotfiles boundary: `shunk031/dotfiles` and `shunk031/dotfiles-private` subscribe to these skills through a declarative allowlist. They no longer hold skill content. Do not add chezmoi source state, `symlink_*.tmpl` adapters, or `home/` trees here.
+- Private counterpart: Skills that name an internal host, a credential, an internal endpoint, or an org-internal process live in the private skill repository instead. Treat the two repositories as separate management domains.
+- Dotfiles boundary: The public and private dotfiles sources subscribe to these skills through a declarative allowlist. They no longer hold skill content. Do not add chezmoi source state, `symlink_*.tmpl` adapters, or `home/` trees here.
 - Coordination: Use the `shunk031-manage-public-private-skills` skill when a change spans this repository and either dotfiles repository, or when deciding which repository owns a skill.
 
 ## Skill Layout

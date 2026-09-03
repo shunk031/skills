@@ -78,7 +78,7 @@
     },
     {
       "id": "immediate-user-escalation",
-      "prompt": "Following the `shunk031-herdr-orchestrate-workers` skill, you are orchestrator agent orch264 in a Herdr session. A worker asks the user to choose between 8 or 16 GPUs, decide whether to delete an 18 GB artifact, and choose one family or all 12 families for scope. Another independent stream can continue. The raw report facts include the mount path `/mnt/internal/run-264`, internal host `gpu17.internal.example`, and IP `10.24.8.17`. This is an offline dry run; describe the immediate escalation and parallel coordination response without executing commands.",
+      "prompt": "Following the `shunk031-herdr-orchestrate-workers` skill, you are orchestrator agent orch264 in a Herdr session. A worker asks the user to choose between 8 or 16 GPUs, decide whether to delete an 18 GB artifact, and choose one family or all 12 families for scope. Another independent stream can continue. The raw report facts include a private mount path, an internal host, and a private IP address. This is an offline dry run; describe the immediate escalation and parallel coordination response without executing commands.",
       "should_trigger": true
     },
     {
