@@ -78,14 +78,9 @@ EOF
     [ "${status}" -eq 0 ]
 }
 
-@test "[common] routine development does not run shuhari" {
-    run grep -R -F 'shuhari' .pre-commit-config.yaml .github/workflows
-    [ "${status}" -eq 1 ]
-
-    run grep -F 'go:github.com/shunk031/shuhari/cmd/shuhari' mise.toml
-    [ "${status}" -eq 1 ]
-
-    run make -n setup gate validate
+@test "[common] pre-commit evaluates without rewriting recorded results" {
+    run grep -F \
+        'entry: env SHUHARI_RECORD_RESULTS=false scripts/shuhari_staged_targets.sh eval' \
+        .pre-commit-config.yaml
     [ "${status}" -eq 0 ]
-    [[ "${output}" != *shuhari* ]]
 }

@@ -4,12 +4,14 @@ min_version = "2026.8.2"
 [tools]
 # Keep each group sorted by package name, ignoring backend prefixes.
 
-# Language runtimes. `node` backs the textlint pre-commit hook, and `python`
-# runs the unit tests for skills that ship executable scripts.
+# Language runtimes. `go` builds the Shuhari gate binary below, `node` backs the
+# textlint pre-commit hook, and `python` runs the unit tests for skills that
+# ship executable scripts.
 #
 # `uv` runs the Python tests and `bats` the shell ones. Both are pinned here
 # rather than assumed: a machine may have them from a global mise config, but a
 # fresh clone and the CI runner see only what this file declares.
+go = "1.26.5"
 node = "lts"
 python = "3.14.6"
 
@@ -19,3 +21,11 @@ python = "3.14.6"
 "aqua:j178/prek" = "0.4.11"
 "aqua:koalaman/shellcheck" = "0.11.0"
 "aqua:mvdan/sh" = "3.13.1"
+
+# Go tools
+#
+# Shuhari has no tagged release yet, so this pins the module-proxy pseudo-version
+# for the current `main` commit. `mise` cannot resolve `latest` for a module with
+# an empty version list, and a floating spec would not be reproducible anyway.
+# Replace this with the semantic version once Shuhari cuts one.
+"go:github.com/shunk031/shuhari/cmd/shuhari" = "0.0.0-20260826170041-07a35e5144ee"

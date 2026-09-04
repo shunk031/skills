@@ -9,6 +9,34 @@ repos:
         pass_filenames: false
         files: ^skills/
 
+      # Schema-only validation. Offline, no agent, no model calls.
+      - id: shuhari-validate
+        name: validate changed skill eval and trigger schemas
+        entry: scripts/shuhari_staged_targets.sh validate
+        language: system
+        pass_filenames: true
+        require_serial: true
+        files: ^skills/[^/]+/(SKILL\.md|evals/(evals|triggers)\.json)$
+
+      # Live model calls. `require_serial` keeps concurrent Codex sessions to
+      # the count Shuhari itself manages through `--jobs`.
+      - id: shuhari-check-trigger
+        name: check trigger boundaries for changed skills
+        entry: scripts/shuhari_staged_targets.sh trigger
+        language: system
+        pass_filenames: true
+        require_serial: true
+        files: ^skills/[^/]+/(SKILL\.md|evals/triggers\.json)$
+
+      # Live model calls, two arms per case. The most expensive gate.
+      - id: shuhari-eval-skill
+        name: evaluate changed skills
+        entry: env SHUHARI_RECORD_RESULTS=false scripts/shuhari_staged_targets.sh eval
+        language: system
+        pass_filenames: true
+        require_serial: true
+        files: ^skills/[^/]+/(SKILL\.md|evals/evals\.json)$
+
       - id: textlint-markdown
         name: fix hard-wrapped Markdown prose
         entry: textlint --fix --config .textlintrc.json
