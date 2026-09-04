@@ -16,7 +16,9 @@ setup() {
     mkdir -p "${stub_bin}"
 
     # Resolved before the stub `mise` joins PATH, so this finds the real one.
-    PINNED_SHUHARI="$(cd "${BATS_TEST_DIRNAME}/../.." && mise which shuhari 2> /dev/null || true)"
+    PINNED_SHUHARI="$(cd "${BATS_TEST_DIRNAME}/../.." && \
+        MISE_ENABLE_TOOLS='go:github.com/shunk031/shuhari/cmd/shuhari' \
+            mise which shuhari 2> /dev/null || true)"
     export PINNED_SHUHARI
 
     local fixture_root="${BATS_TEST_TMPDIR}/repo"

@@ -1,6 +1,11 @@
 # Minimum mise version compatible with this repository's configuration.
 min_version = "2026.8.2"
 
+[settings]
+# Keep the pinned Shuhari version in this file without installing or activating
+# it during routine development. Makefile evaluation targets opt in explicitly.
+disable_tools = ["go:github.com/shunk031/shuhari/cmd/shuhari"]
+
 [tools]
 # Keep each group sorted by package name, ignoring backend prefixes.
 

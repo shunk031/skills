@@ -2,6 +2,10 @@ TRIALS ?= 3
 JOBS ?= 8
 TIMEOUT ?= 600
 
+# The full backend name matches mise's disabled tool setting. Evaluation targets
+# opt in to this tool without activating it for setup, hooks, or other commands.
+SHUHARI_TOOL := go:github.com/shunk031/shuhari/cmd/shuhari
+
 # Keep in step with the `go` pin in mise.toml.
 GO_VERSION ?= 1.26.5
 
@@ -48,15 +52,11 @@ bump-shuhari:
 # Gates
 #
 
-# Offline: layout checks plus schema validation for every skill that ships evals.
+# Offline skill layout checks. Shuhari schema validation remains available from
+# the manual pre-commit stage when evaluation work resumes.
 .PHONY: validate
 validate:
 	./scripts/check_skill_layout.sh
-	@set -e; \
-	for dir in skills/*/; do \
-	    if [ -f "$$dir/evals/evals.json" ]; then shuhari eval skill --validate-only "$$dir"; fi; \
-	    if [ -f "$$dir/evals/triggers.json" ]; then shuhari check trigger --validate-only "$$dir"; fi; \
-	done
 
 # Live model calls against every skill. Deliberately a manual, occasional run;
 # the pre-commit hooks gate incrementally.
@@ -65,7 +65,8 @@ eval:
 	@set -e; \
 	for dir in skills/*/; do \
 	    if [ -f "$$dir/evals/evals.json" ]; then \
-	        ./scripts/shuhari_staged_targets.sh eval "$$dir/SKILL.md"; \
+	        MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
+	            ./scripts/shuhari_staged_targets.sh eval "$$dir/SKILL.md"; \
 	    fi; \
 	done
 
@@ -74,7 +75,8 @@ check-triggers:
 	@set -e; \
 	for dir in skills/*/; do \
 	    if [ -f "$$dir/evals/triggers.json" ]; then \
-	        shuhari check trigger --trials $(TRIALS) --jobs $(JOBS) --timeout $(TIMEOUT) "$$dir"; \
+	        MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
+	            shuhari check trigger --trials $(TRIALS) --jobs $(JOBS) --timeout $(TIMEOUT) "$$dir"; \
 	    fi; \
 	done
 
@@ -127,10 +129,11 @@ test: test-python test-bats
 test-python:
 	uv run --python $(PYTHON_VERSION) --no-project -- python -m unittest discover -s tests/python
 
-# The same offline hooks CI runs. The live gates are skipped here by design.
+# The same offline hooks CI runs. Shuhari hooks use the manual stage and are not
+# part of this run.
 .PHONY: gate
 gate:
-	SKIP=shuhari-check-trigger,shuhari-eval-skill mise exec -- prek run --all-files
+	mise exec -- prek run --all-files
 
 .PHONY: format
 format:

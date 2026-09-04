@@ -15,9 +15,8 @@ permissions:
   contents: read
 
 jobs:
-  # Runs the same offline pre-commit hooks developers run, minus the two gates
-  # that make live Codex calls. Those need a real credential and a real sandbox,
-  # so they stay in pre-commit and never run on a hosted runner.
+  # Runs the same offline pre-commit hooks developers run. Shuhari hooks are in
+  # the manual stage and never run on a hosted runner.
   gate:
     runs-on: ubuntu-latest
 
@@ -30,8 +29,6 @@ jobs:
 
       - name: Run offline gates
         run: make gate
-        env:
-          SKIP: shuhari-check-trigger,shuhari-eval-skill
 
   validate:
     runs-on: ubuntu-latest
