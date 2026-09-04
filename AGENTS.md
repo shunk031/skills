@@ -23,24 +23,21 @@
 
 ## Evaluation Policy
 
-- Harness: Quality gates run through [`shuhari`](https://github.com/shunk031/shuhari). This repository owns target selection and policy values; shuhari owns the evaluation mechanism.
+- Status: Shuhari is temporarily disabled. Do not install or run it during setup, validation, pre-commit, or CI. Keep existing eval cases and recorded results intact so evaluation can resume later.
+- Harness: When evaluation resumes, quality gates run through [`shuhari`](https://github.com/shunk031/shuhari). This repository owns target selection and policy values; shuhari owns the evaluation mechanism.
 - Reference: Eval work returns to https://agentskills.io/skill-creation/evaluating-skills for how cases, assertions, and grading are meant to work. Where that guidance and the rules below differ, follow these: shuhari, not a hand-run loop, is what executes them here.
 - Behavior cases: `skills/<name>/evals/evals.json` holds cases that measure what the agent does when the skill applies. Each case requires `id`, `prompt`, and `expected_output`; `assertions`, `files`, and `required_actions` are optional.
 - Trigger cases: `skills/<name>/evals/triggers.json` holds positive cases and near-miss negative controls. Shuhari requires at least one of each. An obviously irrelevant negative control tests nothing.
 - Writing `expected_output`: State the correct outcome in one to three sentences, describing produced behavior rather than the wording of a reply. Do not restate the assertions. Shuhari runs a blind A/B comparator in addition to assertion grading, so assertion wording copied into `expected_output` biases that comparison.
-- Order of work: Run `--validate-only` first, then `shuhari check trigger`, then `shuhari eval skill`. The first is instant and offline, the second runs one arm, and the third runs both arms plus a grader and a comparator.
+- Evaluation order after re-enabling: Run `--validate-only` first, then `shuhari check trigger`, then `shuhari eval skill`. The first is instant and offline, the second runs one arm, and the third runs both arms plus a grader and a comparator.
 - Artifacts: Shuhari writes `skills/<name>-workspace/` next to the evaluated skill. It holds verbatim agent transcripts and is gitignored. Never commit it and never paste its contents into an issue, a pull request, or a report.
 - Published numbers: a passing or failing `shuhari eval skill` writes `skills/<name>/evals/results.json`, which the documentation site reads. The gate does it, not you — the workspace it derives from is gitignored, so it can only be written where the run happened, and leaving that to a person meant it did not happen. Commit the file with the change that produced it.
 - Skills without evals: A skill may ship without `evals/`. The gate wrapper skips it rather than failing. Adding evals to an existing skill is a welcome change on its own.
 
 ## Development Setup
 
-- In every new clone or worktree, run `make setup` before editing or committing. It installs the pinned toolchain and the pre-commit hooks.
-- `shuhari` must be on `PATH` for the gates to run. The wrapper exits with status 2 when it is missing, because a gate that cannot run is a failure rather than a pass.
-- `shuhari` has no tagged release, so `mise.toml` pins the pseudo-version of a `main` commit rather than a semantic version. Run `make bump-shuhari` to move that pin to current `main`. Run it as plain `make`, never through `mise exec`: mise resolves every pinned tool before running a command, so a stale or unresolvable pin would fail before the recipe could replace it.
-- Never install `shuhari` with a bare `go install`. That writes into the Go toolchain's own `bin` directory, which sits ahead of the pinned tool on `PATH`, so the gates silently run a build nobody pinned. Check with `mise which shuhari`: it must resolve under `installs/go-github-com-shunk031-shuhari-cmd-shuhari/<version>/`. If it resolves anywhere else, delete that binary and re-run `make setup`.
-- The live gates make real model calls through Codex, so they run in pre-commit only. CI is limited to schema validation, layout checks, linting, and unit tests.
-- Never skip the shuhari hooks. `SKIP=shuhari-check-trigger,shuhari-eval-skill` is forbidden: when the model path is unavailable, do not commit — park the branch and commit only after the gates actually run and pass.
+- In every new clone or worktree, run `make setup` before editing or committing. It installs the routine toolchain and pre-commit hooks without shuhari.
+- Do not add shuhari to `mise.toml`, Makefile targets, pre-commit, or CI while the suspension is active.
 
 ## Shell Policy
 

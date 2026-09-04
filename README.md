@@ -79,20 +79,17 @@ Nothing may sit deeper than `skills/<name>/SKILL.md`, and no `SKILL.md` may sit 
 
 ## Development
 
-Skills that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari), a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
+The repository keeps its existing shuhari evaluation cases and recorded results, but shuhari is temporarily disabled because its model-backed checks are too expensive for routine development. `make setup`, pre-commit, and the commands below do not install or run it.
 
 ```bash
 make setup            # install the pinned toolchain and the pre-commit hooks
 make gate             # the offline checks CI runs
-make validate         # layout checks and eval schema validation
+make validate         # skill layout checks
 make test             # unit tests for skills that ship executable scripts
-make check-triggers   # live trigger checks for every skill that has them
-make eval             # live with/without evaluation for every skill that has evals
 make format           # shfmt diff for shell scripts
-make bump-shuhari     # re-pin shuhari, which publishes no tagged releases
 ```
 
-`make check-triggers` and `make eval` make real model calls through Codex, so they run locally rather than in CI, and both are whole-repository sweeps. Day to day the pre-commit hooks cover the same ground incrementally, evaluating only the skills a commit touches. See [`AGENTS.md`](AGENTS.md) for the evaluation policy.
+See [`AGENTS.md`](AGENTS.md) for the retained evaluation format and the current suspension policy.
 
 ## Related repositories
 
