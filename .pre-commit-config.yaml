@@ -16,6 +16,7 @@ repos:
         language: system
         pass_filenames: true
         require_serial: true
+        stages: [manual]
         files: ^skills/[^/]+/(SKILL\.md|evals/(evals|triggers)\.json)$
 
       # Live model calls. `require_serial` keeps concurrent Codex sessions to
@@ -26,6 +27,7 @@ repos:
         language: system
         pass_filenames: true
         require_serial: true
+        stages: [manual]
         files: ^skills/[^/]+/(SKILL\.md|evals/triggers\.json)$
 
       # Live model calls, two arms per case. The most expensive gate.
@@ -35,6 +37,7 @@ repos:
         language: system
         pass_filenames: true
         require_serial: true
+        stages: [manual]
         files: ^skills/[^/]+/(SKILL\.md|evals/evals\.json)$
 
       - id: textlint-markdown
