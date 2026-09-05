@@ -1,0 +1,45 @@
+{
+  "skill_name": "shunk031-research-structured-bullet-writing",
+  "cases": [
+    {
+      "id": "japanese-outline-request",
+      "prompt": "この議事メモから骨子を書いて。経営会議で使うので、論点が追える箇条書きにしてほしい。",
+      "should_trigger": true
+    },
+    {
+      "id": "organize-issues-as-bullets",
+      "prompt": "下書きが長くなったので、箇条書きで論点整理してください。各論点の根拠も近くに置いてください。",
+      "should_trigger": true
+    },
+    {
+      "id": "english-structured-bullet-outline",
+      "prompt": "Turn these research notes into a structured bullet outline with topic sentences and supporting points.",
+      "should_trigger": true
+    },
+    {
+      "id": "evidence-linked-outline",
+      "prompt": "次の文章を、数字と根拠が各論点の近くに残る骨子箇条書きへ直してください。",
+      "should_trigger": true
+    },
+    {
+      "id": "shopping-checklist",
+      "prompt": "週末キャンプの買い物リストをチェックリストにして。食材、調理器具、消耗品で分けて。",
+      "should_trigger": false
+    },
+    {
+      "id": "generic-markdown-formatting",
+      "prompt": "このMarkdownの箇条書きのインデントだけ直して。文章の中身や順番は変えないで。",
+      "should_trigger": false
+    },
+    {
+      "id": "task-todo-list",
+      "prompt": "明日の作業をTODOリストにして。メール返信、経費精算、会議室予約、資料印刷。",
+      "should_trigger": false
+    },
+    {
+      "id": "slide-design-request",
+      "prompt": "この箇条書きを使ってPowerPointの1枚スライドをデザインして。配色とレイアウトも整えて。",
+      "should_trigger": false
+    }
+  ]
+}

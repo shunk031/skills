@@ -1,0 +1,94 @@
+{
+  "schema_version": "1",
+  "skill_name": "shunk031-research-structured-bullet-writing",
+  "measured_at": "2026-09-02T06:58:18.228656Z",
+  "agent": "codex",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "high",
+  "trials": 3,
+  "network": false,
+  "pass_rate": {
+    "with_skill": 0.9352,
+    "without_skill": 0.5278
+  },
+  "tokens": {
+    "with_skill": 75864.1111,
+    "without_skill": 52103
+  },
+  "seconds": {
+    "with_skill": 27.0493,
+    "without_skill": 25.9581
+  },
+  "assertions": [
+    {
+      "case_id": "compose-from-notes",
+      "assertion": "Each top-level bullet summarizes a local group, the outline uses nested support bullets, and the response preserves concrete details such as 3 people, Tuesday morning, 5.5 hours, 8 weeks, 3 formula-copy misses, and 1 metric-name mix-up.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    },
+    {
+      "case_id": "compose-from-notes",
+      "assertion": "The response preserves the partial automation boundary: API-based data retrieval, with spreadsheet aggregation kept for now because metric definitions change monthly.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    },
+    {
+      "case_id": "compose-from-notes",
+      "assertion": "The response starts with three or four top-level bullet items when counted by the main Markdown bullets.",
+      "with_skill": 0.6666666666666666,
+      "without_skill": 0,
+      "category": "mixed"
+    },
+    {
+      "case_id": "insufficient-information",
+      "assertion": "The response does not assert that the launch succeeded as a supported conclusion.",
+      "with_skill": 1,
+      "without_skill": 0,
+      "category": "pass_with_fail_without"
+    },
+    {
+      "case_id": "insufficient-information",
+      "assertion": "The response names the missing outcome evidence from the prompt, such as paid conversion, churn, revenue impact, or customer satisfaction, instead of inventing values for them.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    },
+    {
+      "case_id": "insufficient-information",
+      "assertion": "The response still organizes the available facts, including August 1, 2026, 42%, 1,920 visits in 7 days, and 76 inquiries.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    },
+    {
+      "case_id": "rewrite-long-prose",
+      "assertion": "The response does not add unsupported ROI, adoption, product, budget, or success conclusions beyond the prompt, and it labels the writer's causal interpretation with 推論: or 示唆: rather than citing it as proven.",
+      "with_skill": 0.6666666666666666,
+      "without_skill": 0,
+      "category": "mixed"
+    },
+    {
+      "case_id": "rewrite-long-prose",
+      "assertion": "The response is a Markdown bullet outline with top-level bullets that read as genuine topic sentences and nested support bullets under the local groups.",
+      "with_skill": 1,
+      "without_skill": 0,
+      "category": "pass_with_fail_without"
+    },
+    {
+      "case_id": "rewrite-long-prose",
+      "assertion": "The response keeps the supplied numbers and time references near the claims they support, including 34 members, average 112 daily searches, 61%, 48%, 64%, July, and 180,000 yen per month.",
+      "with_skill": 1,
+      "without_skill": 1,
+      "category": "always_pass_both"
+    },
+    {
+      "case_id": "rewrite-long-prose",
+      "assertion": "The response preserves the input citations and source URLs at the smallest supported unit, including [運用ログA] immediately with the 61% metric, [営業企画ヒアリング] immediately with the 48% metric, [対象資料] attached to each cited FAQ, specification, and past-ticket item, a Markdown link for https://example.com/internal-search/log-a, and the interview source URL.",
+      "with_skill": 1,
+      "without_skill": 0,
+      "category": "pass_with_fail_without"
+    }
+  ]
+}
