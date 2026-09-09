@@ -18,7 +18,7 @@ Treat research as a gate, not a recommendation. Before any design decision or fi
 
 ## Provider fallback
 
-When a research stage returns exactly `403 Forbidden: Selected provider is forbidden`, retry that stage once in an isolated Codex session using `gpt-5.5`, medium reasoning, and live web search. Do not ask the user to approve this bounded retry.
+When a research stage returns exactly `403 Forbidden: Selected provider is forbidden`, route that stage through the normal isolated native-search fallback using `gpt-5.5`, medium reasoning, and live web search. This is the normal research path for that stage, not a one-shot exception, and does not require user approval.
 
 Prefer an available native launcher that accepts the exact model, reasoning effort, and live-search settings. When the Codex CLI is available, use the equivalent of:
 
@@ -31,6 +31,6 @@ env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID \
     '<retry only the failed research stage and return direct sources>'
 ```
 
-Keep the child task read-only and limited to the failed research stage. Treat the retry as successful only when its transcript shows actual web-search activity and its response contains usable direct sources. Continue with the normal stage order using that evidence. If the fallback cannot start, does not search, returns no usable sources, or fails again, keep the research stage incomplete and diagnose the launcher or search failure in read-only mode. Retry only the failed stage after addressing the cause; do not switch models or proceed from memory.
+Keep the child task read-only and limited to the failed research stage. Treat the fallback as successful only when its transcript shows actual web-search activity and its response contains usable direct sources. On transient gateway errors from the fallback — including `stream disconnected before completion`, HTTP 5xx responses, or timeouts — pause briefly, such as two seconds, and retry only the same stage. Make no more than three consecutive fallback attempts in total. Do not block after the first or second transient failure. If all three attempts fail consecutively, report `BLOCKED` with the exact research question to the orchestrator; the orchestrator must run the configured fallback outside the worker sandbox and return the sources, after which the worker resumes the incomplete stage. If the fallback cannot start for a non-transient reason, does not search, or returns no usable sources, keep the research stage incomplete and diagnose the launcher or search failure in read-only mode. Do not switch models, proceed from memory, or weaken the evidence standard.
 
 Do not edit files until both research stages are complete. Do not substitute memory or local repository inspection for either external stage. For failures other than the exact provider-forbidden response, keep the affected research stage incomplete, diagnose the available search path, and retry that stage after addressing the cause. Continue read-only investigation and recovery without asking the user whether ordinary diagnostics should proceed. Continue with implementation only when the required research is satisfied or the task is explicitly re-scoped so this skill no longer applies.

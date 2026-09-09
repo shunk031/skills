@@ -1,6 +1,6 @@
 # Why this skill's behavior cases use the network policy
 
-`evals.json` holds three cases. The `evals/network-required` marker makes the gate evaluate them with `gpt-5.5`, medium reasoning, and network access in Shuhari's isolated sandbox.
+`evals.json` holds four cases. The `evals/network-required` marker makes the gate evaluate them with `gpt-5.5`, medium reasoning, and network access in Shuhari's isolated sandbox.
 
 ## They cannot be measured offline
 
@@ -26,7 +26,7 @@ Enabling egress does not help, because the pinned models cannot use the web-sear
 
 `scripts/shuhari_staged_targets.sh` therefore uses `gpt-5.5` with medium reasoning for behavior cases marked `network-required`. It keeps `gpt-5.6-sol` with medium reasoning as the judge, and ordinary behavior cases remain on `gpt-5.6-luna` with high reasoning and no network access.
 
-The skill delegates this exact failure to one read-only `gpt-5.5` search session during normal use. The evaluation needs the same live-search capability to measure that behavior, so the marker is the explicit harness boundary.
+The skill delegates this exact failure to the normal read-only `gpt-5.5` search path during normal use. Transient gateway failures receive a short pause and up to three attempts. After three consecutive worker failures, the worker reports the exact research question as `BLOCKED`; the orchestrator runs the fallback outside the worker sandbox and returns the sources. The evaluation needs the same live-search capability to measure that behavior, so the marker is the explicit harness boundary.
 
 The failure is not always visible. Both 5.6 answers named the correct release tag anyway. A run can look like successful research and not be — which is worth knowing beyond this file, since a skill that tells an agent to check current documentation is, on this model, telling it to do something it will report having done by other means.
 
