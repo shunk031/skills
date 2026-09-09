@@ -1,0 +1,143 @@
+---
+name: shunk031-research-structured-bullet-writing
+description: 文章やメモを、論点文とそれを支える根拠からなる骨子箇条書きに構成・書き換える。日本語の「骨子を書いて」「箇条書きで論点整理して」、英語の「structured bullet outline」「topic sentences with supporting points」に該当する依頼で使う。品目の列挙、タスク管理、スライド作成は対象外。出力は日本語を既定とする。
+---
+
+> [!NOTE]
+> この `SKILL.md` を読んだら、`🧱 私は shunk031-research-structured-bullet-writing を読みました。` と言う。
+
+# 骨子箇条書き
+
+このスキルの本文自体を、骨子箇条書きの見本として構成する。
+
+- 骨子箇条書きは、与えられた素材を「論点文」と「支える事実」の階層に整理する。
+  - 既存の文章を書き換える依頼にも、メモから新しく構成する依頼にも使う。
+  - 出力は Markdown を既定とする。
+  - 見出しは任意で、読み取りやすくなる場合だけ使う。
+- 出力言語は日本語を既定にし、ユーザーや入力が別言語を明確に選んだ場合だけそれに従う。
+  - 英語で `structured bullet outline` と頼まれた場合など、依頼言語が明確ならその言語で書く。
+  - 引用、論文名、資料名、人名、組織名、製品名、固有の表記、引用文は原文の言語と表記を保つ。
+  - 出典名を勝手に日本語化しない。
+- 先頭の階層は、全体を要約する 3〜4 本の論点文にする。
+  - 各トップレベル箇条書きはラベルではなく、そのまとまりの主張や要点を一文で述べる。
+  - 各トップレベル箇条書きを上から読むだけで、全体の流れが追えるようにする。
+  - 詳細な時刻、回数、期間、担当者数は、原則として下位の支えに置く。
+  - 素材が少ない、または構造上不自然な場合は、3〜4 本に無理に合わせない。
+- 各論点の下には、必要な範囲で 2〜3 本程度の支えを置く。
+  - 根拠、数値、例、原因、制約、未決事項、次の行動を近くに置く。
+  - 一つのまとまりには一つの論点だけを入れる。
+  - 論点が混ざる場合は、短く押し込まずに分ける。
+  - 局所的な結論は、推論の流れを閉じる必要がある場合だけ加える。
+- 事実保持は文体より優先し、素材にないことを補わない。
+  - 事実、数値、因果、評価、結論、提案を勝手に足さない。
+  - 並べ替え、分割、圧縮はしてよい。
+  - 数値や根拠は、それが支える主張の近くに置く。
+  - 成功、失敗、効果、定着、原因、主因などの結論を求められても、素材が足りない場合は不足を明示する。
+- 引用と URL は、出典が支える最小の単位に付ける。
+  - 入力にある引用形式は保つ。
+  - 裸の URL だけは Markdown リンクに直す。
+  - 引用された用語や対象には、`対象A [出典]` のように対象の直後へ置く。
+  - 引用された数値や節には、その数値や節の直後へ置く。
+  - 複数の対象を比較する場合は、それぞれの対象にそれぞれの出典を付ける。
+  - 箇条書き全体を一つの出典が支える場合だけ、箇条書き末尾に引用を置く。
+  - 長い URL や出典注が本文を壊す場合だけ脚注にし、該当ブロックの直下に置く。
+  - 参考文献セクションや書誌情報が必要な場合だけ、独立した参考文献箇条書きを作る。
+- 出典の扱いでは、ユーザーが渡した素材を超えない。
+  - ユーザーが Web 調査を明示した場合を除き、ユーザー提供の出典だけを使う。
+  - 出典を作らない、格上げしない、黙って落とさない。
+  - 出典のない解釈や評価は `推論:` または `示唆:` と明示し、出典が述べた事実のように引用を付けない。
+  - 不足情報で結果が大きく変わる場合だけ質問する。それ以外は、不足を短く示して骨子を書く。
+- 文体は簡潔にしつつ、型を優先して不自然にしない。
+  - 具体的な動詞と平易な名詞を使う。
+  - 同じまとまりの中では、文法や粒度をできるだけそろえる。
+  - 体言止め、同じ文字数、断片的な文体を無理にそろえない。
+
+## 入出力例
+
+### 例: 成果指標が足りない公開後反応
+
+入力:
+
+```markdown
+8月1日に新料金プランを公開。価格ページ訪問は公開後7日で[アクセスログ]1,920件。告知メール開封率は42%で、ログURLは https://example.com/mail-log 。問い合わせは76件[問い合わせ集計]で、主な内容は既存契約からの移行条件。有料転換率、解約率、売上影響は未集計。担当者の見立てでは、関心は高いが成功判断はまだ早い。
+```
+
+出力:
+
+```markdown
+- 新料金プランは公開後の反応を確認できるが、成功判断には成果指標が足りない。
+  - 8月1日に新料金プランを公開した。
+  - 価格ページ訪問は公開後7日で1,920件[アクセスログ]だった。
+  - 告知メール開封率は42%[mail-log](https://example.com/mail-log)だった。
+- 問い合わせの主な内容は、既存契約からの移行条件だった。
+  - 問い合わせは76件[問い合わせ集計]だった。
+- 成功を裏づける成果指標は未集計のため、結論は保留する。
+  - 有料転換率、解約率、売上影響は未集計。
+  - 示唆: 担当者は関心が高いと見ているが、成功とは断定できない。
+  - 当面の結論: 成果指標の集計後に成功判断を行う。
+```
+
+### 例: 議事メモから意思決定の流れを作る
+
+入力:
+
+```markdown
+社内ヘルプデスクの検索改善会議。参加者は運用担当2人、開発担当1人、カスタマーサポート担当1人。7月の問い合わせ1,180件のうち、FAQで解決できた問い合わせは410件。カスタマーサポート担当は、顧客向け予約サイトのキャンセル手順と領収書再発行の質問が多いと報告。開発担当は検索ログの表記ゆれが多く、同じ質問が「領収証」「領収書」「レシート」で分散していると説明。8月末までに同義語辞書を追加し、9月第1週に上位30件の検索失敗語を見直す。FAQ記事の全面改稿は工数が大きいため今回は見送る。
+```
+
+出力:
+
+```markdown
+- 社内ヘルプデスクでは、FAQで解決できない問い合わせがまだ多い。
+  - 7月の問い合わせ1,180件のうち、FAQで解決できた問い合わせは410件だった。
+  - 参加者は運用担当2人、開発担当1人、カスタマーサポート担当1人だった。
+- 顧客向け予約サイトでは、キャンセル手順と領収書再発行の質問が検索改善の主な対象になる。
+  - カスタマーサポート担当は、キャンセル手順と領収書再発行の質問が多いと報告した。
+  - 開発担当は、「領収証」「領収書」「レシート」の表記ゆれで同じ質問が分散していると説明した。
+- 今回は検索語の整理を先に進め、FAQ記事の全面改稿は見送る。
+  - 8月末までに同義語辞書を追加する。
+  - 9月第1週に上位30件の検索失敗語を見直す。
+  - FAQ記事の全面改稿は工数が大きいため今回は見送る。
+```
+
+### 例: 素材が少ない場合は無理に3本へ増やさない
+
+入力:
+
+```markdown
+新人研修の満足度アンケートは回答者18人、平均4.1点。自由記述では「演習時間が足りない」という声が6件あった。理解度テスト、配属後の成果、講師別評価はまだ集計していない。
+```
+
+出力:
+
+```markdown
+- 新人研修の参加者満足度は確認できるが、理解度や配属後の成果はまだ判断できない。
+  - 満足度アンケートの回答者は18人だった。
+  - 平均点は4.1点だった。
+  - 理解度テスト、配属後の成果、講師別評価はまだ集計していない。
+- 演習時間の不足は、自由記述で見えた具体的な改善候補である。
+  - 自由記述では「演習時間が足りない」という声が6件あった。
+  - 推論: 研修内容の評価を固めるには、理解度テストや配属後の成果の集計が必要になる。
+```
+
+### 例: 英語で依頼された場合は英語で骨子を書く
+
+Input:
+
+```markdown
+Please turn these notes into a structured bullet outline. Notes: The April customer onboarding webinar had 86 registrants and 52 live attendees, according to the Event Report. The follow-up email had a 38% click rate, according to the Email Report. Three enterprise prospects asked for a security checklist, and two startup customers asked whether the onboarding templates work with free plans. Trial activation rate and paid conversion rate are not available yet.
+```
+
+Output:
+
+```markdown
+- The April customer onboarding webinar showed early interest, but conversion results are not available yet.
+  - The webinar had 86 registrants and 52 live attendees, according to the Event Report.
+  - The follow-up email had a 38% click rate, according to the Email Report.
+  - Trial activation rate and paid conversion rate are not available yet.
+- Customer questions split between enterprise security review and startup plan limits.
+  - Three enterprise prospects asked for a security checklist.
+  - Two startup customers asked whether the onboarding templates work with free plans.
+- The next judgment should wait for activation and conversion data.
+  - Inference: Attendance and email clicks show interest, but they do not prove onboarding success.
+```
