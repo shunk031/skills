@@ -31,6 +31,14 @@
         "The response names the missing outcome evidence from the prompt, such as paid conversion, churn, revenue impact, or customer satisfaction, instead of inventing values for them.",
         "The response still organizes the available facts, including August 1, 2026, 42%, 1,920 visits in 7 days, and 76 inquiries."
       ]
+    },
+    {
+      "id": "terminal-punctuation",
+      "prompt": "次の文章を、論点と根拠が分かる骨子箇条書きにしてください。各箇条書きは体言止めや断片ではなく、完全な文で書いてください。\\n\\n顧客アンケートは120人から回答を得た。満足度は5点満点で平均4.2だった。自由記述では、検索結果の絞り込みが分かりにくいという意見が18件あった。来月、絞り込み条件の表示位置を変更して再調査する。",
+      "expected_output": "The response organizes the survey results, identified problem, and next action into a Markdown outline while preserving every supplied fact. It follows the skill's established bullet-writing style.",
+      "assertions": [
+        "No Markdown bullet item in the response ends with the Japanese full stop 。."
+      ]
     }
   ]
 }
