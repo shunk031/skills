@@ -53,7 +53,7 @@ Every skill is named `shunk031-<domain>-<topic>`, and `Category` is that domain.
 | [`shunk031-herdr-tab-status`](skills/shunk031-herdr-tab-status/)                                               | `herdr`       | Chooses the leading status emoji and name for the current Herdr tab.                                                        |
 | [`shunk031-manage-agent-guidance`](skills/shunk031-manage-agent-guidance/)                                     | `manage`      | Decides where a persistent agent rule belongs and keeps one source of truth behind thin adapters.                           |
 | [`shunk031-manage-public-private-dotfiles`](skills/shunk031-manage-public-private-dotfiles/)                   | `manage`      | Works across the public and private dotfiles sources, changing only the repository that owns the setting.                   |
-| [`shunk031-manage-public-private-skills`](skills/shunk031-manage-public-private-skills/)                       | `manage`      | Routes skill work between this repository and `shunk031/skills-private`, including evals and the dotfiles subscription.     |
+| [`shunk031-manage-public-private-skills`](skills/shunk031-manage-public-private-skills/)                       | `manage`      | Routes skill work between this repository and the private skill repository, including evals and the dotfiles subscription. |
 | [`shunk031-python-transformers-convert`](skills/shunk031-python-transformers-convert/)                         | `python`      | Converts a custom PyTorch model into Hugging Face Transformers format, through to Hub upload.                               |
 | [`shunk031-python-uv-workflow`](skills/shunk031-python-uv-workflow/)                                           | `python`      | Applies a uv-first, test-first Python workflow with pre-commit quality gates.                                               |
 | [`shunk031-research-before-implementation`](skills/shunk031-research-before-implementation/)                   | `research`    | Reads current official documentation and real implementations before designing anything that depends on a third-party tool. |
@@ -96,7 +96,7 @@ make bump-shuhari     # re-pin shuhari, which publishes no tagged releases
 
 ## Related repositories
 
-- [`shunk031/skills-private`](https://github.com/shunk031/skills-private): skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process.
+- Private skill repository: skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process.
 - [`shunk031/dotfiles`](https://github.com/shunk031/dotfiles): subscribes to these skills through a declarative allowlist reconciled on every `chezmoi apply`.
 
 ## License

@@ -1,0 +1,40 @@
+{
+  "skill_name": "shunk031-writing",
+  "cases": [
+    {
+      "id": "write-report",
+      "prompt": "Write a report for the platform team explaining the database migration result, its risks, and what they need to do next.",
+      "should_trigger": true
+    },
+    {
+      "id": "revise-document",
+      "prompt": "Substantially revise this design document so its section structure and paragraph focus work for maintainers who did not join the design discussion.",
+      "should_trigger": true
+    },
+    {
+      "id": "review-response",
+      "prompt": "Draft a point-by-point response to the review comments on our paper and make sure every finding has a reasoned disposition.",
+      "should_trigger": true
+    },
+    {
+      "id": "plain-text-email",
+      "prompt": "Write a plain-text email to customers explaining the outage, impact, and remediation without assuming they know our system.",
+      "should_trigger": true
+    },
+    {
+      "id": "latex-paper",
+      "prompt": "Create the section and paragraph plan for a LaTeX research paper, then draft its introduction from these experiment notes.",
+      "should_trigger": true
+    },
+    {
+      "id": "code-only",
+      "prompt": "Implement the missing retry function in src/client.py and add its unit tests. Do not write or revise documentation.",
+      "should_trigger": false
+    },
+    {
+      "id": "conversation-only-reply",
+      "prompt": "In two sentences, tell me here in chat why topic sentences help readers. This answer will not be saved or published.",
+      "should_trigger": false
+    }
+  ]
+}

@@ -14,7 +14,8 @@
 #      `description`.
 #   4. The frontmatter `name` equals the skill directory name.
 #   5. `evals/evals.json` and `evals/triggers.json` agree with that name.
-#   6. Each `shunk031-` skill names an allowed domain right after the prefix.
+#   6. Each `shunk031-` skill names an allowed domain right after the prefix,
+#      except the document-level `shunk031-writing` skill.
 #   7. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
 #   8. No Shuhari workspace directory is tracked by git.
 # @exitcode 0 When every check passes.
@@ -113,13 +114,17 @@ function assert_no_nested_skill_files() {
     done < <(find "${SKILLS_ROOT}" -type d -name '*-workspace' -prune -o -name 'SKILL.md' -print 2> /dev/null)
 }
 
-# @description Verify that an owned skill is named `shunk031-<domain>-<topic>`.
+# @description Verify an owned skill uses a domain/topic name or the writing exception.
 # @description
 #   Only skills carrying the owner prefix are in scope; a vendored or
 #   third-party directory is named by whoever owns it.
 # @arg $1 name The skill directory name.
 function check_domain_prefix() {
     local name="$1"
+
+    if [ "${name}" = "shunk031-writing" ]; then
+        return 0
+    fi
 
     case "${name}" in
     "${OWNED_PREFIX}"*) ;;

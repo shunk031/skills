@@ -1,0 +1,4 @@
+interface:
+  display_name: "Document Writing"
+  short_description: "Plan, draft, review, and publish reader-facing documents"
+  default_prompt: "Use $shunk031-writing to create or substantially revise this reader-facing document through its contract, recursive writing process, evidence ledger, and publish gate."

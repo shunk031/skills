@@ -49,6 +49,19 @@ function make_skill() {
     [[ "${output}" == *'is not named shunk031-<domain>-<topic>'* ]]
 }
 
+@test "[common] the document-level writing skill is the only one-part exception" {
+    make_skill shunk031-writing
+
+    run "${CHECKER}"
+    [ "${status}" -eq 0 ]
+
+    make_skill shunk031-editing
+
+    run "${CHECKER}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *'skills/shunk031-editing is not named shunk031-<domain>-<topic>'* ]]
+}
+
 @test "[common] a skill without the owner prefix is out of scope" {
     make_skill vendor-orchestrate-things
 
