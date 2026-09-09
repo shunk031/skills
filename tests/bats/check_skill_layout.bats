@@ -64,6 +64,7 @@ function make_skill() {
     make_skill shunk031-python-a
     make_skill shunk031-research-a
     make_skill shunk031-shellscript-a
+    make_skill shunk031-writing-a
 
     run "${CHECKER}"
     [ "${status}" -eq 0 ]

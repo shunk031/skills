@@ -1,10 +1,10 @@
 ---
-name: shunk031-research-structured-bullet-writing
+name: shunk031-writing-kosshi
 description: 文章やメモを、論点文とそれを支える根拠からなる骨子箇条書きに構成・書き換える。日本語の「骨子を書いて」「箇条書きで論点整理して」、英語の「structured bullet outline」「topic sentences with supporting points」に該当する依頼で使う。品目の列挙、タスク管理、スライド作成は対象外。出力は日本語を既定とする。
 ---
 
 > [!NOTE]
-> この `SKILL.md` を読んだら、`🧱 私は shunk031-research-structured-bullet-writing を読みました。` と言う。
+> この `SKILL.md` を読んだら、`🧱 私は shunk031-writing-kosshi を読みました。` と言う。
 
 # 骨子箇条書き
 

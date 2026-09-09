@@ -35,7 +35,7 @@ readonly SKILLS_ROOT="${REPO_ROOT}/skills"
 # Widening this list is a deliberate edit, which is the point: it is the only
 # place a new domain can be introduced.
 readonly OWNED_PREFIX="shunk031-"
-readonly ALLOWED_DOMAINS="codex github herdr manage python research shellscript"
+readonly ALLOWED_DOMAINS="codex github herdr manage python research shellscript writing"
 
 failures=()
 
