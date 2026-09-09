@@ -78,9 +78,17 @@ EOF
     [ "${status}" -eq 0 ]
 }
 
-@test "[common] pre-commit evaluates without rewriting recorded results" {
+@test "[common] shuhari is disabled during routine development" {
     run grep -F \
-        'entry: env SHUHARI_RECORD_RESULTS=false scripts/shuhari_staged_targets.sh eval' \
-        .pre-commit-config.yaml
+        'disable_tools = ["go:github.com/shunk031/shuhari/cmd/shuhari"]' \
+        mise.toml
     [ "${status}" -eq 0 ]
+
+    run grep -c -F 'stages: [manual]' .pre-commit-config.yaml
+    [ "${status}" -eq 0 ]
+    [ "${output}" -eq 3 ]
+
+    run make -n setup gate validate
+    [ "${status}" -eq 0 ]
+    [[ "${output}" != *shuhari* ]]
 }

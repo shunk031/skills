@@ -23,6 +23,7 @@
 
 ## Evaluation Policy
 
+- Status: Shuhari is temporarily disabled during routine development. Its pre-commit hooks use the `manual` stage, and only the explicit `make check-triggers` and `make eval` targets re-enable the pinned tool.
 - Harness: Quality gates run through [`shuhari`](https://github.com/shunk031/shuhari). This repository owns target selection and policy values; shuhari owns the evaluation mechanism.
 - Reference: Eval work returns to https://agentskills.io/skill-creation/evaluating-skills for how cases, assertions, and grading are meant to work. Where that guidance and the rules below differ, follow these: shuhari, not a hand-run loop, is what executes them here.
 - Behavior cases: `skills/<name>/evals/evals.json` holds cases that measure what the agent does when the skill applies. Each case requires `id`, `prompt`, and `expected_output`; `assertions`, `files`, and `required_actions` are optional.
@@ -35,12 +36,12 @@
 
 ## Development Setup
 
-- In every new clone or worktree, run `make setup` before editing or committing. It installs the pinned toolchain and the pre-commit hooks.
+- In every new clone or worktree, run `make setup` before editing or committing. It installs the routine toolchain and pre-commit hooks. Mise keeps shuhari disabled, so setup does not install it.
 - `shuhari` must be on `PATH` for the gates to run. The wrapper exits with status 2 when it is missing, because a gate that cannot run is a failure rather than a pass.
 - `shuhari` has no tagged release, so `mise.toml` pins the pseudo-version of a `main` commit rather than a semantic version. Run `make bump-shuhari` to move that pin to current `main`. Run it as plain `make`, never through `mise exec`: mise resolves every pinned tool before running a command, so a stale or unresolvable pin would fail before the recipe could replace it.
 - Never install `shuhari` with a bare `go install`. That writes into the Go toolchain's own `bin` directory, which sits ahead of the pinned tool on `PATH`, so the gates silently run a build nobody pinned. Check with `mise which shuhari`: it must resolve under `installs/go-github-com-shunk031-shuhari-cmd-shuhari/<version>/`. If it resolves anywhere else, delete that binary and re-run `make setup`.
-- The live gates make real model calls through Codex, so they run in pre-commit only. CI is limited to schema validation, layout checks, linting, and unit tests.
-- Never skip the shuhari hooks. `SKIP=shuhari-check-trigger,shuhari-eval-skill` is forbidden: when the model path is unavailable, do not commit — park the branch and commit only after the gates actually run and pass.
+- The shuhari hooks use pre-commit's `manual` stage and do not run during ordinary commits or CI. Run them only when the task explicitly includes evaluation work.
+- Never bypass a requested manual shuhari run. When the model path is unavailable during evaluation work, park the branch and commit only after the requested gates actually run and pass.
 
 ## Shell Policy
 
