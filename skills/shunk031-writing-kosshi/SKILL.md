@@ -4,7 +4,7 @@ description: 文章やメモを、論点文とそれを支える根拠からな�
 ---
 
 > [!NOTE]
-> この `SKILL.md` を読んだら、`🧱 私は shunk031-writing-kosshi を読みました。` と言う。
+> この `SKILL.md` を読んだら、`🦴 私は shunk031-writing-kosshi を読みました。` と言う。
 
 # 骨子箇条書き
 
