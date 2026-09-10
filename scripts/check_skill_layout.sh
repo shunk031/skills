@@ -18,6 +18,7 @@
 #   7. Each `shunk031-` skill names an allowed domain right after the prefix.
 #   8. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
 #   9. No Shuhari workspace directory is tracked by git.
+#  10. The README skill index lists every skill exactly once and no removed skill.
 # @exitcode 0 When every check passes.
 # @exitcode 1 When any check fails.
 # @example
@@ -29,6 +30,7 @@ shopt -s nullglob
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
 readonly SKILLS_ROOT="${REPO_ROOT}/skills"
+readonly README_FILE="${REPO_ROOT}/README.md"
 
 # The prefix every skill this repository owns carries, and the domains allowed
 # to follow it. A skill is named `shunk031-<domain>-<topic>` so that the list
@@ -252,11 +254,53 @@ function assert_no_tracked_workspaces() {
     fi
 }
 
+# @description Read skill names linked from the README `## Skills` section.
+# @stdout One skill directory name per link.
+function readme_skill_names() {
+    awk '
+        $0 == "## Skills" { in_skills = 1; next }
+        in_skills && /^## / { exit }
+        in_skills { print }
+    ' "${README_FILE}" | sed -n 's#.*](skills/\([^/]*\)/).*#\1#p'
+}
+
+# @description Verify that the README skill index matches the skill directories.
+function assert_readme_skill_index() {
+    if [ ! -f "${README_FILE}" ]; then
+        fail 'README.md is missing'
+        return 0
+    fi
+
+    local skill_dir name count
+    for skill_dir in "${SKILLS_ROOT}"/*/; do
+        skill_dir="${skill_dir%/}"
+        case "${skill_dir}" in
+        *-workspace) continue ;;
+        esac
+
+        name="$(basename -- "${skill_dir}")"
+        count="$(readme_skill_names | awk -v expected="${name}" '$0 == expected { count++ } END { print count + 0 }')"
+        if [ "${count}" -eq 0 ]; then
+            fail "skills/${name} is missing from README.md"
+        elif [ "${count}" -gt 1 ]; then
+            fail "README.md lists skill ${name} more than once"
+        fi
+    done
+
+    while IFS= read -r name; do
+        [ -n "${name}" ] || continue
+        if [ ! -d "${SKILLS_ROOT}/${name}" ]; then
+            fail "README.md lists missing skill ${name}"
+        fi
+    done < <(readme_skill_names | sort -u)
+}
+
 # @description Run every layout check and report the collected failures.
 function main() {
     assert_no_root_skill_file
     assert_no_nested_skill_files
     assert_no_tracked_workspaces
+    assert_readme_skill_index
 
     local skill_dir
     for skill_dir in "${SKILLS_ROOT}"/*/; do
