@@ -1,6 +1,6 @@
 # Why this skill's behavior cases use the network policy
 
-`evals.json` holds four cases. The `evals/network-required` marker makes the gate evaluate them with `gpt-5.5`, medium reasoning, and network access in Shuhari's isolated sandbox.
+`evals.json` holds three cases. The `evals/network-required` marker makes the gate evaluate them with `gpt-5.5`, medium reasoning, and network access in Shuhari's isolated sandbox.
 
 ## They cannot be measured offline
 
