@@ -18,7 +18,7 @@ env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID \
     --config 'model_reasoning_effort="medium"' \
     --sandbox read-only --ask-for-approval never \
     exec --ephemeral --skip-git-repo-check -C /tmp \
-    '<retry only the failed research stage and return direct sources>' </dev/null
+    '<the research question for this stage; return direct sources>' </dev/null
 ```
 
 2. Only after those results return, use a GitHub search or inspect `github.com` sources. Inspect representative implementation code or configuration and operational patterns, not only repository descriptions. In a Codex session, run this stage with the same command shown above, replacing its question with the stage-2 question.
