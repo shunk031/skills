@@ -14,8 +14,8 @@ description: 文章やメモを、論点文とそれを支える根拠からな�
   - 既存の文章を書き換える依頼にも、メモから新しく構成する依頼にも使う
   - 出力は Markdown を既定とする
   - 見出しは任意で、読み取りやすくなる場合だけ使う
-- 同じ階層の箇条書きは常に並列関係にする
-  - ある項目の説明、具体例、根拠など、その項目に従属する内容は一段深くする
+- 同じ階層には、共通の上位項目へ直接かかる独立した項目だけを並べる
+  - 別の項目を説明・具体化・根拠づける内容は、その項目の一段下に置く
 
 階層の基本形は次の通り。`top-level` と `support-level` は説明用のラベルであり、実際の出力には書かない。
 
@@ -95,12 +95,11 @@ description: 文章やメモを、論点文とそれを支える根拠からな�
 出力:
 
 ```markdown
-- 新料金プランは公開後の反応を確認できるが、成功判断には成果指標が足りない
-  - 8 月 1 日に新料金プランを公開した
+- 8 月 1 日に公開した新料金プランには、関心を示す反応があった
   - 価格ページ訪問は公開後 7 日で 1,920 件[アクセスログ]だった
   - 告知メール開封率は 42%[mail-log](https://example.com/mail-log)だった
-- 問い合わせの主な内容は、既存契約からの移行条件だった
   - 問い合わせは 76 件[問い合わせ集計]だった
+    - 主な内容は、既存契約からの移行条件だった
 - 成功を裏づける成果指標は未集計のため、結論は保留する
   - 有料転換率、解約率、売上影響は未集計
   - 示唆: 担当者は関心が高いと見ているが、成功とは断定できない
@@ -118,9 +117,10 @@ description: 文章やメモを、論点文とそれを支える根拠からな�
 出力:
 
 ```markdown
+- 検索改善会議では、関係者 4 人が社内ヘルプデスクの現状と対応方針を確認した
+  - 参加者は運用担当 2 人、開発担当 1 人、カスタマーサポート担当 1 人だった
 - 社内ヘルプデスクでは、FAQ で解決できない問い合わせがまだ多い
   - 7 月の問い合わせ 1,180 件のうち、FAQ で解決できた問い合わせは 410 件だった
-  - 参加者は運用担当 2 人、開発担当 1 人、カスタマーサポート担当 1 人だった
 - 顧客向け予約サイトでは、キャンセル手順と領収書再発行の質問が検索改善の主な対象になる
   - カスタマーサポート担当は、キャンセル手順と領収書再発行の質問が多いと報告した
   - 開発担当は、「領収証」「領収書」「レシート」の表記ゆれで同じ質問が分散していると説明した
@@ -145,9 +145,9 @@ description: 文章やメモを、論点文とそれを支える根拠からな�
   - 満足度アンケートの回答者は 18 人だった
   - 平均点は 4.1 点だった
   - 理解度テスト、配属後の成果、講師別評価はまだ集計していない
+  - 推論: 研修内容の評価を固めるには、理解度テストや配属後の成果の集計が必要になる
 - 演習時間の不足は、自由記述で見えた具体的な改善候補である
   - 自由記述では「演習時間が足りない」という声が 6 件あった
-  - 推論: 研修内容の評価を固めるには、理解度テストや配属後の成果の集計が必要になる
 ```
 
 ### 例: 英語で依頼された場合は英語で骨子を書く
@@ -161,13 +161,14 @@ Please turn these notes into a structured bullet outline. Notes: The April custo
 Output:
 
 ```markdown
-- The April customer onboarding webinar showed early interest, but conversion results are not available yet.
+- The April customer onboarding webinar showed early interest.
   - The webinar had 86 registrants and 52 live attendees, according to the Event Report.
   - The follow-up email had a 38% click rate, according to the Email Report.
+- Conversion success cannot be judged yet.
   - Trial activation rate and paid conversion rate are not available yet.
+  - Inference: Attendance and email clicks show interest, but they do not prove onboarding success.
+  - The next judgment should wait for activation and conversion data.
 - Customer questions split between enterprise security review and startup plan limits.
   - Three enterprise prospects asked for a security checklist.
   - Two startup customers asked whether the onboarding templates work with free plans.
-- The next judgment should wait for activation and conversion data.
-  - Inference: Attendance and email clicks show interest, but they do not prove onboarding success.
 ```
