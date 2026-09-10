@@ -19,18 +19,6 @@
       ]
     },
     {
-      "id": "provider-forbidden-fallback",
-      "prompt": "You are researching current official documentation before implementing a third-party integration. The native web-search tool returned exactly `403 Forbidden: Selected provider is forbidden`. Continue the task if a trustworthy research route remains available; do not edit files until the research gate is satisfied. If transient gateway failures occur, follow the bounded retry and orchestrator escalation policy.",
-      "expected_output": "Use the normal isolated gpt-5.5 live-search fallback for the failed stage, retrying transient gateway failures briefly and no more than three times. Continue only with a transcript showing web-search activity and usable direct source URLs; after three consecutive worker failures, report the exact question as blocked for the orchestrator to recover outside the worker sandbox.",
-      "assertions": [
-        "The response uses or clearly commits to the normal isolated gpt-5.5 medium live-search fallback instead of treating it as a one-shot exception or immediately asking the user whether to retry.",
-        "The response identifies stream disconnection before completion, HTTP 5xx responses, and timeouts as transient failures, pauses briefly, and bounds retries to three total attempts.",
-        "After three consecutive fallback failures, the worker reports BLOCKED with the exact research question and the orchestrator runs the configured fallback outside the worker sandbox before returning sources.",
-        "The response requires evidence of actual web-search activity and usable direct sources before implementation continues.",
-        "The fallback does not weaken the research gate: implementation remains blocked when the evidence standard is not satisfied."
-      ]
-    },
-    {
       "id": "provider-forbidden-transient-retry",
       "prompt": "You are researching current official documentation before implementing a third-party integration. The native web-search tool returned exactly `403 Forbidden: Selected provider is forbidden`, and the first normal fallback attempt returned `stream disconnected before completion`. Decide what to do next; do not edit files until the research gate is satisfied.",
       "expected_output": "Treat the first stream disconnection as a transient gateway failure, pause briefly, and retry the same gpt-5.5 live-search stage rather than blocking immediately. Keep the three-attempt bound and accept results only when the transcript shows web-search activity and usable direct source URLs.",
