@@ -8,10 +8,10 @@ Coding-agent skills for Claude Code and Codex, installed with the [`skills`](htt
 
 ## Install
 
-Install one skill for both agents:
+Install every skill for both agents:
 
 ```bash
-npx skills add shunk031/skills --skill <name> --agent claude-code --agent codex --global --yes
+npx skills add shunk031/skills --skill '*' --agent claude-code --agent codex --global --yes
 ```
 
 See what is available without installing anything:
@@ -59,6 +59,9 @@ Every skill is named `shunk031-<domain>-<topic>`, and `Category` is that domain.
 | [`shunk031-research-before-implementation`](skills/shunk031-research-before-implementation/)                   | `research`    | Reads current official documentation and real implementations before designing anything that depends on a third-party tool. |
 | [`shunk031-research-high-impact-journal-publishing`](skills/shunk031-research-high-impact-journal-publishing/) | `research`    | Advises on study design, manuscript structure, journal selection, and peer review responses.                                |
 | [`shunk031-shellscript-shdoc-docs`](skills/shunk031-shellscript-shdoc-docs/)                                   | `shellscript` | Adds and repairs shdoc annotations in shell scripts and shell executables.                                                  |
+| [`shunk031-writing-kosshi`](skills/shunk031-writing-kosshi/)                                                   | `writing`     | Structures claims and supporting evidence as an outline.                                                                    |
+| [`shunk031-writing-technical-slides`](skills/shunk031-writing-technical-slides/)                               | `writing`     | Writes technical and paper-review slide text in the repository author's style.                                              |
+| [`shunk031-writing-telegraph`](skills/shunk031-writing-telegraph/)                                             | `writing`     | Rewrites an outline in concise telegraphic style.                                                                           |
 
 ## Layout
 
@@ -97,7 +100,7 @@ make bump-shuhari     # re-pin shuhari, which publishes no tagged releases
 ## Related repositories
 
 - [`shunk031/skills-private`](https://github.com/shunk031/skills-private): skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process.
-- [`shunk031/dotfiles`](https://github.com/shunk031/dotfiles): subscribes to these skills through a declarative allowlist reconciled on every `chezmoi apply`.
+- [`shunk031/dotfiles`](https://github.com/shunk031/dotfiles): subscribes to this repository and refreshes it on `chezmoi apply`.
 
 ## License
 

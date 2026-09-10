@@ -13,6 +13,7 @@ setup() {
         "${FIXTURE_ROOT}/scripts/check_skill_layout.sh"
     CHECKER="${FIXTURE_ROOT}/scripts/check_skill_layout.sh"
     mkdir -p "${FIXTURE_ROOT}/skills"
+    printf '# Skills\n\n## Skills\n\n' > "${FIXTURE_ROOT}/README.md"
 }
 
 # @description Create a minimal well-formed skill directory.
@@ -23,6 +24,35 @@ function make_skill() {
 
     mkdir -p "${skill_dir}"
     printf -- '---\nname: %s\ndescription: d\n---\n\n> [!NOTE]\n> After reading this `SKILL.md`, say: `🧪 I read %s.`\n' "${name}" "${name}" > "${skill_dir}/SKILL.md"
+    printf -- '- [`%s`](skills/%s/)\n' "${name}" "${name}" >> "${FIXTURE_ROOT}/README.md"
+}
+
+@test "[common] a skill missing from the README index is rejected" {
+    make_skill shunk031-herdr-a
+    sed -i.bak '/skills\/shunk031-herdr-a\//d' "${FIXTURE_ROOT}/README.md"
+    rm "${FIXTURE_ROOT}/README.md.bak"
+
+    run "${CHECKER}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *'skills/shunk031-herdr-a is missing from README.md'* ]]
+}
+
+@test "[common] a stale skill in the README index is rejected" {
+    make_skill shunk031-herdr-a
+    printf -- '- [`shunk031-herdr-old`](skills/shunk031-herdr-old/)\n' >> "${FIXTURE_ROOT}/README.md"
+
+    run "${CHECKER}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *'README.md lists missing skill shunk031-herdr-old'* ]]
+}
+
+@test "[common] a duplicate skill in the README index is rejected" {
+    make_skill shunk031-herdr-a
+    printf -- '- [`shunk031-herdr-a`](skills/shunk031-herdr-a/)\n' >> "${FIXTURE_ROOT}/README.md"
+
+    run "${CHECKER}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *'README.md lists skill shunk031-herdr-a more than once'* ]]
 }
 
 @test "[common] a missing read receipt is rejected" {
