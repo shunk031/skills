@@ -95,9 +95,9 @@ function skill_opening_lines() {
 function is_valid_read_receipt() {
     local line="$1"
     local name="$2"
-    local english_prefix='> After reading this `SKILL.md`, say: `'
+    local english_prefix="> After reading this \`SKILL.md\`, say: \`"
     local english_suffix=" I read ${name}."'`'
-    local japanese_prefix='> この `SKILL.md` を読んだら、`'
+    local japanese_prefix="> この \`SKILL.md\` を読んだら、\`"
     local japanese_suffix=" 私は ${name} を読みました。"'` と言う。'
     local emoji
 
