@@ -1,6 +1,6 @@
 ---
 name: shunk031-writing-kosshi
-description: 文章やメモを、主張とそれを支える根拠からなる骨子箇条書きに構成・書き換える。日本語の「骨子を書いて」「箇条書きで論点整理して」、英語の「structured bullet outline」「topic sentences with supporting points」に該当する依頼で使う。品目の列挙、タスク管理、スライド作成は対象外。出力は日本語を既定とする。
+description: 文章やメモを、主張とそれを支える根拠からなる骨子箇条書きに構成・書き換える。「骨子を書いて」「箇条書きで論点整理して」といった依頼で使う。品目の列挙、タスク管理、スライド作成は対象外。
 ---
 
 > [!NOTE]
@@ -31,9 +31,7 @@ description: 文章やメモを、主張とそれを支える根拠からなる�
 
 ## 構成と出力
 
-- 出力言語は日本語を既定にし、ユーザーや入力が別言語を明確に選んだ場合だけそれに従う
-  - 英語で `structured bullet outline` と頼まれた場合など、依頼言語が明確ならその言語で書く
-  - 引用、論文名、資料名、人名、組織名、製品名、固有の表記、引用文は原文の言語と表記を保つ
+- 引用、論文名、資料名、人名、組織名、製品名、固有の表記、引用文は原文の言語と表記を保つ
   - 出典名を勝手に日本語化しない
 - 先頭の階層には、全体を要約する 3〜4 本の主張を置く
   - 各トップレベル箇条書きはラベルではなく、そのまとまりの主張や要点を一文で述べる
@@ -149,27 +147,4 @@ description: 文章やメモを、主張とそれを支える根拠からなる�
   - 推論: 研修内容の評価を固めるには、理解度テストや配属後の成果の集計が必要になる
 - 演習時間の不足は、自由記述で見えた具体的な改善候補である
   - 自由記述では「演習時間が足りない」という声が 6 件あった
-```
-
-### 例: 英語で依頼された場合は英語で骨子を書く
-
-Input:
-
-```markdown
-Please turn these notes into a structured bullet outline. Notes: The April customer onboarding webinar had 86 registrants and 52 live attendees, according to the Event Report. The follow-up email had a 38% click rate, according to the Email Report. Three enterprise prospects asked for a security checklist, and two startup customers asked whether the onboarding templates work with free plans. Trial activation rate and paid conversion rate are not available yet.
-```
-
-Output:
-
-```markdown
-- The April customer onboarding webinar showed early interest.
-  - The webinar had 86 registrants and 52 live attendees, according to the Event Report.
-  - The follow-up email had a 38% click rate, according to the Email Report.
-- Conversion success cannot be judged yet.
-  - Trial activation rate and paid conversion rate are not available yet.
-  - Inference: Attendance and email clicks show interest, but they do not prove onboarding success.
-  - The next judgment should wait for activation and conversion data.
-- Customer questions split between enterprise security review and startup plan limits.
-  - Three enterprise prospects asked for a security checklist.
-  - Two startup customers asked whether the onboarding templates work with free plans.
 ```
