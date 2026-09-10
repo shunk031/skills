@@ -148,3 +148,26 @@ description: 文章やメモを、主張とそれを支える根拠からなる�
 - 演習時間の不足は、自由記述で見えた具体的な改善候補である
   - 自由記述では「演習時間が足りない」という声が 6 件あった
 ```
+
+### 例: 英語で依頼された場合は英語で骨子を書く
+
+Input:
+
+```markdown
+Please turn these notes into a structured bullet outline. Notes: The April customer onboarding webinar had 86 registrants and 52 live attendees, according to the Event Report. The follow-up email had a 38% click rate, according to the Email Report. Three enterprise prospects asked for a security checklist, and two startup customers asked whether the onboarding templates work with free plans. Trial activation rate and paid conversion rate are not available yet.
+```
+
+Output:
+
+```markdown
+- The April customer onboarding webinar showed early interest.
+  - The webinar had 86 registrants and 52 live attendees, according to the Event Report.
+  - The follow-up email had a 38% click rate, according to the Email Report.
+- Conversion success cannot be judged yet.
+  - Trial activation rate and paid conversion rate are not available yet.
+  - Inference: Attendance and email clicks show interest, but they do not prove onboarding success.
+  - The next judgment should wait for activation and conversion data.
+- Customer questions split between enterprise security review and startup plan limits.
+  - Three enterprise prospects asked for a security checklist.
+  - Two startup customers asked whether the onboarding templates work with free plans.
+```
