@@ -8,10 +8,6 @@ description: Attach local files to a GitHub issue or pull request comment via Pl
 
 # GitHub Comment Attach Files
 
-## Read Acknowledgement
-
-- After reading this skill, say: `🐙 I read shunk031-github-comment-attach-files.`
-
 ## When To Use
 
 Use this skill when you need GitHub to host local files and give back anonymized attachment URLs, but you do not want the agent to submit the issue or pull request comment itself.

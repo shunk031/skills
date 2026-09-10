@@ -1,23 +1,23 @@
 {
   "schema_version": "1",
-  "skill_name": "shunk031-research-structured-bullet-writing",
-  "measured_at": "2026-09-02T06:58:18.228656Z",
+  "skill_name": "shunk031-writing-kosshi",
+  "measured_at": "2026-09-09T12:11:57.905400097Z",
   "agent": "codex",
   "model": "gpt-5.6-luna",
   "reasoning_effort": "high",
   "trials": 3,
-  "network": false,
+  "network": true,
   "pass_rate": {
-    "with_skill": 0.9352,
-    "without_skill": 0.5278
+    "with_skill": 0.9514,
+    "without_skill": 0.6597
   },
   "tokens": {
-    "with_skill": 75864.1111,
-    "without_skill": 52103
+    "with_skill": 69949.5,
+    "without_skill": 43278
   },
   "seconds": {
-    "with_skill": 27.0493,
-    "without_skill": 25.9581
+    "with_skill": 29.5746,
+    "without_skill": 15.3535
   },
   "assertions": [
     {
@@ -45,8 +45,8 @@
       "case_id": "insufficient-information",
       "assertion": "The response does not assert that the launch succeeded as a supported conclusion.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.6666666666666666,
+      "category": "mixed"
     },
     {
       "case_id": "insufficient-information",
@@ -73,8 +73,8 @@
       "case_id": "rewrite-long-prose",
       "assertion": "The response is a Markdown bullet outline with top-level bullets that read as genuine topic sentences and nested support bullets under the local groups.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.3333333333333333,
+      "category": "mixed"
     },
     {
       "case_id": "rewrite-long-prose",
@@ -87,8 +87,15 @@
       "case_id": "rewrite-long-prose",
       "assertion": "The response preserves the input citations and source URLs at the smallest supported unit, including [運用ログA] immediately with the 61% metric, [営業企画ヒアリング] immediately with the 48% metric, [対象資料] attached to each cited FAQ, specification, and past-ticket item, a Markdown link for https://example.com/internal-search/log-a, and the interview source URL.",
       "with_skill": 1,
-      "without_skill": 0,
-      "category": "pass_with_fail_without"
+      "without_skill": 0.3333333333333333,
+      "category": "mixed"
+    },
+    {
+      "case_id": "terminal-punctuation",
+      "assertion": "No Markdown bullet item in the response ends with the Japanese full stop 。.",
+      "with_skill": 1,
+      "without_skill": 0.6666666666666666,
+      "category": "mixed"
     }
   ]
 }
