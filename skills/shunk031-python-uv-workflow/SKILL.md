@@ -12,10 +12,6 @@ description: Apply Python development policy using uv-first execution, test-firs
 
 Use this workflow to keep Python implementation and refactoring aligned with repository policy.
 
-## Read Acknowledgement
-
-- After reading this skill, say: `🐍 I read shunk031-python-uv-workflow.`
-
 ## Workflow
 
 1. Use `uv` as the default toolchain for Python projects.
@@ -29,7 +25,7 @@ Use this workflow to keep Python implementation and refactoring aligned with rep
 9. Construct Python paths from a source-file anchor rather than a hard-coded absolute path string:
    - Bad: `Path("/path/to") / "hoge"`
    - Good: `Path(__file__).parents[N] / "path" / "to" / "hoge"`
-   Anchoring paths to the source file keeps them working after relocation and across worktrees without coupling them to a host layout. Explicit roots supplied through a CLI argument or environment variable are allowed; only hard-coded absolute path strings are forbidden.
+     Anchoring paths to the source file keeps them working after relocation and across worktrees without coupling them to a host layout. Explicit roots supplied through a CLI argument or environment variable are allowed; only hard-coded absolute path strings are forbidden.
 
 ## Testing Expectations
 

@@ -13,10 +13,11 @@
 #   3. Each `SKILL.md` has closed YAML frontmatter with a non-empty `name` and
 #      `description`.
 #   4. The frontmatter `name` equals the skill directory name.
-#   5. `evals/evals.json` and `evals/triggers.json` agree with that name.
-#   6. Each `shunk031-` skill names an allowed domain right after the prefix.
-#   7. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
-#   8. No Shuhari workspace directory is tracked by git.
+#   5. Each skill opens with a read-receipt NOTE naming that skill.
+#   6. `evals/evals.json` and `evals/triggers.json` agree with that name.
+#   7. Each `shunk031-` skill names an allowed domain right after the prefix.
+#   8. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
+#   9. No Shuhari workspace directory is tracked by git.
 # @exitcode 0 When every check passes.
 # @exitcode 1 When any check fails.
 # @example
@@ -70,6 +71,49 @@ function frontmatter_field() {
             }
         }
     ' "${file}"
+}
+
+# @description Read the first two non-empty lines after a `SKILL.md` frontmatter block.
+# @arg $1 file The `SKILL.md` path.
+# @stdout The first two non-empty body lines, one per line.
+function skill_opening_lines() {
+    local file="$1"
+    awk '
+        NR == 1 { if ($0 != "---") exit 0; in_block = 1; next }
+        in_block && $0 == "---" { in_block = 0; in_body = 1; next }
+        in_body && $0 !~ /^[[:space:]]*$/ {
+            print
+            count++
+            if (count == 2) exit 0
+        }
+    ' "${file}"
+}
+
+# @description Check whether a line is an English or Japanese read receipt for a skill.
+# @arg $1 line The receipt line.
+# @arg $2 name The expected skill name.
+function is_valid_read_receipt() {
+    local line="$1"
+    local name="$2"
+    local english_prefix='> After reading this `SKILL.md`, say: `'
+    local english_suffix=" I read ${name}."'`'
+    local japanese_prefix='> この `SKILL.md` を読んだら、`'
+    local japanese_suffix=" 私は ${name} を読みました。"'` と言う。'
+    local emoji
+
+    case "${line}" in
+    "${english_prefix}"*"${english_suffix}")
+        emoji="${line#"${english_prefix}"}"
+        emoji="${emoji%"${english_suffix}"}"
+        ;;
+    "${japanese_prefix}"*"${japanese_suffix}")
+        emoji="${line#"${japanese_prefix}"}"
+        emoji="${emoji%"${japanese_suffix}"}"
+        ;;
+    *) return 1 ;;
+    esac
+
+    [ -n "${emoji}" ]
 }
 
 # @description Read `skill_name` from a Shuhari eval or trigger file.
@@ -171,6 +215,16 @@ function check_skill() {
 
     if [ -z "$(frontmatter_field "${skill_file}" description)" ]; then
         fail "skills/${name}/SKILL.md has no frontmatter description"
+    fi
+
+    local opening note receipt
+    opening="$(skill_opening_lines "${skill_file}")"
+    note="${opening%%$'\n'*}"
+    receipt="${opening#*$'\n'}"
+    if [ "${note}" != '> [!NOTE]' ] || [ "${receipt}" = "${opening}" ]; then
+        fail "skills/${name}/SKILL.md has no read-receipt NOTE immediately after frontmatter"
+    elif ! is_valid_read_receipt "${receipt}" "${name}"; then
+        fail "skills/${name}/SKILL.md has an invalid read receipt for ${name}"
     fi
 
     local eval_file

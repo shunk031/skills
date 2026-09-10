@@ -22,7 +22,35 @@ function make_skill() {
     local skill_dir="${FIXTURE_ROOT}/skills/${name}"
 
     mkdir -p "${skill_dir}"
-    printf -- '---\nname: %s\ndescription: d\n---\n' "${name}" > "${skill_dir}/SKILL.md"
+    printf -- '---\nname: %s\ndescription: d\n---\n\n> [!NOTE]\n> After reading this `SKILL.md`, say: `🧪 I read %s.`\n' "${name}" "${name}" > "${skill_dir}/SKILL.md"
+}
+
+@test "[common] a missing read receipt is rejected" {
+    make_skill shunk031-herdr-a
+    printf -- '---\nname: shunk031-herdr-a\ndescription: d\n---\n\n# Heading\n' > "${FIXTURE_ROOT}/skills/shunk031-herdr-a/SKILL.md"
+
+    run "${CHECKER}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *'has no read-receipt NOTE immediately after frontmatter'* ]]
+}
+
+@test "[common] a read receipt naming another skill is rejected" {
+    make_skill shunk031-herdr-a
+    sed -i.bak 's/I read shunk031-herdr-a\./I read shunk031-herdr-b./' "${FIXTURE_ROOT}/skills/shunk031-herdr-a/SKILL.md"
+    rm "${FIXTURE_ROOT}/skills/shunk031-herdr-a/SKILL.md.bak"
+
+    run "${CHECKER}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *'has an invalid read receipt for shunk031-herdr-a'* ]]
+}
+
+@test "[common] a Japanese read receipt is accepted" {
+    make_skill shunk031-research-a
+    sed -i.bak 's/> After reading this `SKILL.md`, say: `🧪 I read shunk031-research-a.`/> この `SKILL.md` を読んだら、`🧪 私は shunk031-research-a を読みました。` と言う。/' "${FIXTURE_ROOT}/skills/shunk031-research-a/SKILL.md"
+    rm "${FIXTURE_ROOT}/skills/shunk031-research-a/SKILL.md.bak"
+
+    run "${CHECKER}"
+    [ "${status}" -eq 0 ]
 }
 
 @test "[common] an allowed domain passes" {
