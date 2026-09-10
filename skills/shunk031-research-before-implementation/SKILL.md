@@ -18,7 +18,7 @@ Treat research as a gate, not a recommendation. Before any design decision or fi
 
 ## Research retry
 
-If a research run fails before producing any output, including a connection error, an HTTP 4xx/5xx response, or a stream disconnect, rerun the same stage for at most 3 total attempts. Between attempts, switch the Gateway endpoint according to the environment's private Gateway guidance in `~/.agents/AGENTS-private.md` when that file exists, but keep the stage, question, and command arguments unchanged. After 3 failed attempts, stop and report `BLOCKED` to the orchestrator with the exact research question so it can run the stage outside the sandbox.
+When a research stage fails before producing sources because the host's web-research capability errors, returns `403 Forbidden: Selected provider is forbidden`, or returns no sources, the agent itself immediately reruns that stage with the command below; this isolated `gpt-5.5` / medium session is the retry, not an optional extra.
 
 ```bash
 env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID \
@@ -28,3 +28,5 @@ env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID \
     exec --ephemeral --skip-git-repo-check -C /tmp \
     '<retry only the failed research stage and return direct sources>' </dev/null
 ```
+
+Run the command at most 3 times in total for one stage; between attempts, switch the Gateway endpoint according to the environment's private Gateway guidance in `~/.agents/AGENTS-private.md` when that file exists (prod and dev launch forms live there), keeping the stage, question, and arguments otherwise unchanged. Accept an attempt only when its transcript shows web-search activity and its answer contains usable direct source URLs. Only after 3 failed command attempts, stop, report `BLOCKED` to the orchestrator with the exact research question, and do not substitute memory or local files for the missing stage.
