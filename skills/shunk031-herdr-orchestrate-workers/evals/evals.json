@@ -3,18 +3,18 @@
   "evals": [
     {
       "id": "structural-variant-design-record-order",
-      "prompt": "You are the orchestrator in a Herdr session. The user asks you to add a Linux variant \"like the macOS job\" to an existing CI workflow. The workflow already has an OS matrix and a separate macOS-only job, so the new variant may make that existing job redundant. In an offline dry run, describe the user-facing report and worker dispatch you would prepare; do not execute commands.",
-      "expected_output": "The orchestrator prepares a report that records the intended workflow shape, removals, retained elements with reasons, and user-owned decisions with options, then gives the worker dispatch.",
+      "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch; do not execute commands.",
+      "expected_output": "The report states the intended workflow shape, removals, retained elements and reasons, and user-owned choices before the worker dispatch.",
       "assertions": [
-        "The response presents a design record with all four parts before the worker dispatch."
+        "The four-part design record precedes the worker dispatch."
       ]
     },
     {
       "id": "structural-variant-questions-redundant-job",
-      "prompt": "You are the orchestrator in a Herdr session. The user asks you to add a Linux variant \"like the macOS job\" to an existing CI workflow. The workflow already has an OS matrix and a separate macOS-only job, so the new variant may make that existing job redundant. In an offline dry run, describe the user-facing report and worker dispatch you would prepare; do not execute commands. Before dispatching, decide what happens to the existing macOS-only job and state its disposition.",
-      "expected_output": "The orchestrator evaluates whether the existing macOS-only job is redundant and gives it a concrete disposition: remove it, retain it for a stated reason, or surface the choice to the user.",
+      "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch, and decide the existing job's fate before dispatching. Do not execute commands.",
+      "expected_output": "The orchestrator gives the existing macOS-only job a disposition: remove it, retain it with a reason, or offer the choice to the user.",
       "assertions": [
-        "The response explicitly decides or surfaces the fate of the existing macOS-only job rather than leaving it untouched by default."
+        "The response gives the existing macOS-only job a disposition."
       ]
     }
   ]
