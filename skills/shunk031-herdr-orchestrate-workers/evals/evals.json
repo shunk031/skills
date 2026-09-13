@@ -1,0 +1,13 @@
+{
+  "skill_name": "shunk031-herdr-orchestrate-workers",
+  "evals": [
+    {
+      "id": "structural-variant-design-record",
+      "prompt": "You are the orchestrator in a Herdr session. The user asks you to add a Linux variant \"like the macOS job\" to an existing CI workflow. The workflow already has an OS matrix and a separate macOS-only job, so the new variant may make that existing job redundant. In an offline dry run, describe the user-facing report and worker dispatch you would prepare; do not execute commands. Before dispatching, question whether the existing macOS-only job is redundant and make the structural design decision explicit.",
+      "expected_output": "Before dispatching the worker, the orchestrator produces a complete four-part design record for the workflow's target shape, removals, retained elements with their reasons, and user-owned decisions with options. It resolves or explicitly surfaces the potentially redundant macOS-only job in that record, carries the record into the worker task, and places dispatch after the record.",
+      "assertions": [
+        "The response places the worker dispatch after a four-part design record and explicitly questions whether the existing macOS-only job is redundant."
+      ]
+    }
+  ]
+}
