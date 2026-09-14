@@ -1,0 +1,21 @@
+{
+  "skill_name": "shunk031-herdr-orchestrate-workers",
+  "evals": [
+    {
+      "id": "structural-variant-design-record-order",
+      "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch; do not execute commands.",
+      "expected_output": "The report states the intended workflow shape, removals, retained elements and reasons, and user-owned choices before the worker dispatch.",
+      "assertions": [
+        "The four-part design record precedes the worker dispatch."
+      ]
+    },
+    {
+      "id": "structural-variant-questions-redundant-job",
+      "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch, and decide the existing job's fate before dispatching. Do not execute commands.",
+      "expected_output": "The orchestrator gives the existing macOS-only job a disposition: remove it, retain it with a reason, or offer the choice to the user.",
+      "assertions": [
+        "The response gives the existing macOS-only job a disposition."
+      ]
+    }
+  ]
+}
