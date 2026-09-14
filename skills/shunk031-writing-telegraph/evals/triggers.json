@@ -1,0 +1,20 @@
+{
+  "skill_name": "shunk031-writing-telegraph",
+  "cases": [
+    {
+      "id": "html-experiment-report",
+      "prompt": "この実験結果をHTMLレポートにして。要点を短く並べ、画像を比較しやすくしてください。",
+      "should_trigger": true
+    },
+    {
+      "id": "short-bullet-report",
+      "prompt": "レポート書いて。箇条書きは短めで。",
+      "should_trigger": true
+    },
+    {
+      "id": "paragraph-report-proofreading",
+      "prompt": "このレポートを段落形式のまま自然な日本語に推敲してください。箇条書きへの変更や要約は不要です。",
+      "should_trigger": false
+    }
+  ]
+}
