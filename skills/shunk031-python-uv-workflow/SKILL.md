@@ -27,6 +27,7 @@ Use this workflow to keep Python implementation and refactoring aligned with rep
    - Required: `Path(__file__).parents[N] / "path" / "to" / "hoge"`
      Never put multiple path components separated by `/` or `\` in a string literal passed to `Path` or used as an operand to `/`. Anchoring paths to the source file keeps them working after relocation and across worktrees without coupling them to a host layout. Explicit roots supplied through a CLI argument or environment variable are allowed; hard-coded absolute path strings remain forbidden.
      Before finalizing Python changes, inspect every changed `Path(...)` and `/` expression for path-separator-containing string operands.
+10. Name variables for their semantic role. When the same concept has multiple representations, add a qualifier such as `_path`, `_text`, or `_data` only to distinguish them; do not add type suffixes mechanically when the role is already clear.
 
 ## Testing Expectations
 
