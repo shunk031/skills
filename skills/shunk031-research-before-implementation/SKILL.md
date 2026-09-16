@@ -10,7 +10,7 @@ description: Research current official web documentation and representative GitH
 
 Treat research as a gate, not a recommendation. Before any design decision or file edit, complete these tool stages in order:
 
-1. Use an available web-research capability for current official sources. Rely on the capability the current agent host actually exposes; do not assume a particular tool name or namespace. Inspect documentation, specifications, release notes, and recommended approaches from at least one relevant non-GitHub domain. In a Codex session, run this stage directly with the command below instead of the session model's web search, which the Gateway rejects with `403 Forbidden: Selected provider is forbidden`.
+1. Use an available web-research capability for current official sources. Rely on the capability the current agent host actually exposes; do not assume a particular tool name or namespace. Inspect documentation, specifications, release notes, and recommended approaches from at least one relevant non-GitHub domain. In a Codex session, run this stage directly with the command below instead of the session model's web search, which the Gateway rejects with `403 Forbidden: Selected provider is forbidden`. Before running it, check `~/.agents/AGENTS-private.md` when readable and the current session-start diagnostic for a Gateway endpoint or profile already known to work. If either names one, use it on the first attempt instead of probing the default Gateway again; do not infer permission to change credentials.
 
 ```bash
 env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID \
