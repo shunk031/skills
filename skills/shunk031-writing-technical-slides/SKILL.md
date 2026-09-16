@@ -117,9 +117,9 @@ description: 技術解説や論文紹介のスライド文章を、節とスラ�
     - 原論文の subsection 名など、英語表記自体に参照価値がある場合は、日本語で説明した後に括弧で正式名称を添えてよい
   - 専門語・略語は、資料全体で最初に登場する箇所で正式名称を示す
     - 日本語名が自然な場合は `日本語名（English Name; ABBR）` を基本形とする
-      - 例: `大規模マルチモーダルモデル（Large Multimodal Model; LMM）`
+      - 例: `主成分分析（Principal Component Analysis; PCA）`
     - 日本語名を通常使わない場合は `English Name (ABBR)` とする
-      - 例: `Perturbed Supervised Fine-Tuning (PSFT)`
+      - 例: `Knowledge Distillation (KD)`
     - タイトルが初出でも例外にしない
       - タイトルで正式名称を書くと長すぎる場合は、同じスライド本文の最初の出現箇所で正式名称を示す
     - 論文本文で定義済みでも、発表資料では独立して初出表記を行う
