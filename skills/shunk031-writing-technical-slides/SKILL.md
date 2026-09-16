@@ -38,21 +38,21 @@ description: 技術解説や論文紹介のスライド文章を、節とスラ�
 ```markdown
 # 11. 提案手法
 
-## 提案手法 2/4 | 正解座標の周辺も教師として利用
+## 提案手法 2/4 | 候補を事前に絞って推論量を削減
 
-### Perturbed Supervised Fine-Tuning (PSFT)
+### 二段階の候補選択
 
-- 正解座標の周辺に小さな摂動を加えた複数のレイアウトを生成
-- 正解レイアウトと周辺レイアウトの両方を教師として学習
+- 第1段階で候補を 100 件から 20 件へ圧縮
+- 第2段階で残った 20 件だけを詳細に評価
 
-➜ 座標一点ではなく、周辺の位置関係まで学習
+➜ 精度を保ちながら推論時の計算量を削減
 
 **図・表**
-- Figure 3(a)
-- Equation (2)–(3)
+- Figure 3
+- Table 2
 
 **出典**
-- [Yamada+ arXiv’25, Sec. 3.2](https://arxiv.org/abs/2501.00001)
+- [Yamada+ arXiv’25, Sec. 3.2](https://arxiv.org/abs/<arXiv-id>)
 ```
 
 ## スライド全体の構成
@@ -100,7 +100,7 @@ description: 技術解説や論文紹介のスライド文章を、節とスラ�
   - 枚数が多い場合は、全体の分類や現在の節を繰り返し示し、節の切り替わりでまとめを置いてよい
 - `本論文の選定理由` では、後続スライドでまだ説明していない専門語・手法名・略語を先取りしすぎない
   - 発表者が何に注目したかを、まず平易な日本語で具体化する
-  - 例: `RL-VRA による geometric alignment に注目` より `描画結果を使って配置のずれをどう減らすかに注目` を優先する
+  - 例: `Adaptive Pruning (AP) の pruning policy に注目` より `重要度の低い計算をどう省いて推論を高速化するかに注目` を優先する
   - 手法名を選定理由で出す必要がなければ、Introduction または Methodology の初出まで待つ
 - 各スライドは、結論を一文だけ置く形式に固定せず、必要な項目を組み合わせる
   - タイトルの下に、`主要な結果`、`結果の解釈`、`現状と課題`、`将来方向` など、そのスライドに必要な短い小見出しを置く
@@ -111,9 +111,9 @@ description: 技術解説や論文紹介のスライド文章を、節とスラ�
   - 説明文では、普通の日本語で明確に書ける一般語を英語のまま混ぜない
     - 論文固有の手法名、モデル名、指標名、一般に英語表記が定着している固有名詞は原表記を保つ
     - 一般語は日本語に寄せ、英単語と日本語の助詞を不必要に混ぜた表現を避ける
-    - 例: `asset` → `素材`、`ground truth` → `正解レイアウト` / `正解データ`、`reward` → `報酬`、`baseline` → `比較手法`
-    - 例: `global layout rearrangement` → `全体のレイアウト調整`、`single-layer edit` → `特定の素材だけを修正`
-    - `geometry を改善`、`layout を再調整`、`aesthetic な解` のような混在表現は避け、`配置の正確さを改善`、`レイアウトを再調整`、`見栄えのよい配置` のように書く
+    - 例: `baseline` → `比較手法`、`reward` → `報酬`、`ground truth` → `正解データ`、`latency` → `推論時間`
+    - 例: `memory footprint` → `メモリ使用量`、`error analysis` → `誤り分析`、`training objective` → `学習目的`
+    - `accuracy を改善`、`memory を削減`、`robust な結果` のような混在表現は避け、`精度を改善`、`メモリ使用量を削減`、`安定した結果` のように書く
     - 原論文の subsection 名など、英語表記自体に参照価値がある場合は、日本語で説明した後に括弧で正式名称を添えてよい
   - 専門語・略語は、資料全体で最初に登場する箇所で正式名称を示す
     - 日本語名が自然な場合は `日本語名（English Name; ABBR）` を基本形とする
@@ -172,9 +172,9 @@ description: 技術解説や論文紹介のスライド文章を、節とスラ�
 
 例:
 
-- `LMM` より前または同じ箇所に `大規模マルチモーダルモデル（Large Multimodal Model; LMM）`
-- `PSFT` より前または同じ箇所に `Perturbed Supervised Fine-Tuning (PSFT)`
-- `RL-VRA` より前または同じ箇所に `Reinforcement Learning for Visual-Reality Alignment (RL-VRA)`
+- `RAG` より前または同じ箇所に `検索拡張生成（Retrieval-Augmented Generation; RAG）`
+- `KD` より前または同じ箇所に `Knowledge Distillation (KD)`
+- `IoU` より前または同じ箇所に `Intersection over Union (IoU)`
 
 ### スライド全体
 
@@ -196,7 +196,7 @@ description: 技術解説や論文紹介のスライド文章を、節とスラ�
   - arXiv 版がない、または arXiv 版より公式公開ページを使う明確な理由がある場合は、CVF / OpenReview / ACL Anthology / 出版社などの公式論文ページを使う
   - Project Page は、論文本体の代替ではなく、デモ・コード・追加資料を参照するときに使う
   - 出典ラベルには、可能なら対象の section / figure / table / equation を含める
-  - 例: `[Wei+ arXiv’25, Sec. 3.2, Fig. 4](https://arxiv.org/abs/2512.04082)`
+  - 例: `[Yamada+ arXiv’25, Sec. 3.2, Fig. 4](https://arxiv.org/abs/<arXiv-id>)`
   - 関連研究を列挙するスライドでは、可能な範囲で各論文のリンクを個別に解決する
 - 実際のスライド上の短い引用は、`shunk031-writing-kosshi` skill の出典規則に従い、引用対象の直後または図の近くに短い角括弧書式で表す
   - Markdown 草稿末尾の `出典` はリンク確認と制作時の参照用であり、スライド上の近接引用を省く理由にはしない
