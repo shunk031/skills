@@ -1,59 +1,31 @@
 {
   "schema_version": "1",
   "skill_name": "shunk031-writing",
-  "measured_at": "2026-09-01T23:43:38.601506262Z",
+  "measured_at": "2026-09-02T07:23:06.684179Z",
   "agent": "codex",
   "model": "gpt-5.6-luna",
   "reasoning_effort": "high",
   "trials": 3,
-  "network": true,
+  "network": false,
   "pass_rate": {
     "with_skill": 1,
-    "without_skill": 0.8667
+    "without_skill": 0
   },
   "tokens": {
-    "with_skill": 176708.4667,
-    "without_skill": 183336.2
+    "with_skill": 174969,
+    "without_skill": 349547.6667
   },
   "seconds": {
-    "with_skill": 44.8264,
-    "without_skill": 62.3931
+    "with_skill": 40.7442,
+    "without_skill": 80.2489
   },
   "assertions": [
-    {
-      "case_id": "1",
-      "assertion": "The response produces a research-paper outline whose entries are complete topic sentences that can become paragraphs. It separates reported results from their interpretation.",
-      "with_skill": 1,
-      "without_skill": 0.6666666666666666,
-      "category": "mixed"
-    },
-    {
-      "case_id": "2",
-      "assertion": "The response presents the report result as a claim line followed by telegraphic supporting fragments. It preserves all supplied counts and the reason the two repositories remain blocked.",
-      "with_skill": 1,
-      "without_skill": 0.6666666666666666,
-      "category": "mixed"
-    },
-    {
-      "case_id": "3",
-      "assertion": "The response removes the false parallel by separating the benefit, operator action, and implementation fact according to their roles. It does more than normalize the bullets' grammar or punctuation.",
-      "with_skill": 1,
-      "without_skill": 1,
-      "category": "always_pass_both"
-    },
-    {
-      "case_id": "4",
-      "assertion": "The response keeps the command the README reader needs and removes the prompt history, avoided approach, and explanation of the revision process. It returns the artifact without a cleanup preface.",
-      "with_skill": 1,
-      "without_skill": 1,
-      "category": "always_pass_both"
-    },
     {
       "case_id": "5",
       "assertion": "The response says publication fails because a required current-hash result is missing. It states that `publish` emits no Markdown to standard output.",
       "with_skill": 1,
-      "without_skill": 1,
-      "category": "always_pass_both"
+      "without_skill": 0,
+      "category": "pass_with_fail_without"
     }
   ]
 }
