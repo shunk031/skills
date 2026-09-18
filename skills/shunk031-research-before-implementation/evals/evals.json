@@ -27,6 +27,16 @@
         "The response specifies a brief pause and a maximum of three total fallback attempts for transient gateway failures.",
         "The response preserves the requirement for live web-search activity and usable direct source URLs before implementation continues."
       ]
+    },
+    {
+      "id": "research-reads-what-the-package-ships",
+      "prompt": "A third-party Python library you have installed exposes a caching mechanism its documentation site describes at a high level. You are about to spend GPU time measuring why that cache never hits in your workload. Decide what to read before running any more experiments; do not edit files yet.",
+      "expected_output": "Read the installed package itself as well as the documentation site: any usage or skill documents bundled beside the code, the docstrings of the functions being called, and the default values of arguments not being passed. Check the project's paper for the quantified claim about the mechanism. Confirm in the code what switches the capability on before measuring anything.",
+      "assertions": [
+        "The response says to read the installed package's own bundled documentation or code, not only the documentation site and the repository.",
+        "The response says to check the default values of arguments that the caller is not passing, or otherwise to confirm in code what enables the capability.",
+        "The response defers further measurement until those sources have been read."
+      ]
     }
   ]
 }
