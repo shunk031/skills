@@ -1,6 +1,6 @@
 ---
 name: shunk031-manage-public-private-skills
-description: Route and carry out work on coding-agent skills. Use when an edit to a skill under ~/.agents/skills or ~/.claude/skills vanished, reverted, or did not take effect; when asked to add, edit, rename, split, or remove a skill; when deciding whether a skill belongs in the public or private skill repository; when writing eval or trigger cases; or when a request names a skill while you are in a dotfiles repository, because skill content no longer lives there.
+description: Route and carry out work on coding-agent skills. Use when an edit to a skill under ~/.agents/skills or ~/.claude/skills vanished, reverted, or did not take effect; when asked to add, edit, rename, split, or remove a skill; when deciding whether a skill belongs in shunk031/skills or shunk031/skills-private; when writing eval or trigger cases; or when a request names a skill while you are in a dotfiles repository, because skill content no longer lives there.
 ---
 
 > [!NOTE]
@@ -15,9 +15,9 @@ Skill content lives in two dedicated repositories. Neither dotfiles repository h
 | Repository                  | Holds                                                                                                    |
 | --------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `shunk031/skills`           | Every publishable skill                                                                                  |
-| Private skill repository   | Skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process |
+| `shunk031/skills-private`   | Skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process |
 | `shunk031/dotfiles`         | The reconcile script and the public subscriptions. No skill content                                      |
-| Private subscriptions       | The private subscriptions. No skill content                                                              |
+| `shunk031/dotfiles-private` | The private subscriptions. No skill content                                                              |
 
 The deciding test is that single question about the skill body. Being written for work does not make a skill private; naming an internal system does. When a skill is close to the line, prefer private and say why.
 
@@ -50,14 +50,15 @@ edit in the skill repository worktree
 DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply    # or: make skills-update
 ```
 
-Adding or removing a skill from the allowlist belongs in its own pull request, separate from the skill's own. Which repository that pull request goes to depends on the skill:
+| Skill source              | Subscription handling                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shunk031/skills`         | The repository-wide subscription discovers additions; removals and renames add the old name to `SKILLS_RETIRED_NAMES` in `shunk031/dotfiles` |
+| `shunk031/skills-private` | Add or remove its entry in `home/dot_config/agents/skills-private.allowlist` in `shunk031/dotfiles-private`                                  |
+| Third-party repository    | Add or remove its selected entry in `install/common/skills.sh` in `shunk031/dotfiles`                                                        |
 
-| Skill lives in            | Subscription goes in                                                             |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| `shunk031/skills`         | `install/common/skills.sh` in `shunk031/dotfiles`                                |
-| Private subscriptions      | The private subscription allowlist in the private dotfiles source                    |
+After merging a public skill change, use `DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply` or `make skills-update` to bypass the daily discovery throttle. Ordinary reconciliation discovers additions within one day. The pinned `skills` CLI does not remove upstream deletions in non-interactive mode, so keep the retired-name cleanup until the CLI gains that behavior.
 
-**Never write a private skill's name into the public dotfiles repository.** It is a public repository, and the name alone discloses the internal host, service, or process that putting the skill in the private repository was meant to hide. The reconcile script is public and stays public; only the list of private names moves.
+**Never write a private skill's name into `shunk031/dotfiles`.** It is a public repository, and the name alone discloses the internal host, service, or process that putting the skill in the private repository was meant to hide. The reconcile script is public and stays public; only the list of private names moves.
 
 The reconciler reads the applied private file at reconcile time and appends its entries to its own public list, so both sets install through one pass. A machine that has only the public source has no such file, which is normal rather than an error.
 

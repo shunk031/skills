@@ -32,6 +32,16 @@
       "should_trigger": true
     },
     {
+      "id": "judgment-bearing-cross-cutting-edit",
+      "prompt": "Write a dispatch prompt for a Codex worker making a judgment-bearing cross-cutting edit where each occurrence may need different treatment. Require editing one occurrence at a time, per-hunk diff review before commit, and explicitly forbid bulk find-and-replace or sed, regex, and scripted rewrites.",
+      "should_trigger": true
+    },
+    {
+      "id": "deterministic-bulk-rename",
+      "prompt": "Give me one shell command for a deterministic bulk rename in a generated file. Every occurrence is identical, no semantic judgment is needed, and no agent dispatch is involved.",
+      "should_trigger": false
+    },
+    {
       "id": "ordinary-code-request",
       "prompt": "Write a Python function named cube that returns the cube of its numeric argument, then show one example call.",
       "should_trigger": false
