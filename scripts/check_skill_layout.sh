@@ -13,11 +13,13 @@
 #   3. Each `SKILL.md` has closed YAML frontmatter with a non-empty `name` and
 #      `description`.
 #   4. The frontmatter `name` equals the skill directory name.
-#   5. `evals/evals.json` and `evals/triggers.json` agree with that name.
-#   6. Each `shunk031-` skill names an allowed domain right after the prefix,
+#   5. Each skill opens with a read-receipt NOTE naming that skill.
+#   6. `evals/evals.json` and `evals/triggers.json` agree with that name.
+#   7. Each `shunk031-` skill names an allowed domain right after the prefix,
 #      except the document-level `shunk031-writing` skill.
-#   7. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
-#   8. No Shuhari workspace directory is tracked by git.
+#   8. No `SKILL.md` is nested deeper than `skills/<name>/SKILL.md`.
+#   9. No Shuhari workspace directory is tracked by git.
+#  10. The README skill index lists every skill exactly once and no removed skill.
 # @exitcode 0 When every check passes.
 # @exitcode 1 When any check fails.
 # @example
@@ -29,6 +31,7 @@ shopt -s nullglob
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
 readonly SKILLS_ROOT="${REPO_ROOT}/skills"
+readonly README_FILE="${REPO_ROOT}/README.md"
 
 # The prefix every skill this repository owns carries, and the domains allowed
 # to follow it. A skill is named `shunk031-<domain>-<topic>` so that the list
@@ -36,7 +39,7 @@ readonly SKILLS_ROOT="${REPO_ROOT}/skills"
 # Widening this list is a deliberate edit, which is the point: it is the only
 # place a new domain can be introduced.
 readonly OWNED_PREFIX="shunk031-"
-readonly ALLOWED_DOMAINS="codex github herdr manage python research shellscript"
+readonly ALLOWED_DOMAINS="codex github herdr manage python research shellscript writing"
 
 failures=()
 
@@ -71,6 +74,49 @@ function frontmatter_field() {
             }
         }
     ' "${file}"
+}
+
+# @description Read the first two non-empty lines after a `SKILL.md` frontmatter block.
+# @arg $1 file The `SKILL.md` path.
+# @stdout The first two non-empty body lines, one per line.
+function skill_opening_lines() {
+    local file="$1"
+    awk '
+        NR == 1 { if ($0 != "---") exit 0; in_block = 1; next }
+        in_block && $0 == "---" { in_block = 0; in_body = 1; next }
+        in_body && $0 !~ /^[[:space:]]*$/ {
+            print
+            count++
+            if (count == 2) exit 0
+        }
+    ' "${file}"
+}
+
+# @description Check whether a line is an English or Japanese read receipt for a skill.
+# @arg $1 line The receipt line.
+# @arg $2 name The expected skill name.
+function is_valid_read_receipt() {
+    local line="$1"
+    local name="$2"
+    local english_prefix="> After reading this \`SKILL.md\`, say: \`"
+    local english_suffix=" I read ${name}."'`'
+    local japanese_prefix="> この \`SKILL.md\` を読んだら、\`"
+    local japanese_suffix=" 私は ${name} を読みました。"'` と言う。'
+    local emoji
+
+    case "${line}" in
+    "${english_prefix}"*"${english_suffix}")
+        emoji="${line#"${english_prefix}"}"
+        emoji="${emoji%"${english_suffix}"}"
+        ;;
+    "${japanese_prefix}"*"${japanese_suffix}")
+        emoji="${line#"${japanese_prefix}"}"
+        emoji="${emoji%"${japanese_suffix}"}"
+        ;;
+    *) return 1 ;;
+    esac
+
+    [ -n "${emoji}" ]
 }
 
 # @description Read `skill_name` from a Shuhari eval or trigger file.
@@ -178,6 +224,16 @@ function check_skill() {
         fail "skills/${name}/SKILL.md has no frontmatter description"
     fi
 
+    local opening note receipt
+    opening="$(skill_opening_lines "${skill_file}")"
+    note="${opening%%$'\n'*}"
+    receipt="${opening#*$'\n'}"
+    if [ "${note}" != '> [!NOTE]' ] || [ "${receipt}" = "${opening}" ]; then
+        fail "skills/${name}/SKILL.md has no read-receipt NOTE immediately after frontmatter"
+    elif ! is_valid_read_receipt "${receipt}" "${name}"; then
+        fail "skills/${name}/SKILL.md has an invalid read receipt for ${name}"
+    fi
+
     local eval_file
     for eval_file in evals.json triggers.json; do
         local path="${skill_dir}/evals/${eval_file}"
@@ -203,11 +259,53 @@ function assert_no_tracked_workspaces() {
     fi
 }
 
+# @description Read skill names linked from the README `## Skills` section.
+# @stdout One skill directory name per link.
+function readme_skill_names() {
+    awk '
+        $0 == "## Skills" { in_skills = 1; next }
+        in_skills && /^## / { exit }
+        in_skills { print }
+    ' "${README_FILE}" | sed -n 's#.*](skills/\([^/]*\)/).*#\1#p'
+}
+
+# @description Verify that the README skill index matches the skill directories.
+function assert_readme_skill_index() {
+    if [ ! -f "${README_FILE}" ]; then
+        fail 'README.md is missing'
+        return 0
+    fi
+
+    local skill_dir name count
+    for skill_dir in "${SKILLS_ROOT}"/*/; do
+        skill_dir="${skill_dir%/}"
+        case "${skill_dir}" in
+        *-workspace) continue ;;
+        esac
+
+        name="$(basename -- "${skill_dir}")"
+        count="$(readme_skill_names | awk -v expected="${name}" '$0 == expected { count++ } END { print count + 0 }')"
+        if [ "${count}" -eq 0 ]; then
+            fail "skills/${name} is missing from README.md"
+        elif [ "${count}" -gt 1 ]; then
+            fail "README.md lists skill ${name} more than once"
+        fi
+    done
+
+    while IFS= read -r name; do
+        [ -n "${name}" ] || continue
+        if [ ! -d "${SKILLS_ROOT}/${name}" ]; then
+            fail "README.md lists missing skill ${name}"
+        fi
+    done < <(readme_skill_names | sort -u)
+}
+
 # @description Run every layout check and report the collected failures.
 function main() {
     assert_no_root_skill_file
     assert_no_nested_skill_files
     assert_no_tracked_workspaces
+    assert_readme_skill_index
 
     local skill_dir
     for skill_dir in "${SKILLS_ROOT}"/*/; do

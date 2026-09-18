@@ -1,17 +1,15 @@
 # skills
 
-[![CI](https://github.com/shunk031/skills/actions/workflows/ci.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/ci.yaml)
-[![Docs](https://github.com/shunk031/skills/actions/workflows/docs.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/docs.yaml)
-[![skills.sh](https://skills.sh/b/shunk031/skills)](https://skills.sh/shunk031/skills)
+[![CI](https://github.com/shunk031/skills/actions/workflows/ci.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/ci.yaml) [![Docs](https://github.com/shunk031/skills/actions/workflows/docs.yaml/badge.svg)](https://github.com/shunk031/skills/actions/workflows/docs.yaml) [![skills.sh](https://skills.sh/b/shunk031/skills)](https://skills.sh/shunk031/skills)
 
 Coding-agent skills for Claude Code and Codex, installed with the [`skills`](https://github.com/vercel-labs/skills) CLI. Browse them at [shunk031.me/skills](https://shunk031.me/skills/), where each skill's page shows what its evaluation measured.
 
 ## Install
 
-Install one skill for both agents:
+Install every skill for both agents:
 
 ```bash
-npx skills add shunk031/skills --skill <name> --agent claude-code --agent codex --global --yes
+npx skills add shunk031/skills --skill '*' --agent claude-code --agent codex --global --yes
 ```
 
 See what is available without installing anything:
@@ -42,23 +40,27 @@ Both read the same `skills/` directory, so the two channels deliver identical co
 
 ## Skills
 
-Every skill is named `shunk031-<domain>-<topic>`, and `Category` is that domain. The set is closed: `scripts/check_skill_layout.sh` rejects a skill whose domain is not in its allowlist, so a new category is a deliberate change rather than a name someone picked at commit time.
+Every skill is named `shunk031-<domain>-<topic>`, except the document-level `shunk031-writing` skill; `Category` is that domain. The set is closed: `scripts/check_skill_layout.sh` rejects a skill whose domain is not in its allowlist, so a new category is a deliberate change rather than a name someone picked at commit time.
 
-| Skill                                                                                                          | Category      | What it does                                                                                                                |
-| -------------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| [`shunk031-codex-worker-prompting`](skills/shunk031-codex-worker-prompting/)                                   | `codex`       | Writes task prompts, follow-ups, and authorizations aimed at Codex-family worker models.                                    |
-| [`shunk031-github-cgd-identity`](skills/shunk031-github-cgd-identity/)                                         | `github`      | Performs GitHub writes in `creative-graphic-design` repositories as the machine user rather than the personal account.      |
-| [`shunk031-github-comment-attach-files`](skills/shunk031-github-comment-attach-files/)                         | `github`      | Uploads local files into a GitHub issue or pull request comment and returns the hosted URLs without posting the comment.    |
-| [`shunk031-herdr-orchestrate-workers`](skills/shunk031-herdr-orchestrate-workers/)                             | `herdr`       | Runs parallel Codex workers in Herdr worktree tabs and routes their reports, reviews, and pull-request lifecycles.          |
-| [`shunk031-herdr-tab-status`](skills/shunk031-herdr-tab-status/)                                               | `herdr`       | Chooses the leading status emoji and name for the current Herdr tab.                                                        |
-| [`shunk031-manage-agent-guidance`](skills/shunk031-manage-agent-guidance/)                                     | `manage`      | Decides where a persistent agent rule belongs and keeps one source of truth behind thin adapters.                           |
-| [`shunk031-manage-public-private-dotfiles`](skills/shunk031-manage-public-private-dotfiles/)                   | `manage`      | Works across the public and private dotfiles sources, changing only the repository that owns the setting.                   |
-| [`shunk031-manage-public-private-skills`](skills/shunk031-manage-public-private-skills/)                       | `manage`      | Routes skill work between this repository and the private skill repository, including evals and the dotfiles subscription. |
-| [`shunk031-python-transformers-convert`](skills/shunk031-python-transformers-convert/)                         | `python`      | Converts a custom PyTorch model into Hugging Face Transformers format, through to Hub upload.                               |
-| [`shunk031-python-uv-workflow`](skills/shunk031-python-uv-workflow/)                                           | `python`      | Applies a uv-first, test-first Python workflow with pre-commit quality gates.                                               |
-| [`shunk031-research-before-implementation`](skills/shunk031-research-before-implementation/)                   | `research`    | Reads current official documentation and real implementations before designing anything that depends on a third-party tool. |
-| [`shunk031-research-high-impact-journal-publishing`](skills/shunk031-research-high-impact-journal-publishing/) | `research`    | Advises on study design, manuscript structure, journal selection, and peer review responses.                                |
-| [`shunk031-shellscript-shdoc-docs`](skills/shunk031-shellscript-shdoc-docs/)                                   | `shellscript` | Adds and repairs shdoc annotations in shell scripts and shell executables.                                                  |
+| Skill | Category | What it does |
+| --- | --- | --- |
+| [`shunk031-codex-worker-prompting`](skills/shunk031-codex-worker-prompting/) | `codex` | Writes task prompts, follow-ups, and authorizations aimed at Codex-family worker models. |
+| [`shunk031-github-cgd-identity`](skills/shunk031-github-cgd-identity/) | `github` | Performs GitHub writes in `creative-graphic-design` repositories as the machine user rather than the personal account. |
+| [`shunk031-github-comment-attach-files`](skills/shunk031-github-comment-attach-files/) | `github` | Uploads local files into a GitHub issue or pull request comment and returns the hosted URLs without posting the comment. |
+| [`shunk031-herdr-orchestrate-workers`](skills/shunk031-herdr-orchestrate-workers/) | `herdr` | Runs parallel Codex workers in Herdr worktree tabs and routes their reports, reviews, and pull-request lifecycles. |
+| [`shunk031-herdr-tab-status`](skills/shunk031-herdr-tab-status/) | `herdr` | Chooses the leading status emoji and name for the current Herdr tab. |
+| [`shunk031-manage-agent-guidance`](skills/shunk031-manage-agent-guidance/) | `manage` | Decides where a persistent agent rule belongs and keeps one source of truth behind thin adapters. |
+| [`shunk031-manage-public-private-dotfiles`](skills/shunk031-manage-public-private-dotfiles/) | `manage` | Works across the public and private dotfiles sources, changing only the repository that owns the setting. |
+| [`shunk031-manage-public-private-skills`](skills/shunk031-manage-public-private-skills/) | `manage` | Routes skill work between this repository and the private skill repository, including evals and the dotfiles subscription. |
+| [`shunk031-writing`](skills/shunk031-writing/) | `writing` | Owns document-level planning, drafting, reviewing, and publication gates. |
+| [`shunk031-python-transformers-convert`](skills/shunk031-python-transformers-convert/) | `python` | Converts a custom PyTorch model into Hugging Face Transformers format, through to Hub upload. |
+| [`shunk031-python-uv-workflow`](skills/shunk031-python-uv-workflow/) | `python` | Applies a uv-first, test-first Python workflow with pre-commit quality gates. |
+| [`shunk031-research-before-implementation`](skills/shunk031-research-before-implementation/) | `research` | Reads current official documentation and real implementations before designing anything that depends on a third-party tool. |
+| [`shunk031-research-high-impact-journal-publishing`](skills/shunk031-research-high-impact-journal-publishing/) | `research` | Advises on study design, manuscript structure, journal selection, and peer review responses. |
+| [`shunk031-shellscript-shdoc-docs`](skills/shunk031-shellscript-shdoc-docs/) | `shellscript` | Adds and repairs shdoc annotations in shell scripts and shell executables. |
+| [`shunk031-writing-kosshi`](skills/shunk031-writing-kosshi/) | `writing` | Structures claims and supporting evidence as an outline. |
+| [`shunk031-writing-technical-slides`](skills/shunk031-writing-technical-slides/) | `writing` | Writes technical and paper-review slide text in the repository author's style. |
+| [`shunk031-writing-telegraph`](skills/shunk031-writing-telegraph/) | `writing` | Rewrites an outline in concise telegraphic style. |
 
 ## Layout
 
@@ -79,12 +81,12 @@ Nothing may sit deeper than `skills/<name>/SKILL.md`, and no `SKILL.md` may sit 
 
 ## Development
 
-Skills that ship evaluation cases are gated with [`shuhari`](https://github.com/shunk031/shuhari), a harness that measures whether a skill fires when it should and whether it changes what the agent produces.
+Skills that ship evaluation cases can be checked with [`shuhari`](https://github.com/shunk031/shuhari), a harness that measures whether a skill fires when it should and whether it changes what the agent produces. Shuhari is temporarily disabled in mise and its pre-commit hooks use the `manual` stage, so routine setup and commits do not install or run it.
 
 ```bash
 make setup            # install the pinned toolchain and the pre-commit hooks
 make gate             # the offline checks CI runs
-make validate         # layout checks and eval schema validation
+make validate         # skill layout checks
 make test             # unit tests for skills that ship executable scripts
 make check-triggers   # live trigger checks for every skill that has them
 make eval             # live with/without evaluation for every skill that has evals
@@ -92,7 +94,7 @@ make format           # shfmt diff for shell scripts
 make bump-shuhari     # re-pin shuhari, which publishes no tagged releases
 ```
 
-`make check-triggers` and `make eval` make real model calls through Codex, so they run locally rather than in CI, and both are whole-repository sweeps. Day to day the pre-commit hooks cover the same ground incrementally, evaluating only the skills a commit touches. See [`AGENTS.md`](AGENTS.md) for the evaluation policy.
+`make check-triggers` and `make eval` explicitly re-enable the pinned shuhari tool and make real model calls through Codex. Run them only when evaluation work is intended. The manual pre-commit hooks can be invoked with `prek run --hook-stage manual <hook-id>`. See [`AGENTS.md`](AGENTS.md) for the evaluation policy.
 
 ## Related repositories
 
