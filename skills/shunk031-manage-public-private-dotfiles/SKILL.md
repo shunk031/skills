@@ -46,7 +46,7 @@ Skill content is not one of those domains any more. It lives in `shunk031/skills
 5. Validate and report each affected domain independently.
    - Run the checks required by each affected repository and report which repository owns each change.
    - Keep credentials and secret values out of command output, diffs quoted in chat, and summaries.
-   - Do not run `chezmoi apply`, change runtime state, push, open or update pull requests, or merge unless the user's request explicitly authorizes that operation.
+   - Ordinary implementation work may commit, push its task branch, and create or update its pull request under the shared workflow. Merging, `chezmoi apply`, runtime changes, deletion, and cleanup still require explicit user permission.
 
 ## Expected Outcome
 
