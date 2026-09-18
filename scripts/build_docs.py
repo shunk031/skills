@@ -131,7 +131,7 @@ def read_skill(skill_dir: Path) -> dict[str, Any] | None:
                 fields[key.strip()] = value.strip().strip("\"'")
 
     references = (
-        sorted((skill_dir / "references").glob("*.md"))
+        sorted((skill_dir / "references").rglob("*.md"))
         if (skill_dir / "references").is_dir()
         else []
     )
@@ -343,8 +343,11 @@ def render_nav(skills: list[dict[str, Any]]) -> str:
         lines.append(f"      - {skill['name']}/index.md")
         for reference in skill["references"]:
             title = reference_title(reference.stem)
+            relative = reference.relative_to(
+                SKILLS_ROOT / skill["name"] / "references"
+            )
             lines.append(
-                f"      - {title}: {skill['name']}/references/{reference.name}"
+                f"      - {title}: {skill['name']}/references/{relative.as_posix()}"
             )
     return "\n".join(lines) + "\n"
 
@@ -396,7 +399,10 @@ def main() -> int:
         pages += 1
 
         for reference in skill["references"]:
-            destination = page_dir / "references" / reference.name
+            relative = reference.relative_to(
+                SKILLS_ROOT / skill["name"] / "references"
+            )
+            destination = page_dir / "references" / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             # A reference file carries no frontmatter of its own, so give it a
             # title. Without one the sidebar falls back to the first heading,
