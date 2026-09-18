@@ -1,0 +1,13 @@
+{
+  "skill_name": "shunk031-writing-telegraph",
+  "evals": [
+    {
+      "id": "apply-style-to-report-not-progress-chat",
+      "prompt": "実験結果を report.html にまとめて、shunk031-writing-telegraph で本文を短い骨子箇条書きにしてください。作業中の進捗と完了報告は普通の会話文で知らせてください。",
+      "expected_output": "The HTML report body uses a concise hierarchical bullet outline. Progress updates and the completion message remain ordinary conversational prose rather than being reformatted as report bullets.",
+      "assertions": [
+        "The response applies the telegraph bullet style to the requested report deliverable rather than only using that style in progress or completion messages."
+      ]
+    }
+  ]
+}

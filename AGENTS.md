@@ -7,22 +7,23 @@
 
 - Purpose: This repository is the source of truth for the publicly shareable coding-agent skills used across `shunk031`'s environments. It is consumed with the [`skills`](https://github.com/vercel-labs/skills) CLI, not by cloning it into place.
 - Format: Skills here follow the open Agent Skills format described at https://agentskills.io/home: a directory holding a `SKILL.md` whose frontmatter carries at least `name` and `description`, with bundled scripts and reference files optional. The Skill Layout rules below narrow that format for this repository; they do not replace it.
-- Private counterpart: Skills that name an internal host, a credential, an internal endpoint, or an org-internal process live in the private skill repository instead. Treat the two repositories as separate management domains.
-- Dotfiles boundary: The public and private dotfiles sources subscribe to these skills through a declarative allowlist. They no longer hold skill content. Do not add chezmoi source state, `symlink_*.tmpl` adapters, or `home/` trees here.
+- Private counterpart: Skills that name an internal host, a credential, an internal endpoint, or an org-internal process live in `shunk031/skills-private` instead. Treat the two repositories as separate management domains.
+- Dotfiles boundary: `shunk031/dotfiles` subscribes to this repository as a whole, while `shunk031/dotfiles-private` selects private skills individually. Neither repository holds skill content. Do not add chezmoi source state, `symlink_*.tmpl` adapters, or `home/` trees here.
 - Coordination: Use the `shunk031-manage-public-private-skills` skill when a change spans this repository and either dotfiles repository, or when deciding which repository owns a skill.
 
 ## Skill Layout
 
 - Location: Every skill is a directory at `skills/<name>/` containing `SKILL.md`. Optional siblings are `agents/`, `references/`, `scripts/`, and `evals/`.
 - Naming: The `name` field in `SKILL.md` frontmatter must equal the directory name. Shuhari refuses to load a skill whose name and directory disagree, and the `skills` CLI installs by directory name.
-- Domain-first names: A skill owned here is named `shunk031-<domain>-<topic>`, where `<domain>` is one of the domains `scripts/check_skill_layout.sh` allows. Skills sort and read by the subject they belong to rather than by the verb that happens to start their name, so adding a domain means changing that allowlist deliberately rather than inventing a prefix at commit time.
-- Read receipts: Immediately after the frontmatter and before the first heading, every `SKILL.md` opens with a NOTE block written in the skill body's language: an English skill says ``After reading this `SKILL.md`, say: `<emoji> I read <skill-name>.` ``, while a Japanese skill says ``この `SKILL.md` を読んだら、`<emoji> 私は <skill-name> を読みました。` と言う。``; the emoji fits the skill's subject, `<skill-name>` matches the frontmatter name, and the receipt makes skill loading observable in the transcript.
+- Domain-first names: A skill owned here is named `shunk031-<domain>-<topic>`, where `<domain>` is one of the domains `scripts/check_skill_layout.sh` allows. The document-level `shunk031-writing` skill is the only exception. Skills sort and read by the subject they belong to rather than by the verb that happens to start their name, so adding a domain means changing that allowlist deliberately rather than inventing a prefix at commit time.
+- Read receipts: Immediately after the frontmatter and before the first heading, every `SKILL.md` opens with a NOTE block written in the skill body's language: an English skill says `` After reading this `SKILL.md`, say: `<emoji> I read <skill-name>.`  ``, while a Japanese skill says `` この `SKILL.md` を読んだら、`<emoji> 私は <skill-name> を読みました。` と言う。 ``; the emoji fits the skill's subject, `<skill-name>` matches the frontmatter name, and the receipt makes skill loading observable in the transcript.
 - Never place a `SKILL.md` at the repository root. The `skills` CLI stops discovery at a root-level `SKILL.md` and returns only that one skill, which makes every other skill in this repository invisible to installers.
 - Never nest a skill deeper than `skills/<name>/`. Discovery walks a bounded number of levels, and a deeper `SKILL.md` is not reliably found.
 - Do not add `AGENTS.evals.json` to this repository. `shuhari eval instructions` resolves its eval file as `<file-without-extension>.evals.json`, so that file would create a second instructions gate here. The shared instructions gate belongs to `shunk031/dotfiles`.
 
 ## Evaluation Policy
 
+- Status: Shuhari is temporarily disabled during routine development. Its pre-commit hooks use the `manual` stage, and only the explicit `make check-triggers` and `make eval` targets re-enable the pinned tool.
 - Harness: Quality gates run through [`shuhari`](https://github.com/shunk031/shuhari). This repository owns target selection and policy values; shuhari owns the evaluation mechanism.
 - Reference: Eval work returns to https://agentskills.io/skill-creation/evaluating-skills for how cases, assertions, and grading are meant to work. Where that guidance and the rules below differ, follow these: shuhari, not a hand-run loop, is what executes them here.
 - Behavior cases: `skills/<name>/evals/evals.json` holds cases that measure what the agent does when the skill applies. Each case requires `id`, `prompt`, and `expected_output`; `assertions`, `files`, and `required_actions` are optional.
@@ -35,12 +36,12 @@
 
 ## Development Setup
 
-- In every new clone or worktree, run `make setup` before editing or committing. It installs the pinned toolchain and the pre-commit hooks.
+- In every new clone or worktree, run `make setup` before editing or committing. It installs the routine toolchain and pre-commit hooks. Mise keeps shuhari disabled, so setup does not install it.
 - `shuhari` must be on `PATH` for the gates to run. The wrapper exits with status 2 when it is missing, because a gate that cannot run is a failure rather than a pass.
 - `shuhari` has no tagged release, so `mise.toml` pins the pseudo-version of a `main` commit rather than a semantic version. Run `make bump-shuhari` to move that pin to current `main`. Run it as plain `make`, never through `mise exec`: mise resolves every pinned tool before running a command, so a stale or unresolvable pin would fail before the recipe could replace it.
 - Never install `shuhari` with a bare `go install`. That writes into the Go toolchain's own `bin` directory, which sits ahead of the pinned tool on `PATH`, so the gates silently run a build nobody pinned. Check with `mise which shuhari`: it must resolve under `installs/go-github-com-shunk031-shuhari-cmd-shuhari/<version>/`. If it resolves anywhere else, delete that binary and re-run `make setup`.
-- The live gates make real model calls through Codex, so they run in pre-commit only. CI is limited to schema validation, layout checks, linting, and unit tests.
-- Never skip the shuhari hooks. `SKIP=shuhari-check-trigger,shuhari-eval-skill` is forbidden: when the model path is unavailable, do not commit — park the branch and commit only after the gates actually run and pass.
+- The shuhari hooks use pre-commit's `manual` stage and do not run during ordinary commits or CI. Run them only when the task explicitly includes evaluation work.
+- Never bypass a requested manual shuhari run. When the model path is unavailable during evaluation work, park the branch and commit only after the requested gates actually run and pass.
 
 ## Shell Policy
 

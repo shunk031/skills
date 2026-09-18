@@ -12,10 +12,6 @@ description: Apply Python development policy using uv-first execution, test-firs
 
 Use this workflow to keep Python implementation and refactoring aligned with repository policy.
 
-## Read Acknowledgement
-
-- After reading this skill, say: `🐍 I read shunk031-python-uv-workflow.`
-
 ## Workflow
 
 1. Use `uv` as the default toolchain for Python projects.
@@ -26,10 +22,12 @@ Use this workflow to keep Python implementation and refactoring aligned with rep
 6. Create `.pre-commit-config.yaml` when missing.
 7. Create `Makefile` with `setup` target when missing.
 8. For refactoring from non-`uv` originals, align dependencies, raise coverage, and verify output parity.
-9. Construct Python paths from a source-file anchor rather than a hard-coded absolute path string:
-   - Bad: `Path("/path/to") / "hoge"`
-   - Good: `Path(__file__).parents[N] / "path" / "to" / "hoge"`
-   Anchoring paths to the source file keeps them working after relocation and across worktrees without coupling them to a host layout. Explicit roots supplied through a CLI argument or environment variable are allowed; only hard-coded absolute path strings are forbidden.
+9. Construct Python paths from a source-file anchor, and keep every path component in its own operand:
+   - Forbidden: `Path("/path/to") / "hoge"` and `REPO_ROOT / "home/dot_codex/hooks/session_start_gateway.py"`
+   - Required: `Path(__file__).parents[N] / "path" / "to" / "hoge"`
+     Never put multiple path components separated by `/` or `\` in a string literal passed to `Path` or used as an operand to `/`. Anchoring paths to the source file keeps them working after relocation and across worktrees without coupling them to a host layout. Explicit roots supplied through a CLI argument or environment variable are allowed; hard-coded absolute path strings remain forbidden.
+     Before finalizing Python changes, inspect every changed `Path(...)` and `/` expression for path-separator-containing string operands.
+10. Name variables for their semantic role. When the same concept has multiple representations, add a qualifier such as `_path`, `_text`, or `_data` only to distinguish them; do not add type suffixes mechanically when the role is already clear.
 
 ## Testing Expectations
 
