@@ -1,6 +1,6 @@
 ---
 name: shunk031-manage-public-private-skills
-description: Route and carry out work on coding-agent skills. Use when an edit to a skill under ~/.agents/skills or ~/.claude/skills vanished, reverted, or did not take effect; when asked to add, edit, rename, split, or remove a skill; when deciding whether a skill belongs in shunk031/skills or shunk031/skills-private; when writing eval or trigger cases; or when a request names a skill while you are in a dotfiles repository, because skill content no longer lives there.
+description: Route coding-agent skill work between the public and private source repositories. Use when an installed skill change vanished, when adding, editing, renaming, splitting, or removing a skill, or when writing its evals and trigger cases.
 ---
 
 > [!NOTE]
@@ -12,12 +12,12 @@ Skill content lives in two dedicated repositories. Neither dotfiles repository h
 
 ## Where a skill lives
 
-| Repository                  | Holds                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `shunk031/skills`           | Every publishable skill                                                                                  |
-| `shunk031/skills-private`   | Skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process |
-| `shunk031/dotfiles`         | The reconcile script and the public subscriptions. No skill content                                      |
-| `shunk031/dotfiles-private` | The private subscriptions. No skill content                                                              |
+| Repository | Holds |
+| --- | --- |
+| `shunk031/skills` | Every publishable skill |
+| `shunk031/skills-private` | Skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process |
+| `shunk031/dotfiles` | The reconcile script and the public subscriptions. No skill content |
+| `shunk031/dotfiles-private` | The private subscriptions. No skill content |
 
 The deciding test is that single question about the skill body. Being written for work does not make a skill private; naming an internal system does. When a skill is close to the line, prefer private and say why.
 
@@ -50,13 +50,13 @@ edit in the skill repository worktree
 DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply    # or: make skills-update
 ```
 
-| Skill source              | Subscription handling                                                                                                                        |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shunk031/skills`         | The repository-wide subscription discovers additions; removals and renames add the old name to `SKILLS_RETIRED_NAMES` in `shunk031/dotfiles` |
-| `shunk031/skills-private` | Add or remove its entry in `home/dot_config/agents/skills-private.allowlist` in `shunk031/dotfiles-private`                                  |
-| Third-party repository    | Add or remove its selected entry in `install/common/skills.sh` in `shunk031/dotfiles`                                                        |
+| Skill source | Subscription handling |
+| --- | --- |
+| `shunk031/skills` | The repository-wide subscription discovers additions; the reconciliation script removes names reported as upstream deletions, while renames or cases the warning does not cover add the old name to `SKILLS_RETIRED_NAMES` in `shunk031/dotfiles` |
+| `shunk031/skills-private` | Add or remove its entry in `home/dot_config/agents/skills-private.allowlist` in `shunk031/dotfiles-private` |
+| Third-party repository | Add or remove its selected entry in `install/common/skills.sh` in `shunk031/dotfiles` |
 
-After merging a public skill change, use `DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply` or `make skills-update` to bypass the daily discovery throttle. Ordinary reconciliation discovers additions within one day. The pinned `skills` CLI does not remove upstream deletions in non-interactive mode, so keep the retired-name cleanup until the CLI gains that behavior.
+After merging a public skill change, use `DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply` or `make skills-update` to bypass the daily discovery throttle. Ordinary reconciliation discovers additions within one day and removes names reported by the `skills update` upstream-deletion warning. Keep `SKILLS_RETIRED_NAMES` for renames or deletions that the warning does not expose.
 
 **Never write a private skill's name into `shunk031/dotfiles`.** It is a public repository, and the name alone discloses the internal host, service, or process that putting the skill in the private repository was meant to hide. The reconcile script is public and stays public; only the list of private names moves.
 
@@ -75,31 +75,7 @@ In that file only a leading `#` starts a comment, because an entry may carry a `
 
 ## Writing evals
 
-Behavior cases go in `evals/evals.json`, each with `id`, `prompt`, and `expected_output`; `assertions` and `files` are optional. Trigger cases go in `evals/triggers.json` and need at least one positive and one near-miss negative control.
-
-Write `expected_output` as one to three sentences describing the behaviour that should result, not the wording of a good reply, and **do not restate the assertions**. Shuhari runs a blind A/B comparator between the with-skill and without-skill outputs alongside assertion grading, so `expected_output` that echoes assertion text biases that comparison.
-
-Make negative controls near misses. A control that shares the skill's vocabulary while genuinely not calling for it measures the boundary; an unrelated prompt measures nothing.
-
-**An assertion may only test what its own prompt asks for.** To measure something else, write another case whose prompt asks for it. An assertion that demands a warning the prompt never invited, or an outcome the prompt forbade, fails a correct answer: the model answered the question it was given. Such a case reads as a weak skill while it is really a mis-scoped test, and the usual reaction — making the prompt harder or the assertion looser — moves the number without measuring anything.
-
-Assertions multiply, so an unreliable one is worse than it looks. A trial passes only when every assertion in it passes, and the case needs a majority of trials. Three assertions that each hold every time are fine. Three that each hold two times in three leave the case failing about a third of the time purely on which trial each miss lands in, and the verdict then flips between runs with nothing changed — which reads as a flaky skill and is really one case asking several things at once.
-
-Three trials decide a gate, not a question. An assertion scoring worse with the skill than without is a reason to re-measure at five, not a finding: three such assertions once read as the skill hurting, and at five trials two were flat and the third had reversed into the skill's largest single gain. Do not act on a sign you have seen once.
-
-When that happens, split the _case_, not the assertion. Splitting one assertion into two tells you which claim failed but leaves the conjunction intact; separate cases are each judged on their own claim. Prefer a case that asks one thing from the start.
-
-Also watch for an assertion that judges execution in a case whose prompt says not to execute. It is unpassable: judge the decision the response states instead.
-
-Judge substance, not wording. An assertion that lists three nouns fails a response covering two of them, and one that demands a particular word fails a response giving the same reason in different words. Both look like a weak skill and are a brittle test.
-
-A case where both arms pass every trial is a finished measurement, not a broken one: it says the model already does this without the skill. Delete the case and keep the rule in `SKILL.md`. Do not sharpen the case until a difference appears — that manufactures the result.
-
-Runs are offline by default. A skill whose subject is the live network cannot be graded offline: it correctly refuses to proceed and loses to a baseline that guesses. Declare the exception with an `evals/network-required` marker, which makes the gate skip those cases and say why.
-
-It skips rather than enabling egress because the pinned models cannot use the web-search tool at all — they answer `403 Forbidden: Selected provider is forbidden` and fall back to memory or a direct API call, often without saying so. Leave such cases in `evals.json` rather than deleting them: they are correct, and a deleted case leaves the restore condition in prose with nothing to notice when it is met. Removing the marker is both how you put them back and how you test whether the constraint has lifted.
-
-Order of work is `--validate-only`, then `shuhari check trigger`, then `shuhari eval skill`. The first is instant and offline; the last runs both arms plus a grader and a comparator.
+Behavior cases go in `evals/evals.json`; trigger cases go in `evals/triggers.json`. Read [references/eval-authoring.md](references/eval-authoring.md) when adding or changing either file. It covers case scope, near-miss controls, trial variance, network-required cases, and gate order.
 
 ## Authoring and reviewing a skill
 

@@ -1,21 +1,21 @@
 ---
 name: shunk031-research-before-implementation
-description: Research current official web documentation and representative GitHub implementation code before designing or editing non-trivial work involving third-party tools, libraries, platforms, APIs, configuration formats, or version-dependent behavior. Use for implementation, migration, integration, and configuration tasks where local files or memory alone cannot establish current supported behavior.
+description: Research current official documentation and representative implementation code before non-trivial work that depends on third-party tools, APIs, platforms, or versioned behavior.
 ---
 
 > [!NOTE]
 > After reading this `SKILL.md`, say: `🔎 I read shunk031-research-before-implementation.`
 
-# Research Before Implementation
+# Research before implementation
 
-Treat research as a gate, not a recommendation. Before any design decision or file edit, complete these tool stages in order:
+Use this skill when local files or stable knowledge cannot establish behavior that matters to the task. Skip the research workflow for self-contained edits and routine wording fixes unless the user asks for research.
 
-1. Use an available web-research capability for current official sources. Rely on the capability the current agent host actually exposes; do not assume a particular tool name or namespace. Inspect documentation, specifications, release notes, and recommended approaches from at least one relevant non-GitHub domain. When the project has a paper, read it for the behaviour you are about to measure: design intent and quantified results are routinely reported there and nowhere else, and a number the paper claims is a target to reproduce rather than a figure to discover.
-2. Only after those results return, read the implementation — both what the project publishes and what it ships. Inspect representative code or configuration on `github.com`, not only repository descriptions. Then read the installed package itself, which frequently carries guidance that never reaches the documentation site: bundled skill or usage documents beside the code, the docstring of every function you intend to call, and the default value of every argument you do not intend to pass. A feature can be fully documented and still be inert unless a caller asks for it. In a Codex session, run the `github.com` part of this stage with the same command shown above, replacing its question with the stage-2 question.
-3. Compare the documented behavior with the implementation you read. Resolve version, platform, and maintenance differences before choosing the design. Where the documentation describes a capability, confirm in the code what switches it on; a mechanism the project measures and reports may be inert under its own defaults.
-4. Implement and verify the change based on that evidence.
-5. In the final response, name and link the web sources and GitHub examples consulted and state how they affected the implementation. The final response must list at least one official non-GitHub URL and one representative GitHub URL, and explain how each source affected the implementation. The GitHub URL must point directly to implementation code or configuration, not only a README, release, or marketplace page.
+1. Check current official documentation, specifications, release notes, or recommended approaches through an available web-research capability. Read the relevant source content, not only a URL or search-result title. Use a relevant non-GitHub source when one exists. Read a paper when its reported behavior is the thing being measured.
+2. Inspect representative implementation code or configuration on GitHub after the official sources. Read installed documentation and source only for the APIs, defaults, or entrypoints the task will use.
+3. Compare the documented behavior with the implementation. Resolve version, platform, maintenance, and activation differences before choosing the design.
+4. Implement and verify the change from that evidence. Scale the depth of research and verification to the risk and number of affected callers.
+5. Report the sources that changed the decision. Link at least one official non-GitHub source and one direct implementation or configuration file when both were consulted.
 
 ## Research retry
 
-If the research capability exits before producing sources because of a connection error, an HTTP 5xx response, or a stream disconnect, rerun it at most 3 times for one stage, following any applicable local launch guidance. Accept an attempt as soon as its answer contains at least one direct URL to a source it consulted; do not rerun for format, length, or wording reasons, and do not rerun when the answer states that the documentation does not specify something. After 3 failed attempts, stop, report `BLOCKED` to the orchestrator with the exact research question, and do not substitute memory or local files.
+If the research capability exits before producing sources because of a transient connection error, an HTTP 5xx response, or a stream disconnect, retry that stage at most 3 total attempts. A provider restriction or denied tool, including a 403, is stable: do not retry it, change credentials, or bypass the restriction. If the host exposes another permitted retrieval path, use that path instead of launching a nested agent or substituting memory. Accept an attempt only after reading the source content and recording its direct URL; do not rerun for format, length, or wording reasons, and do not rerun when the answer states that the documentation does not specify something. If no permitted research path succeeds, stop and report `BLOCKED` with the exact question and the failed paths.
