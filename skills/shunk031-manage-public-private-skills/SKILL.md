@@ -34,6 +34,10 @@ The deciding test is that single question about the skill body. Being written fo
 
 This differs from the old arrangement, where the pool entry was a symlink into the chezmoi source tree and editing the live skill did edit the source.
 
+## Verify which version is running
+
+When diagnosing a missing or ineffective skill update, compare GitHub's current content at the subscribed ref, the installed `~/.agents/skills/<name>` copy, and the content the target session actually read. Resolve the current GitHub commit or blob through the remote; a local checkout or `origin/main` may be stale even when it matches the installed copy. Check the target session's transcript or an authorized reread; an updated file alone does not prove the session loaded it. Mark any unavailable comparison as unverified. Distinguish an undeployed change from behavior that the current source no longer specifies before recommending a sync.
+
 ## The loop from edit to running skill
 
 ```
