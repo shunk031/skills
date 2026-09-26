@@ -13,12 +13,12 @@
 
 ## Skill Layout
 
-- Location: Every skill is a directory at `skills/<name>/` containing `SKILL.md`. Optional siblings are `agents/`, `references/`, `scripts/`, and `evals/`.
+- Location: Every skill is a directory at `skills/<category>/<name>/` containing `SKILL.md`. Optional siblings are `agents/`, `references/`, `scripts/`, and `evals/`.
 - Naming: The `name` field in `SKILL.md` frontmatter must equal the directory name. Shuhari refuses to load a skill whose name and directory disagree, and the `skills` CLI installs by directory name.
 - Domain-first names: A skill owned here is named `shunk031-<domain>-<topic>`, where `<domain>` is one of the domains `scripts/check_skill_layout.sh` allows. Skills sort and read by the subject they belong to rather than by the verb that happens to start their name, so adding a domain means changing that allowlist deliberately rather than inventing a prefix at commit time.
 - Read receipts: Immediately after the frontmatter and before the first heading, every `SKILL.md` opens with a NOTE block written in the skill body's language: an English skill says `` After reading this `SKILL.md`, say: `<emoji> I read <skill-name>.`  ``, while a Japanese skill says `` この `SKILL.md` を読んだら、`<emoji> 私は <skill-name> を読みました。` と言う。 ``; the emoji fits the skill's subject, `<skill-name>` matches the frontmatter name, and the receipt makes skill loading observable in the transcript.
 - Never place a `SKILL.md` at the repository root. The `skills` CLI stops discovery at a root-level `SKILL.md` and returns only that one skill, which makes every other skill in this repository invisible to installers.
-- Never nest a skill deeper than `skills/<name>/`. Discovery walks a bounded number of levels, and a deeper `SKILL.md` is not reliably found.
+- Category layout: Keep each skill at `skills/<category>/<name>/`. The category is the domain encoded after `shunk031-`; the skill name itself remains unchanged.
 - Do not add `AGENTS.evals.json` to this repository. `shuhari eval instructions` resolves its eval file as `<file-without-extension>.evals.json`, so that file would create a second instructions gate here. The shared instructions gate belongs to `shunk031/dotfiles`.
 
 ## Evaluation Policy
@@ -26,11 +26,11 @@
 - Status: Shuhari is temporarily disabled during routine development. Its pre-commit hooks use the `manual` stage, and only the explicit `make check-triggers` and `make eval` targets re-enable the pinned tool.
 - Harness: Quality gates run through [`shuhari`](https://github.com/shunk031/shuhari). This repository owns target selection and policy values; shuhari owns the evaluation mechanism.
 - Reference: Eval work returns to https://agentskills.io/skill-creation/evaluating-skills for how cases, assertions, and grading are meant to work. Where that guidance and the rules below differ, follow these: shuhari, not a hand-run loop, is what executes them here.
-- Behavior cases: `skills/<name>/evals/evals.json` holds cases that measure what the agent does when the skill applies. Each case requires `id`, `prompt`, and `expected_output`; `assertions`, `files`, and `required_actions` are optional.
-- Trigger cases: `skills/<name>/evals/triggers.json` holds positive cases and near-miss negative controls. Shuhari requires at least one of each. An obviously irrelevant negative control tests nothing.
-- Eval authoring: Read `skills/shunk031-manage-public-private-skills/references/eval-authoring.md` when writing or revising cases. Keep routine source edits independent of the live model gates.
-- Artifacts: Shuhari writes `skills/<name>-workspace/` next to the evaluated skill. It holds verbatim agent transcripts and is gitignored. Never commit it and never paste its contents into an issue, a pull request, or a report.
-- Published numbers: a passing or failing `shuhari eval skill` writes `skills/<name>/evals/results.json`, which the documentation site reads. The gate does it, not you — the workspace it derives from is gitignored, so it can only be written where the run happened, and leaving that to a person meant it did not happen. Commit the file with the change that produced it.
+- Behavior cases: `skills/<category>/<name>/evals/evals.json` holds cases that measure what the agent does when the skill applies. Each case requires `id`, `prompt`, and `expected_output`; `assertions`, `files`, and `required_actions` are optional.
+- Trigger cases: `skills/<category>/<name>/evals/triggers.json` holds positive cases and near-miss negative controls. Shuhari requires at least one of each. An obviously irrelevant negative control tests nothing.
+- Eval authoring: Read `skills/manage/shunk031-manage-public-private-skills/references/eval-authoring.md` when writing or revising cases. Keep routine source edits independent of the live model gates.
+- Artifacts: Shuhari writes `skills/<category>/<name>-workspace/` next to the evaluated skill. It holds verbatim agent transcripts and is gitignored. Never commit it and never paste its contents into an issue, a pull request, or a report.
+- Published numbers: a passing or failing `shuhari eval skill` writes `skills/<category>/<name>/evals/results.json`, which the documentation site reads. The gate does it, not you — the workspace it derives from is gitignored, so it can only be written where the run happened, and leaving that to a person meant it did not happen. Commit the file with the change that produced it.
 - Skills without evals: A skill may ship without `evals/`. The gate wrapper skips it rather than failing. Adding evals to an existing skill is a welcome change on its own.
 
 ## Development Setup
@@ -53,7 +53,7 @@
 - `make docs-serve` previews it locally; `make docs-build` is what CI runs, with `--strict` so a broken link fails. `--strict` covers links and nothing else: a page whose code blocks render as headings still builds clean, which is how the site shipped for a while with a shebang as an H1.
 - A skill's `SKILL.md` is shown verbatim inside a card, titled by the same icon the navigation uses. It is a quoted artifact written for an agent, not this site's prose, and the card is what draws that line. A card is only styled as `.grid > .card`, so it needs both wrappers; `.card` alone renders as plain text with a class nobody reads.
 - The card's title is bold text followed by `---`, which is the shape the theme's card is built around. A heading there fights every margin the theme sets and leaves the page with two H1s. Hand-written CSS lives in `assets/` and is copied into the generated `docs/`.
-- A skill page shows what its evaluation measured, from `skills/<name>/evals/results.json`. `scripts/record_eval_results.py` lifts those numbers out of a completed Shuhari run. That file is committed; the workspace it comes from is not, because the workspace holds transcripts and the numbers do not.
+- A skill page shows what its evaluation measured, from `skills/<category>/<name>/evals/results.json`. `scripts/record_eval_results.py` lifts those numbers out of a completed Shuhari run. That file is committed; the workspace it comes from is not, because the workspace holds transcripts and the numbers do not.
 
 ## Comment Policy
 

@@ -38,7 +38,7 @@
 # @exitcode 1 A Shuhari gate failed.
 # @exitcode 2 Invalid usage, or `shuhari` is not installed.
 # @example
-#   scripts/shuhari_staged_targets.sh eval skills/shunk031-python-uv-workflow/SKILL.md
+#   scripts/shuhari_staged_targets.sh eval skills/python/shunk031-python-uv-workflow/SKILL.md
 
 set -Eeuo pipefail
 
@@ -164,19 +164,26 @@ function validate_shuhari_mode() {
     fi
 }
 
-# @description Resolve a changed path to its skill directory name.
+# @description Resolve a changed path to its skill directory.
 # @arg $1 path Repository-relative or absolute changed path.
-# @stdout The skill directory name, or nothing for paths outside `skills/`.
-function skill_name_of() {
+# @stdout The absolute skill directory, or nothing for paths outside a skill.
+function skill_dir_of() {
     local path="$1"
     local relative="${path#"${REPO_ROOT}/"}"
     relative="${relative#./}"
     case "${relative}" in
-    skills/*/*) ;;
+    skills/*) ;;
     *) return 0 ;;
     esac
-    local rest="${relative#skills/}"
-    printf '%s\n' "${rest%%/*}"
+
+    local candidate="${REPO_ROOT}/${relative}"
+    while [ "${candidate}" != "${REPO_ROOT}" ] && [ "${candidate}" != "${SKILLS_ROOT}" ]; do
+        if [ -f "${candidate}/SKILL.md" ]; then
+            printf '%s\n' "${candidate}"
+            return 0
+        fi
+        candidate="$(dirname -- "${candidate}")"
+    done
 }
 
 # @description Collect existing skill directories for the supplied paths.
@@ -187,12 +194,11 @@ function skill_name_of() {
 # @arg $@ paths Changed file paths.
 # @stdout One absolute skill directory per line, deduplicated and sorted.
 function collect_targets() {
-    local path name
+    local path target
     for path in "$@"; do
-        name="$(skill_name_of "${path}")"
-        [ -n "${name}" ] || continue
-        [ -f "${SKILLS_ROOT}/${name}/SKILL.md" ] || continue
-        printf '%s\n' "${SKILLS_ROOT}/${name}"
+        target="$(skill_dir_of "${path}")"
+        [ -n "${target}" ] || continue
+        printf '%s\n' "${target}"
     done | LC_ALL=C sort -u
 }
 
