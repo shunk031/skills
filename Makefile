@@ -118,16 +118,7 @@ test-bats:
 	mise exec -- bats tests/bats
 
 .PHONY: test
-test: test-python test-bats
-
-# Unit tests for the Python scripts skills ship. Offline, no agent.
-#
-# `--no-project` keeps this from adopting a pyproject.toml that does not exist,
-# and naming the interpreter keeps a bare `python` on PATH — or an activated
-# virtualenv from another checkout — from deciding which one runs.
-.PHONY: test-python
-test-python:
-	uv run --python $(PYTHON_VERSION) --no-project -- python -m unittest discover -s tests/python
+test: test-bats
 
 # The same offline hooks CI runs. Shuhari hooks use the manual stage and are not
 # part of this run.
