@@ -70,11 +70,11 @@ In that file only a leading `#` starts a comment, because an entry may carry a `
 
 ## Layout rules that are easy to get wrong
 
-- One directory per skill at `skills/<name>/`, holding `SKILL.md`. Frontmatter `name` must equal the directory name.
+- One directory per skill at `skills/<category>/<name>/`, holding `SKILL.md`. Frontmatter `name` must equal the leaf directory name.
 - Never put a `SKILL.md` at a repository root. The `skills` CLI stops discovery there and returns only that skill, hiding every other one from installers.
-- Never nest a skill deeper than `skills/<name>/`.
+- Keep the category layout exactly one level below `skills/`: `skills/<category>/<name>/`.
 - `evals/` is reserved: shuhari looks for `evals/evals.json` and `evals/triggers.json` at fixed paths.
-- Never commit `skills/<name>-workspace/`. Those are shuhari run artifacts holding verbatim agent transcripts.
+- Never commit `skills/<category>/<name>-workspace/`. Those are shuhari run artifacts holding verbatim agent transcripts.
 - Scripts a skill needs at runtime go inside the skill directory. The CLI copies the whole skill directory into the pool, so anything outside it will not be there when the skill runs.
 
 ## Writing evals

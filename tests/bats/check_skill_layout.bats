@@ -20,11 +20,18 @@ setup() {
 # @arg $1 name The skill directory name, also written as the frontmatter name.
 function make_skill() {
     local name="$1"
-    local skill_dir="${FIXTURE_ROOT}/skills/${name}"
+    local category="vendor"
+    case "${name}" in
+    shunk031-*)
+        local remainder="${name#shunk031-}"
+        category="${remainder%%-*}"
+        ;;
+    esac
+    local skill_dir="${FIXTURE_ROOT}/skills/${category}/${name}"
 
     mkdir -p "${skill_dir}"
     printf -- '---\nname: %s\ndescription: d\n---\n\n> [!NOTE]\n> After reading this `SKILL.md`, say: `🧪 I read %s.`\n' "${name}" "${name}" > "${skill_dir}/SKILL.md"
-    printf -- '- [`%s`](skills/%s/)\n' "${name}" "${name}" >> "${FIXTURE_ROOT}/README.md"
+    printf -- '- [`%s`](skills/%s/%s/)\n' "${name}" "${category}" "${name}" >> "${FIXTURE_ROOT}/README.md"
 }
 
 @test "[common] a skill missing from the README index is rejected" {
@@ -34,12 +41,12 @@ function make_skill() {
 
     run "${CHECKER}"
     [ "${status}" -eq 1 ]
-    [[ "${output}" == *'skills/shunk031-herdr-a is missing from README.md'* ]]
+    [[ "${output}" == *'skills/herdr/shunk031-herdr-a is missing from README.md'* ]]
 }
 
 @test "[common] a stale skill in the README index is rejected" {
     make_skill shunk031-herdr-a
-    printf -- '- [`shunk031-herdr-old`](skills/shunk031-herdr-old/)\n' >> "${FIXTURE_ROOT}/README.md"
+    printf -- '- [`shunk031-herdr-old`](skills/herdr/shunk031-herdr-old/)\n' >> "${FIXTURE_ROOT}/README.md"
 
     run "${CHECKER}"
     [ "${status}" -eq 1 ]
@@ -48,7 +55,7 @@ function make_skill() {
 
 @test "[common] a duplicate skill in the README index is rejected" {
     make_skill shunk031-herdr-a
-    printf -- '- [`shunk031-herdr-a`](skills/shunk031-herdr-a/)\n' >> "${FIXTURE_ROOT}/README.md"
+    printf -- '- [`shunk031-herdr-a`](skills/herdr/shunk031-herdr-a/)\n' >> "${FIXTURE_ROOT}/README.md"
 
     run "${CHECKER}"
     [ "${status}" -eq 1 ]
@@ -57,7 +64,7 @@ function make_skill() {
 
 @test "[common] a missing read receipt is rejected" {
     make_skill shunk031-herdr-a
-    printf -- '---\nname: shunk031-herdr-a\ndescription: d\n---\n\n# Heading\n' > "${FIXTURE_ROOT}/skills/shunk031-herdr-a/SKILL.md"
+    printf -- '---\nname: shunk031-herdr-a\ndescription: d\n---\n\n# Heading\n' > "${FIXTURE_ROOT}/skills/herdr/shunk031-herdr-a/SKILL.md"
 
     run "${CHECKER}"
     [ "${status}" -eq 1 ]
@@ -66,8 +73,8 @@ function make_skill() {
 
 @test "[common] a read receipt naming another skill is rejected" {
     make_skill shunk031-herdr-a
-    sed -i.bak 's/I read shunk031-herdr-a\./I read shunk031-herdr-b./' "${FIXTURE_ROOT}/skills/shunk031-herdr-a/SKILL.md"
-    rm "${FIXTURE_ROOT}/skills/shunk031-herdr-a/SKILL.md.bak"
+    sed -i.bak 's/I read shunk031-herdr-a\./I read shunk031-herdr-b./' "${FIXTURE_ROOT}/skills/herdr/shunk031-herdr-a/SKILL.md"
+    rm "${FIXTURE_ROOT}/skills/herdr/shunk031-herdr-a/SKILL.md.bak"
 
     run "${CHECKER}"
     [ "${status}" -eq 1 ]
@@ -76,8 +83,8 @@ function make_skill() {
 
 @test "[common] a Japanese read receipt is accepted" {
     make_skill shunk031-research-a
-    sed -i.bak 's/> After reading this `SKILL.md`, say: `🧪 I read shunk031-research-a.`/> この `SKILL.md` を読んだら、`🧪 私は shunk031-research-a を読みました。` と言う。/' "${FIXTURE_ROOT}/skills/shunk031-research-a/SKILL.md"
-    rm "${FIXTURE_ROOT}/skills/shunk031-research-a/SKILL.md.bak"
+    sed -i.bak 's/> After reading this `SKILL.md`, say: `🧪 I read shunk031-research-a.`/> この `SKILL.md` を読んだら、`🧪 私は shunk031-research-a を読みました。` と言う。/' "${FIXTURE_ROOT}/skills/research/shunk031-research-a/SKILL.md"
+    rm "${FIXTURE_ROOT}/skills/research/shunk031-research-a/SKILL.md.bak"
 
     run "${CHECKER}"
     [ "${status}" -eq 0 ]
@@ -107,6 +114,18 @@ function make_skill() {
     [[ "${output}" == *'is not named shunk031-<domain>-<topic>'* ]]
 }
 
+@test "[common] an owned skill in the wrong category is rejected" {
+    make_skill shunk031-herdr-a
+    mkdir -p "${FIXTURE_ROOT}/skills/writing"
+    mv "${FIXTURE_ROOT}/skills/herdr/shunk031-herdr-a" "${FIXTURE_ROOT}/skills/writing/shunk031-herdr-a"
+    sed -i.bak 's#skills/herdr/shunk031-herdr-a/#skills/writing/shunk031-herdr-a/#' "${FIXTURE_ROOT}/README.md"
+    rm "${FIXTURE_ROOT}/README.md.bak"
+
+    run "${CHECKER}"
+    [ "${status}" -eq 1 ]
+    [[ "${output}" == *"is not under its name's domain directory herdr"* ]]
+}
+
 @test "[common] a skill without the owner prefix is out of scope" {
     make_skill vendor-orchestrate-things
 
@@ -131,14 +150,11 @@ function make_skill() {
 @test "[common] the allowlist matches the domains the tree actually uses" {
     # The check is only as good as its list. A rename wave that adds a domain
     # without widening the allowlist fails here rather than in pre-commit.
-    local skill_dir name
-    for skill_dir in "${BATS_TEST_DIRNAME}"/../../skills/*/; do
-        name="$(basename -- "${skill_dir%/}")"
-        case "${name}" in
-        *-workspace) continue ;;
-        esac
+    local skill_file name
+    while IFS= read -r skill_file; do
+        name="$(basename -- "$(dirname -- "${skill_file}")")"
         make_skill "${name}"
-    done
+    done < <(find "${BATS_TEST_DIRNAME}"/../../skills -mindepth 2 -maxdepth 2 -type f -name SKILL.md -print)
 
     run "${CHECKER}"
     [ "${status}" -eq 0 ]

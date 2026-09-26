@@ -17,7 +17,7 @@ repos:
         pass_filenames: true
         require_serial: true
         stages: [manual]
-        files: ^skills/[^/]+/(SKILL\.md|evals/(evals|triggers)\.json)$
+        files: ^skills/[^/]+/[^/]+/(SKILL\.md|evals/(evals|triggers)\.json)$
 
       # Live model calls. `require_serial` keeps concurrent Codex sessions to
       # the count Shuhari itself manages through `--jobs`.
@@ -28,7 +28,7 @@ repos:
         pass_filenames: true
         require_serial: true
         stages: [manual]
-        files: ^skills/[^/]+/(SKILL\.md|evals/triggers\.json)$
+        files: ^skills/[^/]+/[^/]+/(SKILL\.md|evals/triggers\.json)$
 
       # Live model calls, two arms per case. The most expensive gate.
       - id: shuhari-eval-skill
@@ -38,7 +38,7 @@ repos:
         pass_filenames: true
         require_serial: true
         stages: [manual]
-        files: ^skills/[^/]+/(SKILL\.md|evals/evals\.json)$
+        files: ^skills/[^/]+/[^/]+/(SKILL\.md|evals/evals\.json)$
 
       - id: textlint-markdown
         name: fix hard-wrapped Markdown prose

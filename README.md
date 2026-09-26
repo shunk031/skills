@@ -46,30 +46,30 @@ Every skill is named `shunk031-<domain>-<topic>`, and `Category` is that domain.
 
 | Skill                                                                                                          | Category      | What it does                                                                                                                |
 | -------------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| [`shunk031-codex-worker-prompting`](skills/shunk031-codex-worker-prompting/)                                   | `codex`       | Writes task prompts, follow-ups, and authorizations aimed at Codex-family worker models.                                    |
-| [`shunk031-github-cgd-identity`](skills/shunk031-github-cgd-identity/)                                         | `github`      | Performs GitHub writes in `creative-graphic-design` repositories as the machine user rather than the personal account.      |
-| [`shunk031-github-comment-attach-files`](skills/shunk031-github-comment-attach-files/)                         | `github`      | Uploads local files into a GitHub issue or pull request comment and returns the hosted URLs without posting the comment.    |
-| [`shunk031-herdr-chezmoi-apply`](skills/shunk031-herdr-chezmoi-apply/)                                         | `herdr`       | Updates and applies public and private dotfiles on Local and Herdr saved machines.                                        |
-| [`shunk031-herdr-orchestrate-workers`](skills/shunk031-herdr-orchestrate-workers/)                             | `herdr`       | Runs parallel Codex workers in Herdr worktree tabs and routes their reports, reviews, and pull-request lifecycles.          |
-| [`shunk031-herdr-tab-status`](skills/shunk031-herdr-tab-status/)                                               | `herdr`       | Chooses the leading status emoji and name for the current Herdr tab.                                                        |
-| [`shunk031-manage-agent-guidance`](skills/shunk031-manage-agent-guidance/)                                     | `manage`      | Decides where a persistent agent rule belongs and keeps one source of truth behind thin adapters.                           |
-| [`shunk031-manage-public-private-dotfiles`](skills/shunk031-manage-public-private-dotfiles/)                   | `manage`      | Works across the public and private dotfiles sources, changing only the repository that owns the setting.                   |
-| [`shunk031-manage-public-private-skills`](skills/shunk031-manage-public-private-skills/)                       | `manage`      | Routes skill work between this repository and `shunk031/skills-private`, including evals and the dotfiles subscription.     |
-| [`shunk031-python-transformers-convert`](skills/shunk031-python-transformers-convert/)                         | `python`      | Converts a custom PyTorch model into Hugging Face Transformers format, through to Hub upload.                               |
-| [`shunk031-python-uv-workflow`](skills/shunk031-python-uv-workflow/)                                           | `python`      | Applies a uv-first, test-first Python workflow with pre-commit quality gates.                                               |
-| [`shunk031-research-before-implementation`](skills/shunk031-research-before-implementation/)                   | `research`    | Reads current official documentation and real implementations before designing anything that depends on a third-party tool. |
-| [`shunk031-research-high-impact-journal-publishing`](skills/shunk031-research-high-impact-journal-publishing/) | `research`    | Advises on study design, manuscript structure, journal selection, and peer review responses.                                |
-| [`shunk031-shellscript-shdoc-docs`](skills/shunk031-shellscript-shdoc-docs/)                                   | `shellscript` | Adds and repairs shdoc annotations in shell scripts and shell executables.                                                  |
-| [`shunk031-writing-kosshi`](skills/shunk031-writing-kosshi/)                                                   | `writing`     | Structures claims and supporting evidence as an outline.                                                                    |
-| [`shunk031-writing-technical-slides`](skills/shunk031-writing-technical-slides/)                               | `writing`     | Writes technical and paper-review slide text in the repository author's style.                                              |
-| [`shunk031-writing-telegraph`](skills/shunk031-writing-telegraph/)                                             | `writing`     | Rewrites an outline in concise telegraphic style.                                                                           |
+| [`shunk031-codex-worker-prompting`](skills/codex/shunk031-codex-worker-prompting/)                             | `codex`       | Writes task prompts, follow-ups, and authorizations aimed at Codex-family worker models.                                    |
+| [`shunk031-github-cgd-identity`](skills/github/shunk031-github-cgd-identity/)                                 | `github`      | Performs GitHub writes in `creative-graphic-design` repositories as the machine user rather than the personal account.      |
+| [`shunk031-github-comment-attach-files`](skills/github/shunk031-github-comment-attach-files/)                   | `github`      | Uploads local files into a GitHub issue or pull request comment and returns the hosted URLs without posting the comment.    |
+| [`shunk031-herdr-chezmoi-apply`](skills/herdr/shunk031-herdr-chezmoi-apply/)                                   | `herdr`       | Updates and applies public and private dotfiles on Local and Herdr saved machines.                                        |
+| [`shunk031-herdr-orchestrate-workers`](skills/herdr/shunk031-herdr-orchestrate-workers/)                       | `herdr`       | Runs parallel Codex workers in Herdr worktree tabs and routes their reports, reviews, and pull-request lifecycles.          |
+| [`shunk031-herdr-tab-status`](skills/herdr/shunk031-herdr-tab-status/)                                         | `herdr`       | Chooses the leading status emoji and name for the current Herdr tab.                                                        |
+| [`shunk031-manage-agent-guidance`](skills/manage/shunk031-manage-agent-guidance/)                               | `manage`      | Decides where a persistent agent rule belongs and keeps one source of truth behind thin adapters.                           |
+| [`shunk031-manage-public-private-dotfiles`](skills/manage/shunk031-manage-public-private-dotfiles/)             | `manage`      | Works across the public and private dotfiles sources, changing only the repository that owns the setting.                   |
+| [`shunk031-manage-public-private-skills`](skills/manage/shunk031-manage-public-private-skills/)                 | `manage`      | Routes skill work between this repository and `shunk031/skills-private`, including evals and the dotfiles subscription.     |
+| [`shunk031-python-transformers-convert`](skills/python/shunk031-python-transformers-convert/)                   | `python`      | Converts a custom PyTorch model into Hugging Face Transformers format, through to Hub upload.                               |
+| [`shunk031-python-uv-workflow`](skills/python/shunk031-python-uv-workflow/)                                     | `python`      | Applies a uv-first, test-first Python workflow with pre-commit quality gates.                                               |
+| [`shunk031-research-before-implementation`](skills/research/shunk031-research-before-implementation/)         | `research`    | Reads current official documentation and real implementations before designing anything that depends on a third-party tool. |
+| [`shunk031-research-high-impact-journal-publishing`](skills/research/shunk031-research-high-impact-journal-publishing/) | `research`    | Advises on study design, manuscript structure, journal selection, and peer review responses.                                |
+| [`shunk031-shellscript-shdoc-docs`](skills/shellscript/shunk031-shellscript-shdoc-docs/)                       | `shellscript` | Adds and repairs shdoc annotations in shell scripts and shell executables.                                                  |
+| [`shunk031-writing-kosshi`](skills/writing/shunk031-writing-kosshi/)                                           | `writing`     | Structures claims and supporting evidence as an outline.                                                                    |
+| [`shunk031-writing-technical-slides`](skills/writing/shunk031-writing-technical-slides/)                       | `writing`     | Writes technical and paper-review slide text in the repository author's style.                                              |
+| [`shunk031-writing-telegraph`](skills/writing/shunk031-writing-telegraph/)                                     | `writing`     | Rewrites an outline in concise telegraphic style.                                                                           |
 
 ## Layout
 
-Each skill is one directory under `skills/`:
+Each skill is one directory under a category in `skills/`:
 
 ```text
-skills/<name>/
+skills/<category>/<name>/
 ├── SKILL.md            # required; frontmatter `name` must equal <name>
 ├── agents/             # optional per-agent wrappers
 ├── references/         # optional supporting documents
@@ -79,7 +79,7 @@ skills/<name>/
     └── triggers.json   # optional trigger cases and near-miss negatives
 ```
 
-Nothing may sit deeper than `skills/<name>/SKILL.md`, and no `SKILL.md` may sit at the repository root: the CLI stops discovery at a root-level one and returns only that skill. Anything a skill needs at runtime belongs inside its own directory, because the CLI copies that directory and nothing else.
+Skills must be exactly one category and one name below `skills/`, and no `SKILL.md` may sit at the repository root: the CLI stops discovery at a root-level one and returns only that skill. Anything a skill needs at runtime belongs inside its own directory, because the CLI copies that directory and nothing else.
 
 ## Development
 
