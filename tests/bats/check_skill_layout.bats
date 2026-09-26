@@ -36,7 +36,7 @@ function make_skill() {
 
 @test "[common] a skill missing from the README index is rejected" {
     make_skill shunk031-herdr-a
-    sed -i.bak '/skills\/shunk031-herdr-a\//d' "${FIXTURE_ROOT}/README.md"
+    sed -i.bak '/skills\/herdr\/shunk031-herdr-a\//d' "${FIXTURE_ROOT}/README.md"
     rm "${FIXTURE_ROOT}/README.md.bak"
 
     run "${CHECKER}"
