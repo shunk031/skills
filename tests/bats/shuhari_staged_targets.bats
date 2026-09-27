@@ -17,7 +17,7 @@ setup() {
         "${fixture_root}/scripts/shuhari_staged_targets.sh"
     WRAPPER="${fixture_root}/scripts/shuhari_staged_targets.sh"
 
-    local skill_dir="${fixture_root}/skills/override-fixture"
+    local skill_dir="${fixture_root}/skills/fixture/override-fixture"
     mkdir -p "${skill_dir}/evals"
     cat > "${skill_dir}/SKILL.md" << 'EOF'
 ---

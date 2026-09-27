@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Record a Shuhari eval run's published numbers beside the skill it measured.
 
-Shuhari writes every run into ``skills/<name>-workspace/``, which is gitignored
+Shuhari writes every run into ``skills/<category>/<name>-workspace/``, which is gitignored
 because it holds verbatim agent transcripts. The aggregate numbers are not in
 that category: ``benchmark.json`` carries pass rates, token counts, timings, and
 the assertion texts already committed in ``evals.json``. Nothing an agent said
 appears in it.
 
-This lifts those numbers into ``skills/<name>/evals/results.json``, which is
+This lifts those numbers into ``skills/<category>/<name>/evals/results.json``, which is
 committed, so the documentation site can state what a skill measurably changes
 without anyone re-running an evaluation to find out.
 

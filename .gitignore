@@ -1,6 +1,7 @@
 # Shuhari writes iteration artifacts next to the evaluated skill, so they land
 # inside `skills/`. They hold verbatim agent transcripts: never commit them.
 skills/*-workspace/
+skills/*/*-workspace/
 
 .agents/worklog/
 .playwright-cli/

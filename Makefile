@@ -63,21 +63,19 @@ validate:
 .PHONY: eval
 eval:
 	@set -e; \
-	for dir in skills/*/; do \
-	    if [ -f "$$dir/evals/evals.json" ]; then \
-	        MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
-	            ./scripts/shuhari_staged_targets.sh eval "$$dir/SKILL.md"; \
-	    fi; \
+	find skills -type f -path '*/evals/evals.json' -print | while IFS= read -r eval_file; do \
+	    dir="$${eval_file%/evals/evals.json}"; \
+	    MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
+	        ./scripts/shuhari_staged_targets.sh eval "$$dir/SKILL.md"; \
 	done
 
 .PHONY: check-triggers
 check-triggers:
 	@set -e; \
-	for dir in skills/*/; do \
-	    if [ -f "$$dir/evals/triggers.json" ]; then \
-	        MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
-	            shuhari check trigger --trials $(TRIALS) --jobs $(JOBS) --timeout $(TIMEOUT) "$$dir"; \
-	    fi; \
+	find skills -type f -path '*/evals/triggers.json' -print | while IFS= read -r trigger_file; do \
+	    dir="$${trigger_file%/evals/triggers.json}"; \
+	    MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
+	        shuhari check trigger --trials $(TRIALS) --jobs $(JOBS) --timeout $(TIMEOUT) "$$dir"; \
 	done
 
 #
