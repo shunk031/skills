@@ -1,6 +1,6 @@
 ---
 name: shunk031-python-uv-workflow
-description: Apply Python development policy using uv-first execution, test-first behavior validation, and pre-commit quality gates. Use when implementing or refactoring Python code.
+description: Apply Python development policy using uv-first execution, test-first behavior validation, and pre-commit quality gates. Use when implementing or refactoring Python code, when `uv.lock` changes unexpectedly on `uv run` or `uv sync`, when a lockfile carries an `[options]` block the project does not declare, or when uv prints `Resolving despite existing lockfile`.
 ---
 
 > [!NOTE]
@@ -19,7 +19,7 @@ Use this workflow to keep Python implementation and refactoring aligned with rep
 3. Write tests when behavior changes and verify expected behavior.
 4. Add standard dev dependencies with `uv`.
 5. Follow the existing project's setup and quality gates. Install pre-commit hooks after dependency setup when the project or repository requires them.
-6. For a new project or an explicit setup request, add only the project configuration the request or repository policy needs; do not create `.pre-commit-config.yaml` or a `Makefile` for an isolated script edit.
+6. For a new project or an explicit setup request, add only the project configuration the request or repository policy needs; do not create `.pre-commit-config.yaml` or a `Makefile` for an isolated script edit. Keep resolver-affecting uv settings such as `exclude-newer` out of a user's global uv configuration: `uv lock` records them in the lockfile's `[options]` block, so every environment without the same setting re-resolves and rewrites the lockfile on each non-frozen `uv run`, `uv sync`, or `uv-lock` hook. A project that needs such a setting must declare it under `[tool.uv]` in its own `pyproject.toml`; a committed lockfile with an undeclared `[options]` block is defective and must be fixed by regenerating the lock.
 7. For refactoring from non-`uv` originals, align dependencies and verify output parity. Match the repository's coverage target; raise coverage toward 90% only when the refactor or repository requires that target.
 8. Construct Python paths from a source-file anchor, and keep every path component in its own operand:
    - Forbidden: `Path("/path/to") / "hoge"` and `REPO_ROOT / "home/dot_codex/hooks/session_start_gateway.py"`
