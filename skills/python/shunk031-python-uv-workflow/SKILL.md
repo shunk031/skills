@@ -19,14 +19,15 @@ Use this workflow to keep Python implementation and refactoring aligned with rep
 3. Write tests when behavior changes and verify expected behavior.
 4. Add standard dev dependencies with `uv`.
 5. Follow the existing project's setup and quality gates. Install pre-commit hooks after dependency setup when the project or repository requires them.
-6. For a new project or an explicit setup request, add only the project configuration the request or repository policy needs; do not create `.pre-commit-config.yaml` or a `Makefile` for an isolated script edit. Keep resolver-affecting uv settings such as `exclude-newer` out of a user's global uv configuration: `uv lock` records them in the lockfile's `[options]` block, so every environment without the same setting re-resolves and rewrites the lockfile on each non-frozen `uv run`, `uv sync`, or `uv-lock` hook. A project that needs such a setting must declare it under `[tool.uv]` in its own `pyproject.toml`; a committed lockfile with an undeclared `[options]` block is defective and must be fixed by regenerating the lock.
-7. For refactoring from non-`uv` originals, align dependencies and verify output parity. Match the repository's coverage target; raise coverage toward 90% only when the refactor or repository requires that target.
-8. Construct Python paths from a source-file anchor, and keep every path component in its own operand:
+6. For a new project or an explicit setup request, add only the project configuration the request or repository policy needs; do not create `.pre-commit-config.yaml` or a `Makefile` for an isolated script edit.
+7. Keep resolver-affecting uv settings such as `exclude-newer` out of a user's global uv configuration: `uv lock` records them in the lockfile's `[options]` block, so every environment without the same setting re-resolves and rewrites the lockfile on each non-frozen `uv run`, `uv sync`, or `uv-lock` hook. A project that needs such a setting must declare it under `[tool.uv]` in its own `pyproject.toml`; a committed lockfile with an undeclared `[options]` block is defective and must be fixed by regenerating the lock.
+8. For refactoring from non-`uv` originals, align dependencies and verify output parity. Match the repository's coverage target; raise coverage toward 90% only when the refactor or repository requires that target.
+9. Construct Python paths from a source-file anchor, and keep every path component in its own operand:
    - Forbidden: `Path("/path/to") / "hoge"` and `REPO_ROOT / "home/dot_codex/hooks/session_start_gateway.py"`
    - Required: `Path(__file__).parents[N] / "path" / "to" / "hoge"`
      Never put multiple path components separated by `/` or `\` in a string literal passed to `Path` or used as an operand to `/`. Anchoring paths to the source file keeps them working after relocation and across worktrees without coupling them to a host layout. Explicit roots supplied through a CLI argument or environment variable are allowed; hard-coded absolute path strings remain forbidden.
      Before finalizing Python changes, inspect every changed `Path(...)` and `/` expression for path-separator-containing string operands.
-9. Name variables for their semantic role. When the same concept has multiple representations, add a qualifier such as `_path`, `_text`, or `_data` only to distinguish them; do not add type suffixes mechanically when the role is already clear.
+10. Name variables for their semantic role. When the same concept has multiple representations, add a qualifier such as `_path`, `_text`, or `_data` only to distinguish them; do not add type suffixes mechanically when the role is already clear.
 
 ## Testing Expectations
 
