@@ -53,6 +53,7 @@ function usage_error() {
     exit 2
 }
 
+# shellcheck disable=SC2329 # Invoked by the EXIT trap.
 # @description Copy artifacts, log, and exit code to the persistent directory, then release the VM.
 # @description
 #   Runs as the EXIT trap, so it sees the job's exit status in `$?` and exits
