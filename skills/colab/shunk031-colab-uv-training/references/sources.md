@@ -10,6 +10,7 @@ Each entry names the fact in `SKILL.md` it supports. Facts marked as observed co
 - [googlecolab/google-colab-cli#82](https://github.com/googlecolab/google-colab-cli/issues/82): a long `colab exec` timeout that is exceeded can spin a local CPU core indefinitely.
 - `colab_cli/client.py` in the installed package: `Client.list_assignments()` reads `/tun/m/assignments`, and `Client.unassign(endpoint)` posts to `/tun/m/unassign/<endpoint>`; `colab_cli.common.state.client` is the authenticated client the CLI itself uses.
 - With jupyter-kernel-client 0.8.0 installed, google-colab-cli 0.7.2 kernel commands fail with `AttributeError: module 'jupyter_kernel_client' has no attribute 'JupyterSubprotocol'`: observed.
+- A live smoke test of `scripts/colab-job.sh` on a CPU runtime with colab CLI 0.7.4 and a fine-grained token for one Hub repository: the first upload, a 20-second sync loop, the final upload, and self-release worked, `list_assignments()` was empty about 20 seconds after release, and the wrapper's output from a `!` line sent with `colab exec -f` reached the local client. Afterwards the local session record and the sweeper lease remained until `colab sessions` printed `Pruned 1 stale local session(s).`: observed.
 - About one `colab exec` call in ten failed with a read timeout or hung before reaching the kernel during an A100 run: observed.
 - `colab run` signal handling and websocket teardown: observed behavior of the CLI, reported with the task that produced this skill.
 

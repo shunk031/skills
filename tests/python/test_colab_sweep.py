@@ -145,6 +145,40 @@ class ColabSweepTest(unittest.TestCase):
         self.assertEqual(status, 0)
         client.unassign.assert_called_once_with("old")
 
+    def test_released_or_pruned_session_loses_its_lease(self) -> None:
+        modules, client = fake_colab_cli(["live"])
+        with TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config"
+            config.mkdir()
+            (config / "sessions.json").write_text(
+                '{"gone": {"endpoint": "released"}, "job": {"endpoint": "live"}}'
+            )
+            leases = Path(tmp) / "state" / "leases"
+            leases.mkdir(parents=True)
+            (leases / "gone").write_text("9999999999\n")
+            (leases / "job").write_text("9999999999\n")
+            (leases / "pruned").write_text("9999999999\n")
+            with mock.patch.dict(sys.modules, modules), mock.patch.object(
+                colab_sweep, "STATE_DIR", leases.parent
+            ), mock.patch.object(colab_sweep, "COLAB_CONFIG_DIR", config):
+                with redirect_stdout(io.StringIO()) as dry:
+                    dry_status = colab_sweep.sweep(dry_run=True, grace=60)
+                dry_leases = sorted(p.name for p in leases.iterdir())
+                with redirect_stdout(io.StringIO()) as real:
+                    status = colab_sweep.sweep(dry_run=False, grace=60)
+                remaining = sorted(p.name for p in leases.iterdir())
+            state = (config / "sessions.json").read_text()
+
+        self.assertEqual((dry_status, status), (0, 0))
+        self.assertIn("stale released session=gone", dry.getvalue())
+        self.assertIn("colab sessions", dry.getvalue())
+        self.assertEqual(dry_leases, ["gone", "job", "pruned"])
+        self.assertIn("lease gone: session no longer assigned; remove lease", real.getvalue())
+        self.assertIn("lease pruned: session not recorded; remove lease", real.getvalue())
+        self.assertEqual(remaining, ["job"])
+        self.assertIn("released", state)
+        client.unassign.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

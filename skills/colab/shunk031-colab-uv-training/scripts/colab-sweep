@@ -17,7 +17,10 @@ period (default 30m, or `COLAB_SWEEP_GRACE`), which protects a session that
 
 `colab-sweep lease NAME DURATION` gives a recorded session an expiry, such as
 `4h`; the next sweep after it stops the session with `colab stop`. Sessions
-without a lease are only reported. `--dry-run` reports without acting or
+without a lease are only reported. A recorded session whose runtime is no
+longer assigned, such as one that released itself, is reported as stale and
+its lease removed; `colab sessions` prunes the stale local record. A lease
+whose session is not recorded at all is removed too. `--dry-run` reports without acting or
 writing any file. Sweep state and the action log live in
 `$XDG_STATE_HOME/colab-sweep` (default `~/.local/state/colab-sweep`).
 
@@ -169,6 +172,31 @@ def sweep(dry_run: bool, grace: int) -> int:
         log(f"error: cannot read colab state files: {e!r}", logfile)
         return 1
 
+    # Listed before leases so a lease on a released session can be dropped.
+    # A failed listing still lets expired leases be stopped below.
+    try:
+        assignments = state.client.list_assignments()
+    except (Exception, SystemExit) as e:
+        log(f"error: cannot list assignments: {e!r}", logfile)
+        assignments = None
+        failed = True
+
+    released: set[str] = set()
+    if assignments is not None:
+        assigned = {a.endpoint for a in assignments}
+        live = {name for endpoint, (name, _) in owners.items() if endpoint in assigned}
+        for endpoint, (name, path) in owners.items():
+            if endpoint in assigned:
+                continue
+
+            log(
+                f"stale {endpoint} session={name} ({path}): no longer assigned; "
+                "run `colab sessions` to prune the local record",
+                logfile,
+            )
+            if name not in live:
+                released.add(name)
+
     colab = str(Path(sys.executable).with_name("colab"))
     now = time.time()
     for lease_file in sorted((STATE_DIR / "leases").glob("*")):
@@ -180,18 +208,18 @@ def sweep(dry_run: bool, grace: int) -> int:
             failed = True
             continue
 
-        if expiry > now:
-            log(f"lease {name}: {int(expiry - now) // 60}m left", logfile)
-            continue
-
+        # A lease is taken after `colab new` records the session, so a lease
+        # whose session is unrecorded or no longer assigned guards nothing.
         paths = [path for owner, path in owners.values() if owner == name]
-        if not paths:
-            log(
-                f"lease {name}: expired, session not recorded; {prefix}remove lease",
-                logfile,
-            )
+        if not paths or name in released:
+            reason = "no longer assigned" if paths else "not recorded"
+            log(f"lease {name}: session {reason}; {prefix}remove lease", logfile)
             if not dry_run:
                 lease_file.unlink()
+            continue
+
+        if expiry > now:
+            log(f"lease {name}: {int(expiry - now) // 60}m left", logfile)
             continue
 
         stopped = True
@@ -211,10 +239,7 @@ def sweep(dry_run: bool, grace: int) -> int:
         if stopped and not dry_run:
             lease_file.unlink()
 
-    try:
-        assignments = state.client.list_assignments()
-    except (Exception, SystemExit) as e:
-        log(f"error: cannot list assignments: {e!r}", logfile)
+    if assignments is None:
         return 1
 
     first_seen_file = STATE_DIR / "state.json"

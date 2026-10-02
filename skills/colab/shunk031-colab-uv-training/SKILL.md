@@ -27,7 +27,7 @@ Follow these steps in order. Steps 10 and 11 are not optional: run them on succe
 7. On a resumed segment, download the last checkpoint from the Hub (see Durable results).
 8. Launch the job as one busy kernel cell, confirm it started, and poll it (see Keeping the runtime alive).
 9. Download only the small results you need locally.
-10. Tear down: `colab stop -s <name>`, even when the wrapper already released the VM. Then run `scripts/colab-sweep --dry-run` and `scripts/colab-sweep`.
+10. Tear down. When the wrapper released the VM, run `colab sessions`, which prunes the session's stale local record; otherwise run `colab stop -s <name>`. Then run `scripts/colab-sweep --dry-run` and `scripts/colab-sweep`, which also removes the session's lease.
 11. Verify with `colab sessions` that no session or `[?]` orphan remains, and report the result.
 
 Never use `colab run` for a multi-hour job. It does not handle SIGTERM or SIGHUP, so killing the local process leaks the VM; it tears the VM down on any websocket drop, which a multi-hour connection will eventually hit; and its default `--timeout` is 30 seconds.
@@ -43,6 +43,7 @@ EOF
 timeout 38400 colab exec -s <name> --timeout 37800 -f /abs/path/launch.py > fit-seg1.out 2>&1
 ```
 
+- `!` lines sent with `colab exec -f` return the shell's output to the local client: the wrapper's output reached it in an observed run (2026-10-02). How finely the output streams was not measured.
 - Keep `$` out of the `!` line: IPython expands `$name` from the Python namespace before the shell sees it. Put shell that needs variables in a script, upload it, and run it with `!bash /content/<script>.sh`.
 - Set `colab exec --timeout` above the wrapper's `--ttl` plus a margin for the final upload; 10 hours of job and 10.5 hours of `--timeout` is the shape. When `--timeout` is exceeded the local client can spin at 100% CPU instead of returning, so wrap the client in an outer `timeout` as well.
 - Run that `colab exec` in the background of the agent's own environment, with output redirected to a local file, and keep the local machine awake and online for the whole job. An SSH or console connection held open is the alternative way to keep a live connection.
@@ -82,6 +83,8 @@ When a suite reports numerical differences, run the same suite on the same VM at
 - on every exit, success or failure, writes `exit_code` into the log directory and uploads everything once more;
 - prints `<job> finished with exit code N`, so the local `colab exec` output records the outcome even after the VM is gone;
 - then releases the VM itself with `POST http://${TBE_RUNTIME_ADDR}/unassign`, the call `google.colab.runtime.unassign()` makes. `TBE_RUNTIME_ADDR` is set in kernels started through the CLI (observed as `172.28.0.1:8011` with colab CLI 0.7.4), so the job stops billing the moment it ends, even if the agent is not watching.
+
+A live smoke test on 2026-10-02 (CPU runtime, colab CLI 0.7.4, a fine-grained token for one repository) exercised the whole path: the first upload, a 20-second sync loop during the job, the final upload of `logs/<job>/{job.log,exit_code}` and a sync path, and self-release, after which `list_assignments()` was empty within about 20 seconds.
 
 It uses `hf` when it is on `PATH`, otherwise `uvx --from huggingface_hub hf`. When the final upload fails, the wrapper keeps the VM and says so, because the VM then holds the only copy; your `colab stop` remains the release after you recover the results. Pass `--no-release` when you will inspect the VM after the job. Run `bash colab-job.sh --help` for the full option list.
 
@@ -135,6 +138,7 @@ Run these on the VM, through the busy-cell pattern or a short `colab exec` per s
 - Owned sessions are the endpoints recorded in `~/.config/colab-cli/sessions.json` and in every `~/.config/colab-cli/states/*.json`. When you isolate a run with `colab --config <file>`, put that file in `~/.config/colab-cli/states/`, or the sweep treats your live session as an orphan.
 - An orphan is an assigned runtime that no state file records; `colab sessions` shows it as `[?]`, and it bills like any other. The sweep unassigns an orphan only after it has stayed an orphan for the grace period (`--grace`, default `30m`, or `COLAB_SWEEP_GRACE`), which protects a session that another `colab new` is still creating. First-seen times live in `$XDG_STATE_HOME/colab-sweep` (default `~/.local/state/colab-sweep`), with an action log beside them.
 - `colab-sweep lease <name> <duration>` gives a recorded session an expiry, such as `11h`; the first sweep after it runs `colab stop` on that session. Sessions without a lease are only reported.
+- A recorded session whose runtime is no longer assigned, such as one the wrapper released, is reported as stale. The sweep removes its lease, and the lease of any session that is not recorded at all, but never edits the CLI's state files: run `colab sessions`, which prunes stale local records in 0.7.4 and prints `Pruned N stale local session(s).`
 - `--dry-run` reports what a sweep would do and writes nothing.
 - A state file that does not parse aborts the sweep instead of reading as empty, so a corrupt file never turns owned sessions into orphans. Any API or state error makes it exit with status 1; report that rather than retrying blindly.
 - It needs the `colab_cli` package. When the current `python3` cannot import it, the script re-executes itself under the interpreter of a mise pipx install, `$(mise where pipx:google-colab-cli)/google-colab-cli/bin/python`. With any other install method, run it with the CLI's interpreter directly, the one in the shebang of `command -v colab`.
@@ -146,7 +150,6 @@ Because nothing runs the sweep on a timer, a runtime left behind by a crashed ag
 These are not yet confirmed. Treat them as open, and record what you observe when a run settles one.
 
 - Whether a busy kernel cell keeps a Colab Pro runtime alive after the local connection is lost, and whether a detached driver with an idle kernel survives between polls.
-- Whether `!` shell lines sent with `colab exec -f` stream their output to the local client as they would in a notebook.
 
 ## References
 
