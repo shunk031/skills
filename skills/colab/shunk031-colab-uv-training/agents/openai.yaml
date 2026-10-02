@@ -1,0 +1,4 @@
+interface:
+  display_name: "Colab uv Training"
+  short_description: "Run long uv-workspace GPU jobs on Colab safely and resumably"
+  default_prompt: "Use this when running training or GPU test suites from a uv repository on a Google Colab runtime through the colab CLI."
