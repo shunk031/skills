@@ -41,6 +41,7 @@ NAME_PREFIX = "shunk031-"
 FALLBACK_ICON = "lucide/file-text"
 ICONS = {
     "shunk031-codex-worker-prompting": "lucide/message-square-code",
+    "shunk031-colab-uv-training": "lucide/cpu",
     "shunk031-github-cgd-identity": "lucide/id-card",
     "shunk031-github-comment-attach-files": "lucide/paperclip",
     "shunk031-herdr-orchestrate-workers": "lucide/network",
@@ -83,6 +84,7 @@ def reference_title(stem: str) -> str:
 # not build tag index pages yet, so these are labels rather than navigation.
 TAGS = {
     "shunk031-codex-worker-prompting": ["Codex", "Agents", "Herdr"],
+    "shunk031-colab-uv-training": ["Colab", "uv", "GPU", "Training", "Hugging Face"],
     "shunk031-github-cgd-identity": ["GitHub", "Git"],
     "shunk031-github-comment-attach-files": ["GitHub"],
     "shunk031-herdr-orchestrate-workers": ["Herdr", "Codex", "Agents", "Git"],

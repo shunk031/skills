@@ -135,6 +135,7 @@ function make_skill() {
 
 @test "[common] every allowed domain is accepted" {
     make_skill shunk031-codex-a
+    make_skill shunk031-colab-a
     make_skill shunk031-github-a
     make_skill shunk031-herdr-a
     make_skill shunk031-manage-a
