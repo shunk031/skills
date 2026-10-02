@@ -9,6 +9,7 @@ Each entry names the fact in `SKILL.md` it supports. Facts marked as observed co
 - [googlecolab/google-colab-cli#144](https://github.com/googlecolab/google-colab-cli/pull/144) and the maintainer comment in [googlecolab/google-colab-cli#160](https://github.com/googlecolab/google-colab-cli/issues/160): without background execution, the backend keeps a runtime by kernel activity and live connections, and the client keep-alive ping does not extend it.
 - [googlecolab/google-colab-cli#82](https://github.com/googlecolab/google-colab-cli/issues/82): a long `colab exec` timeout that is exceeded can spin a local CPU core indefinitely.
 - `colab_cli/client.py` in the installed package: `Client.list_assignments()` reads `/tun/m/assignments`, and `Client.unassign(endpoint)` posts to `/tun/m/unassign/<endpoint>`; `colab_cli.common.state.client` is the authenticated client the CLI itself uses.
+- With jupyter-kernel-client 0.8.0 installed, google-colab-cli 0.7.2 kernel commands fail with `AttributeError: module 'jupyter_kernel_client' has no attribute 'JupyterSubprotocol'`: observed.
 - `colab run` signal handling and websocket teardown: observed behavior of the CLI, reported with the task that produced this skill.
 
 ## Colab runtime

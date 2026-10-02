@@ -12,21 +12,21 @@ This skill is the operating procedure for running one long GPU job from a uv-wor
 
 Three facts drive every rule below. A Colab VM is billed until it is unassigned, so a leaked session costs compute units with nothing to show. A runtime lives for about 12 hours at most and can be reclaimed earlier, so a job must persist its state outside the VM and resume from it. And Colab's image is set up for its own system Python, so a uv project needs a few environment corrections before `uv sync` targets the right place.
 
-Requires google-colab-cli 0.7.4 or later (`colab version`). Versions up to 0.7.2 dropped sessions when the runtime token expired after about an hour while the VM stayed assigned, which produced orphaned, billed VMs.
+Requires google-colab-cli 0.7.4 or later (`colab version`; upgrade with `colab update` or your installer). Two defects rule out older versions. In 0.7.2, every kernel command (`colab exec`, `repl`, `run`) fails with `AttributeError: module 'jupyter_kernel_client' has no attribute 'JupyterSubprotocol'` once jupyter-kernel-client 0.8.0 is installed. And up to 0.7.2, the CLI dropped a session when its runtime token expired after about an hour while the VM stayed assigned, which produced orphaned, billed VMs.
 
 ## Lifecycle
 
 Follow these steps in order. Steps 9 and 10 are not optional: run them on success, on failure, and when you abandon the job.
 
 1. Check the account. `colab usage` must show a positive compute-unit balance that covers the planned run. Never buy compute units while a job is running: the purchase can replace the runtime and kill the job. If the balance is short, stop and ask the user.
-2. Sweep before you start. When the user's `colab-sweep` helper is installed, run `colab-sweep --dry-run` and report any session it would stop. It is a personal helper, not part of the CLI; when it is absent, use `colab sessions` and the orphan check below instead.
+2. Sweep before you start: run `scripts/colab-sweep --dry-run` from this skill, then `scripts/colab-sweep` to act on what it reported (see The sweeper).
 3. Create a named session: `colab new -s <name> --gpu <A100|L4|T4|H100|G4>`. Always pass `-s`; later commands, the sweep, and teardown all key on the name.
-4. Lease it immediately, when `colab-sweep` is installed: `colab-sweep lease <name> <duration>`, with a duration a little longer than the job's hard limit. The lease lets the sweep stop the session if this agent dies.
+4. Lease it immediately: `scripts/colab-sweep lease <name> <duration>`, with a duration a little longer than the job's hard limit. The lease lets a later sweep stop the session if this agent dies.
 5. Mount Google Drive (see Durable results). The first consent is a human browser step.
 6. Prepare the environment on the VM (see uv on Colab).
 7. Upload the job wrapper, `scripts/colab-job.sh` from this skill, and any secret file: `colab upload -s <name> <skill-dir>/scripts/colab-job.sh /content/colab-job.sh`.
 8. Launch the job as one busy kernel cell and poll it (see Keeping the runtime alive).
-9. Tear down: `colab stop -s <name>`, even when the wrapper already released the VM. Then run `colab-sweep --dry-run` when available.
+9. Tear down: `colab stop -s <name>`, even when the wrapper already released the VM. Then run `scripts/colab-sweep --dry-run` and `scripts/colab-sweep`.
 10. Verify with `colab sessions` that no session or `[?]` orphan remains, and report the result.
 
 Never use `colab run` for a multi-hour job. It does not handle SIGTERM or SIGHUP, so killing the local process leaks the VM; it tears the VM down on any websocket drop, which a multi-hour connection will eventually hit; and its default `--timeout` is 30 seconds.
@@ -89,20 +89,18 @@ Run these on the VM, through the busy-cell pattern or a short `colab exec` per s
 - `colab exec --env KEY=VALUE` writes the value in plain text to `~/.config/colab-cli/history/*.jsonl`. Do not pass secrets with it.
 - Write secrets to a local `KEY=VALUE` file with mode 0600, upload it with `colab upload`, and pass it as `--env-file`. The wrapper exports it to the job and deletes it from the VM before the job starts. Delete the local copy when the job no longer needs it, and never print its contents.
 
-## Orphan recovery
+## The sweeper
 
-An orphan is a VM still assigned on the server with no local session record; `colab sessions` shows it as `[?]`, and it bills like any other. Release it by endpoint with the Python environment the CLI is installed in (the interpreter in the shebang of `command -v colab`):
+`scripts/colab-sweep` stops leaked and expired Colab runtimes. Nothing schedules it: run it before and after every job, as the lifecycle says.
 
-```python
-from colab_cli.common import state
+- Owned sessions are the endpoints recorded in `~/.config/colab-cli/sessions.json` and in every `~/.config/colab-cli/states/*.json`. When you isolate a run with `colab --config <file>`, put that file in `~/.config/colab-cli/states/`, or the sweep treats your live session as an orphan.
+- An orphan is an assigned runtime that no state file records; `colab sessions` shows it as `[?]`, and it bills like any other. The sweep unassigns an orphan only after it has stayed an orphan for the grace period (`--grace`, default `30m`, or `COLAB_SWEEP_GRACE`), which protects a session that another `colab new` is still creating. First-seen times live in `$XDG_STATE_HOME/colab-sweep` (default `~/.local/state/colab-sweep`), with an action log beside them.
+- `colab-sweep lease <name> <duration>` gives a recorded session an expiry, such as `11h`; the first sweep after it runs `colab stop` on that session. Sessions without a lease are only reported.
+- `--dry-run` reports what a sweep would do and writes nothing.
+- A state file that does not parse aborts the sweep instead of reading as empty, so a corrupt file never turns owned sessions into orphans. Any API or state error makes it exit with status 1; report that rather than retrying blindly.
+- It needs the `colab_cli` package. When the current `python3` cannot import it, the script re-executes itself under the interpreter of a mise pipx install, `$(mise where pipx:google-colab-cli)/google-colab-cli/bin/python`. With any other install method, run it with the CLI's interpreter directly, the one in the shebang of `command -v colab`.
 
-for assignment in state.client.list_assignments():
-    print(assignment.endpoint, assignment.accelerator)
-# After confirming which endpoint is the orphan:
-state.client.unassign("<endpoint>")
-```
-
-`unassign` is `POST /tun/m/unassign/<endpoint>`. Confirm with `colab sessions` afterwards. Only release endpoints that are not another agent's live session: compare against the sessions you, the sweep, and the user know about, and ask when unsure.
+Because nothing runs the sweep on a timer, a runtime left behind by a crashed agent is caught in two ways: the job wrapper's hard `--ttl` ends the job and the wrapper unassigns the VM, and the next sweep, by any agent, stops an expired lease or unassigns the orphan.
 
 ## To verify
 
