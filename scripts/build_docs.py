@@ -84,7 +84,7 @@ def reference_title(stem: str) -> str:
 # not build tag index pages yet, so these are labels rather than navigation.
 TAGS = {
     "shunk031-codex-worker-prompting": ["Codex", "Agents", "Herdr"],
-    "shunk031-colab-uv-training": ["Colab", "uv", "GPU", "Training"],
+    "shunk031-colab-uv-training": ["Colab", "uv", "GPU", "Training", "Hugging Face"],
     "shunk031-github-cgd-identity": ["GitHub", "Git"],
     "shunk031-github-comment-attach-files": ["GitHub"],
     "shunk031-herdr-orchestrate-workers": ["Herdr", "Codex", "Agents", "Git"],

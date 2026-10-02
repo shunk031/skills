@@ -1,45 +1,63 @@
 #!/usr/bin/env bash
 
 # @file skills/colab/shunk031-colab-uv-training/scripts/colab-job.sh
-# @brief Run one long GPU job on a Colab VM, persist its results, then release the VM.
+# @brief Run one long GPU job on a Colab VM, sync its results to the Hugging Face Hub, then release the VM.
 # @description
 #   Upload this script to the Colab VM and run it from a busy kernel cell. It
-#   runs the command under a hard `timeout`, tees its output to a log, and on
-#   every exit, success or failure, copies the declared artifacts and the log to
-#   a persistent directory, writes the exit code beside them, and asks the
-#   runtime to unassign itself through `TBE_RUNTIME_ADDR`, the same call
-#   `google.colab.runtime.unassign()` makes.
+#   runs the command under a hard `timeout` and tees its output to
+#   `<work>/logs/job.log`. While the job runs, a background loop uploads the
+#   log directory and every `--sync-path` to a Hub repository each interval; a
+#   failed upload is logged and the job continues. On every exit, success or
+#   failure, it writes the exit code into the log directory, uploads everything
+#   once more, and asks the runtime to unassign itself through
+#   `TBE_RUNTIME_ADDR`, the same call `google.colab.runtime.unassign()` makes.
 #
-#   When any copy fails, the VM is kept rather than released: the local copies
-#   are the only ones left, and the agent's own `colab stop` still bounds cost.
-#   A persistent directory under `/content/drive` is refused unless Drive is
-#   mounted, because `mkdir -p` would otherwise create a local directory that
-#   vanishes with the VM.
-# @option --job NAME Job name; names the work and persistent directories (required).
+#   Paths land in the repository as `<prefix>/logs/<job>` and
+#   `<prefix>/<basename>`, so segments of one run can share a prefix.
+#   The token file is read and deleted before the job starts, and the token is
+#   passed only to the uploader. An upload that fails before the job starts
+#   aborts the run. When the final upload fails, the VM is kept rather than
+#   released: the local copies are the only ones left, and the agent's own
+#   `colab stop` still bounds cost.
+# @option --job NAME Job id; names the local work directory and the default prefix (required).
+# @option --hub-repo REPO Hub repository that receives the results, such as `<user>/colab-jobs` (required).
+# @option --hub-repo-type TYPE Hub repository type (default: `model`).
+# @option --hub-prefix PATH Folder in the repository for this job (default: the job id).
+# @option --hub-token-file PATH File holding a Hub token; read and deleted at startup.
+# @option --sync-path PATH File or directory uploaded each interval and at exit; repeatable.
+# @option --sync-interval DURATION Seconds between uploads, with an optional `s`, `m`, or `h` suffix (default: `15m`).
 # @option --ttl DURATION Hard limit passed to `timeout`, such as `11h` (default: `11h`).
-# @option --persist-dir DIR Where artifacts, log, and exit code are copied (default: `/content/drive/MyDrive/colab-jobs/<job>`).
-# @option --artifact PATH File or directory copied to the persistent directory on exit; repeatable.
 # @option --env-file PATH `KEY=VALUE` file exported to the command and deleted before it runs.
 # @option --no-release Keep the VM assigned after the job, for inspection.
 # @arg $@ The command to run, after `--`.
-# @exitcode 2 When the arguments are invalid or the persistent directory is unusable.
+# @exitcode 2 When the arguments are invalid or the first upload fails.
 # @exitcode * Otherwise the command's exit code; 124 when `timeout` stopped it.
 # @example
-#   bash /content/colab-job.sh --job fit-seg1 --ttl 10h --artifact /content/repo/lightning_logs \
-#       --env-file /content/job.env -- uv run --package my-model python train.py fit --ckpt_path last
+#   bash /content/colab-job.sh --job fit-seg1 --hub-repo <user>/colab-jobs --hub-prefix my-project/fit-seg1 \
+#       --hub-token-file /content/hf-token --sync-path /content/out/ckpt --sync-path /content/out/results \
+#       --ttl 10h -- uv run --no-sync python train.py fit --ckpt_path last
 
 set -Eeuo pipefail
 
-readonly USAGE='usage: colab-job.sh --job NAME [--ttl DURATION] [--persist-dir DIR] [--artifact PATH]... [--env-file PATH] [--no-release] -- COMMAND [ARGS...]'
+readonly USAGE='usage: colab-job.sh --job NAME --hub-repo REPO [--hub-repo-type TYPE] [--hub-prefix PATH] [--hub-token-file PATH] [--sync-path PATH]... [--sync-interval DURATION] [--ttl DURATION] [--env-file PATH] [--no-release] -- COMMAND [ARGS...]'
 
 job=''
+hub_repo=''
+hub_repo_type='model'
+hub_prefix=''
+hub_token_file=''
+hf_token=''
+sync_interval='15m'
+sync_seconds=0
 ttl='11h'
-persist_dir=''
 env_file=''
 release=1
-artifacts=()
+sync_paths=()
+hf_cmd=()
 work_dir=''
-log_file=''
+log_dir=''
+stop_file=''
+sync_pid=''
 
 # @description Print a prefixed message to stderr.
 # @arg $1 message The message.
@@ -53,37 +71,78 @@ function usage_error() {
     exit 2
 }
 
+# @description Upload one local file or directory to the Hub repository.
+# @arg $1 path The local path.
+# @arg $2 path_in_repo The destination inside the repository.
+function hub_upload() {
+    local token_env=()
+    if [ -n "${hf_token}" ]; then
+        token_env=("HF_TOKEN=${hf_token}")
+    fi
+
+    # Colab's PYTHONPATH and UV_SYSTEM_PYTHON would leak into the uploader's interpreter.
+    env -u PYTHONPATH -u UV_SYSTEM_PYTHON ${token_env[@]+"${token_env[@]}"} \
+        "${hf_cmd[@]}" upload "${hub_repo}" "$1" "$2" --repo-type "${hub_repo_type}" --private --quiet > /dev/null
+}
+
+# @description Upload the log directory and every existing sync path.
+# @exitcode 1 When any upload failed.
+function upload_all() {
+    local failed=0
+    local path
+
+    hub_upload "${log_dir}" "${hub_prefix}/logs/${job}" || failed=1
+    for path in ${sync_paths[@]+"${sync_paths[@]}"}; do
+        [ -e "${path}" ] || continue
+        hub_upload "${path}" "${hub_prefix}/$(basename -- "${path}")" || failed=1
+    done
+
+    return "${failed}"
+}
+
+# @description Upload every interval until the stop file appears.
+# @description
+#   Sleeping one second at a time lets the wrapper stop the loop between
+#   uploads instead of killing it in the middle of a commit.
+function sync_loop() {
+    local waited=0
+    while [ ! -e "${stop_file}" ]; do
+        sleep 1
+        waited=$((waited + 1))
+        [ "${waited}" -ge "${sync_seconds}" ] || continue
+
+        waited=0
+        upload_all || say "warning: periodic upload to ${hub_repo} failed; the job continues"
+    done
+}
+
 # shellcheck disable=SC2329 # Invoked by the EXIT trap.
-# @description Copy artifacts, log, and exit code to the persistent directory, then release the VM.
+# @description Stop the sync loop, upload the results a final time, then release the VM.
 # @description
 #   Runs as the EXIT trap, so it sees the job's exit status in `$?` and exits
 #   with that same status.
 function finish() {
     local status=$?
-    local persisted=1
-    local artifact
+    local uploaded=1
 
     trap - EXIT
-    printf '%s\n' "${status}" > "${work_dir}/exit_code"
+    : > "${stop_file}"
+    if [ -n "${sync_pid}" ]; then
+        wait "${sync_pid}" || true
+    fi
 
-    # `${artifacts[@]+...}` keeps Bash 3.2's `set -u` from rejecting an empty array.
-    for artifact in ${artifacts[@]+"${artifacts[@]}"} "${log_file}" "${work_dir}/exit_code"; do
-        if [ ! -e "${artifact}" ]; then
-            say "artifact ${artifact} does not exist; skipped"
-            continue
-        fi
-
-        if ! cp -R "${artifact}" "${persist_dir}/"; then
-            say "failed to copy ${artifact} to ${persist_dir}"
-            persisted=0
-        fi
-    done
-
-    say "${job} finished with exit code ${status}; persisted to ${persist_dir}"
+    printf '%s\n' "${status}" > "${log_dir}/exit_code"
+    say "${job} finished with exit code ${status}"
+    if upload_all; then
+        say "results uploaded to ${hub_repo}/${hub_prefix}"
+    else
+        say "final upload to ${hub_repo} failed"
+        uploaded=0
+    fi
 
     if [ "${release}" -eq 0 ]; then
         say 'self-release disabled; the VM stays assigned until colab stop'
-    elif [ "${persisted}" -eq 0 ]; then
+    elif [ "${uploaded}" -eq 0 ]; then
         say "not releasing the VM: results exist only under ${work_dir}"
     elif [ -z "${TBE_RUNTIME_ADDR:-}" ]; then
         say 'warning: TBE_RUNTIME_ADDR is unset; release the VM with colab stop'
@@ -98,13 +157,17 @@ function finish() {
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-    --job | --ttl | --persist-dir | --artifact | --env-file)
+    --job | --hub-repo | --hub-repo-type | --hub-prefix | --hub-token-file | --sync-path | --sync-interval | --ttl | --env-file)
         [ "$#" -ge 2 ] || usage_error
         case "$1" in
         --job) job="$2" ;;
+        --hub-repo) hub_repo="$2" ;;
+        --hub-repo-type) hub_repo_type="$2" ;;
+        --hub-prefix) hub_prefix="$2" ;;
+        --hub-token-file) hub_token_file="$2" ;;
+        --sync-path) sync_paths+=("$2") ;;
+        --sync-interval) sync_interval="$2" ;;
         --ttl) ttl="$2" ;;
-        --persist-dir) persist_dir="$2" ;;
-        --artifact) artifacts+=("$2") ;;
         --env-file) env_file="$2" ;;
         esac
         shift 2
@@ -125,36 +188,51 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-[ -n "${job}" ] && [ "$#" -gt 0 ] || usage_error
+[ -n "${job}" ] && [ -n "${hub_repo}" ] && [ "$#" -gt 0 ] || usage_error
 case "${job}" in
 */* | .*) usage_error ;;
 esac
 
-persist_dir="${persist_dir:-/content/drive/MyDrive/colab-jobs/${job}}"
-case "${persist_dir}" in
-/content/drive/*)
-    if [ ! -d /content/drive/MyDrive ]; then
-        say "Google Drive is not mounted; run colab drivemount first or pass --persist-dir"
-        exit 2
-    fi
-    ;;
+[[ "${sync_interval}" =~ ^[1-9][0-9]*[smh]?$ ]] || usage_error
+case "${sync_interval}" in
+*h) sync_seconds=$((${sync_interval%h} * 3600)) ;;
+*m) sync_seconds=$((${sync_interval%m} * 60)) ;;
+*) sync_seconds="${sync_interval%s}" ;;
 esac
 
-if ! mkdir -p "${persist_dir}"; then
-    say "cannot create ${persist_dir}"
-    exit 2
+hub_prefix="${hub_prefix:-${job}}"
+if command -v hf > /dev/null 2>&1; then
+    hf_cmd=(hf)
+else
+    hf_cmd=(uvx --from huggingface_hub hf)
+fi
+
+if [ -n "${hub_token_file}" ]; then
+    if ! hf_token="$(cat -- "${hub_token_file}")"; then
+        say "cannot read ${hub_token_file}"
+        exit 2
+    fi
+    rm -f -- "${hub_token_file}"
 fi
 
 work_dir="${COLAB_JOB_WORK_ROOT:-/content/colab-jobs}/${job}"
-mkdir -p "${work_dir}"
-log_file="${work_dir}/job.log"
+log_dir="${work_dir}/logs"
+stop_file="${work_dir}/.sync-stop"
+mkdir -p "${log_dir}"
+rm -f -- "${stop_file}"
 
 if [ -n "${env_file}" ]; then
     set -a
     # shellcheck source=/dev/null
     . "${env_file}"
     set +a
-    rm -f "${env_file}"
+    rm -f -- "${env_file}"
+fi
+
+printf 'colab-job: starting %s (limit %s)\n' "${job}" "${ttl}" >> "${log_dir}/job.log"
+if ! upload_all; then
+    say "cannot upload to ${hub_repo}; check the repository and token before running the job"
+    exit 2
 fi
 
 trap finish EXIT
@@ -162,9 +240,12 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-say "starting ${job} (limit ${ttl}); log at ${log_file}"
+sync_loop &
+sync_pid=$!
+
+say "starting ${job} (limit ${ttl}); log at ${log_dir}/job.log, syncing every ${sync_interval}"
 set +e
-timeout --kill-after=120 "${ttl}" "$@" 2>&1 | tee -a "${log_file}"
+timeout --kill-after=120 "${ttl}" "$@" 2>&1 | tee -a "${log_dir}/job.log"
 job_status="${PIPESTATUS[0]}"
 set -e
 
