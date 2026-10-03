@@ -8,6 +8,8 @@ Use the repository's checkpoint writer and resume command. Store checkpoints in 
 
 For a Hub-backed Lightning run, download the selected checkpoint before starting the next segment. Run this as an uploaded shell script so the token stays out of IPython command expansion and CLI history. Use the CLI's interpreter or `uvx --from huggingface_hub hf` if `hf` is unavailable.
 
+If a previous wrapper has already run, follow [Hub operations after the wrapper](running-jobs.md#hub-operations-after-the-wrapper) to upload and preflight a fresh restricted token file before this download.
+
 ```bash
 set -euo pipefail
 HF_TOKEN="$(cat /content/hf-token)" hf download <user>/colab-jobs --include '<project>/<run-id>/ckpt/last.ckpt' --local-dir /content/hub
@@ -16,7 +18,7 @@ cp /content/hub/<project>/<run-id>/ckpt/last.ckpt /content/out/ckpt/last.ckpt
 test -s /content/out/ckpt/last.ckpt
 ```
 
-Then pass the explicit path, for example `fit --ckpt_path /content/out/ckpt/last.ckpt`. Confirm from the training log that the checkpoint loaded. Lightning's `ckpt_path="last"` can start fresh when no checkpoint exists, so do not use that fallback to satisfy a request to resume. If download or validation fails, resolve it before allocating more training time. Keep the token file restricted until the wrapper consumes and deletes it.
+Then pass the explicit path, for example `fit --ckpt_path /content/out/ckpt/last.ckpt`. Confirm from the training log that the checkpoint loaded. Lightning's `ckpt_path="last"` can start fresh when no checkpoint exists, so do not use that fallback to satisfy a request to resume. If download or validation fails, resolve it before allocating more training time. Delete the token file after the download; upload a separate restricted token file when starting the next wrapper run.
 
 Use a new job name for each segment and the same run prefix when continuing the same run. Download the results the user requested locally; leave large checkpoints at the approved destination unless local copies are part of the request.
 
@@ -28,7 +30,7 @@ Stop a stuck local client by its recorded PID before opening another client. Rel
 
 ## Failed upload or release
 
-When the wrapper retains the VM after a final upload failure, recover all required sync paths and logs by repairing the upload or downloading them. Verify that recovery succeeded before `colab stop`. The wrapper deletes its token file at startup, so an upload retry may need a new restricted token file from the authorized secret store.
+When the wrapper retains the VM after a final upload failure, recover all required sync paths and logs by repairing the upload or downloading them. Verify that recovery succeeded before `colab stop`. The wrapper deletes its token file at startup, so use [Hub operations after the wrapper](running-jobs.md#hub-operations-after-the-wrapper) to upload and preflight a fresh restricted token file for any retry.
 
 If storage remains unavailable, report the endpoint, remaining results, and ongoing allocation. Do not let a scheduled or manually invoked sweep erase the only copy. A hard cost cap may conflict with retention; use the user's existing loss-versus-cost decision or ask for that decision rather than silently choosing.
 
