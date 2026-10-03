@@ -8,6 +8,14 @@ Use an approved private Hub repository and a unique prefix such as `<project>/<r
 
 Use a fine-grained token scoped to that repository. Write it to a local file with mode 0600, upload it to `/content/hf-token`, restrict the remote file to mode 0600, and remove the temporary local copy. The wrapper reads and deletes the remote copy before the job starts and passes that token only to the uploader. Do not separately export the Hub token into the job's environment.
 
+## Hub operations after the wrapper
+
+The wrapper reads and deletes its remote token file before the job starts. Any later Hugging Face Hub API operation, including listing or downloading artifacts and retrying an upload, needs a fresh restricted copy of the fine-grained token from the authorized secret source.
+
+Write the token to a temporary local file with mode `0600`, then upload it to `/content/hf-token` with `colab upload -s <name> <local-token-file> /content/hf-token`. Restrict the VM copy to mode `0600` and remove the local file after the upload succeeds; if the upload fails, remove it before retrying. Before the Hub operation, run `colab ls -s <name> /content` and verify that `hf-token` is present; `colab ls` uses the contents API. If it is absent, upload a fresh copy rather than assuming the wrapper's token remains.
+
+Run the operation with the token read from `/content/hf-token`; do not pass token values in command text or `colab exec --env`. When the operation finishes, whether it succeeds or fails, remove `/content/hf-token` and confirm the temporary local file is also gone.
+
 For secrets the job itself needs, upload a restricted `--env-file`. The wrapper sources it as shell code, exports its variables, and deletes it before launching the command. Generate this file from trusted, shell-quoted assignments. Never use `colab exec --env` for credentials: the CLI records its values in local history. Colab notebook Secrets are not available through the CLI workflow observed here.
 
 The wrapper expects `hf` on PATH or falls back to `uvx --from huggingface_hub hf`. Before spending GPU time, verify that the intended repository is private and writable. The wrapper passes `--private` to uploads; that flag does not replace checking an existing repository's visibility.

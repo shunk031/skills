@@ -1,6 +1,6 @@
 # Sources
 
-Use these sources to check the operational references when a version-sensitive behavior matters. Facts marked as observed were reported from Colab runs on 2026-10-02; they have no published trace here and were not repeated during the instruction review. They do not establish a failure rate, lifetime, or teardown guarantee for a new runtime.
+Use these sources to check the operational references when a version-sensitive behavior matters. Facts marked as observed were reported from Colab runs on the dates shown; they have no published trace here and were not repeated during the instruction review. They do not establish a failure rate, lifetime, or teardown guarantee for a new runtime.
 
 ## colab CLI
 
@@ -11,6 +11,7 @@ Use these sources to check the operational references when a version-sensitive b
 - [colab_cli/client.py](https://github.com/googlecolab/google-colab-cli/blob/main/src/colab_cli/client.py): `Client.list_assignments()` and `Client.unassign(endpoint)` access assignments for the account. Local CLI records do not prove ownership of every account assignment; the sweeper compares them with those assignments.
 - With jupyter-kernel-client 0.8.0 installed, google-colab-cli 0.7.2 kernel commands fail with `AttributeError: module 'jupyter_kernel_client' has no attribute 'JupyterSubprotocol'`: observed.
 - A live smoke test of `scripts/colab-job.sh` on a CPU runtime with colab CLI 0.7.4 and a fine-grained token for one Hub repository: the first upload, a 20-second sync loop, the final upload, and self-release worked, `list_assignments()` was empty about 20 seconds after release, and the wrapper's output from a `!` line sent with `colab exec -f` reached the local client. Afterwards the local session record and the sweeper lease remained until `colab sessions` printed `Pruned 1 stale local session(s).`: observed.
+- On 2026-10-03 with Colab CLI 0.7.4, a separate post-wrapper `colab exec` call to list Hub artifacts failed because `/content/hf-token` had been consumed before the job started. The listing succeeded after uploading a fresh restricted token file from a temporary local file, deleting the local copy, and removing the VM copy afterward: observed.
 - `colab exec` calls failed with read timeouts or hung before reaching the kernel during an A100 run: observed. No sample size or repeatable failure-rate measurement is available here.
 - `colab run` signal handling and websocket teardown: observed behavior of the CLI, reported with the task that produced this skill.
 
