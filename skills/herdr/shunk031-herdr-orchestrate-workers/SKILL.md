@@ -47,7 +47,7 @@ An orchestrator delegates independent tasks to worker agents, one git worktree t
 
 ## Work as a worker
 
-6. Keep your own tab label according to the `shunk031-herdr-tab-status` skill with `herdr tab rename "$HERDR_TAB_ID" <label>`; do not duplicate its status syntax here.
+6. Keep your own tab label according to the `shunk031-herdr-tab-status` skill; it owns live tab lookup, rename commands, and response verification. Do not duplicate its status syntax here.
 
 7. Commit in your worktree; push the branch and open a pull request only if your dispatch says so. Every report begins with its status prefix and the sender's own assigned worker name: `DONE <worker-name>: <one-line summary> <PR URL if any>`, `BLOCKED <worker-name>: <question>`, or `STATUS <worker-name>: <state>`. Use the exact worker name stated in the dispatch template, never the addressee's name. `herdr agent prompt` injects plain text without sender metadata, so the sender name is required for mechanical attribution; the addressee is already implied by the target of `herdr agent prompt`. Build the report in a variable and send it with `herdr agent prompt <orch-name> "$report"`. If you cannot proceed, send the `BLOCKED` form the same way and wait for a reply. Keep an open PR in the user-action handoff status defined by `shunk031-herdr-tab-status` until no user or CI action remains; only then use its completion status.
 
