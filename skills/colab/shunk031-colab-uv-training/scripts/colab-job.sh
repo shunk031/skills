@@ -4,7 +4,8 @@
 # @brief Run one long GPU job on a Colab VM, sync its results to the Hugging Face Hub, then release the VM.
 # @description
 #   Upload this script to the Colab VM and run it from a busy kernel cell. It
-#   runs the command under a hard `timeout` and tees its output to
+#   clears Colab's Python overrides before running the command under a hard
+#   `timeout`, and tees its output to
 #   `<work>/logs/job.log`. While the job runs, a background loop uploads the
 #   log directory and every `--sync-path` to a Hub repository each interval; a
 #   failed upload is logged and the job continues. On every exit, success or
@@ -35,7 +36,7 @@
 # @example
 #   bash /content/colab-job.sh --job fit-seg1 --hub-repo <user>/colab-jobs --hub-prefix my-project/fit-seg1 \
 #       --hub-token-file /content/hf-token --sync-path /content/out/ckpt --sync-path /content/out/results \
-#       --ttl 10h -- uv run --no-sync python train.py fit --ckpt_path last
+#       --ttl 10h -- bash -c 'unset UV_SYSTEM_PYTHON PYTHONPATH MPLBACKEND && uv run --no-sync python train.py fit --ckpt_path last'
 
 set -Eeuo pipefail
 
@@ -245,7 +246,10 @@ sync_pid=$!
 
 say "starting ${job} (limit ${ttl}); log at ${log_dir}/job.log, syncing every ${sync_interval}"
 set +e
-timeout --kill-after=120 "${ttl}" "$@" 2>&1 | tee -a "${log_dir}/job.log"
+(
+    unset UV_SYSTEM_PYTHON PYTHONPATH MPLBACKEND
+    timeout --kill-after=120 "${ttl}" "$@"
+) 2>&1 | tee -a "${log_dir}/job.log"
 job_status="${PIPESTATUS[0]}"
 set -e
 

@@ -127,6 +127,17 @@ EOF
     [[ "${output}" != *secret-value* ]]
 }
 
+@test "[common] Colab Python overrides are cleared before the job command" {
+    export UV_SYSTEM_PYTHON=true
+    export PYTHONPATH=/env/python
+    export MPLBACKEND=module://matplotlib_inline.backend_inline
+
+    run "${JOB_SCRIPT}" --job fit --hub-repo user/colab-jobs -- \
+        sh -c 'test -z "${UV_SYSTEM_PYTHON:-}" && test -z "${PYTHONPATH:-}" && test -z "${MPLBACKEND:-}" && echo clean'
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *clean* ]]
+}
+
 @test "[common] invalid arguments are usage errors" {
     run "${JOB_SCRIPT}" --job fit --hub-repo user/colab-jobs
     [ "${status}" -eq 2 ]
