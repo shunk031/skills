@@ -28,7 +28,7 @@ Upload `scripts/colab-job.sh` from this skill to `/content/colab-job.sh`. This e
 
 ```bash
 cat > /abs/path/launch.py << 'EOF_PY'
-!bash /content/colab-job.sh --job fit-seg1 --hub-repo <user>/colab-jobs --hub-prefix <project>/<run-id> --hub-token-file /content/hf-token --sync-path /content/out/ckpt --sync-path /content/out/results --ttl 10h -- bash -c 'cd /content/repo && unset UV_SYSTEM_PYTHON PYTHONPATH MPLBACKEND && CUDA_VISIBLE_DEVICES=0 uv run --no-sync --package <member> python -m <module> fit --config <config>'
+!bash /content/colab-job.sh --job fit-seg1 --hub-repo <user>/colab-jobs --hub-prefix <project>/<run-id> --hub-token-file /content/hf-token --sync-path /content/out/ckpt --sync-path /content/out/results --ttl 10h -- bash -c 'cd /content/repo && CUDA_VISIBLE_DEVICES=0 uv run --no-sync --package <member> python -m <module> fit --config <config>'
 EOF_PY
 timeout 38400 colab exec -s <name> --timeout 37800 -f /abs/path/launch.py > fit-seg1.out 2>&1
 ```

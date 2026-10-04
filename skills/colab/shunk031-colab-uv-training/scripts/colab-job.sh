@@ -37,7 +37,7 @@
 # @example
 #   bash /content/colab-job.sh --job fit-seg1 --hub-repo <user>/colab-jobs --hub-prefix my-project/fit-seg1 \
 #       --hub-token-file /content/hf-token --sync-path /content/out/ckpt --sync-path /content/out/results \
-#       --ttl 10h -- bash -c 'unset UV_SYSTEM_PYTHON PYTHONPATH MPLBACKEND && uv run --no-sync python train.py fit --ckpt_path last'
+#       --ttl 10h -- uv run --no-sync python train.py fit --ckpt_path last
 
 set -Eeuo pipefail
 

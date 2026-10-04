@@ -22,7 +22,7 @@ Use these sources to check the operational references when a version-sensitive b
 - `TBE_RUNTIME_ADDR` is set in a kernel started through colab CLI 0.7.4 (`172.28.0.1:8011` on a CPU runtime): observed.
 - `colab drivemount` on a fresh session printed a new OAuth consent URL (redirecting to `/tun/m/authorize-for-drive-credentials-ephem`) and waited for Enter; without a human it did not mount: observed.
 - Colab presets `UV_SYSTEM_PYTHON=true`, `UV_INSTALL_DIR=/usr/local/bin`, `PYTHONPATH=/env/python`, and empty `UV_CONSTRAINT` and `UV_BUILD_CONSTRAINT`; `uv run pytest` fell back to the system pytest when the project environment lacked it: observed.
-- With Colab CLI 0.7.4, a project uv environment lacking `matplotlib_inline` inherited `MPLBACKEND=module://matplotlib_inline.backend_inline` and raised `ValueError` during a matplotlib import through Lightning: observed in both runs.
+- With Colab CLI 0.7.4, a project uv environment lacking `matplotlib_inline` inherited `MPLBACKEND=module://matplotlib_inline.backend_inline` and raised `ValueError` during a matplotlib import through Lightning on 2026-10-02 (CPU) and 2026-10-04 (A100): observed.
 - On 2026-10-02 (CPU), setting `MPLBACKEND=Agg` was followed by a regenerated run that completed: observed.
 - On 2026-10-04 (A100), unsetting `MPLBACKEND` was followed by a run that passed package import, the training loop, and the original validation/evaluate smoke: observed.
 - The A100 runtime was an A100-SXM4-40GB with driver 580.82.07 and CUDA 13.0 on Ubuntu 24.04, with 12 vCPUs, 83 GB of RAM, and about 194 GB free under `/content`; the first `uv sync` with torch took about 40 seconds: observed.
