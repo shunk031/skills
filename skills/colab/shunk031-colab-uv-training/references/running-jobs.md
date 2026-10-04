@@ -16,7 +16,7 @@ Write the token to a temporary local file with mode `0600`, then upload it to `/
 
 Run the operation with the token read from `/content/hf-token`; do not pass token values in command text or `colab exec --env`. When the operation finishes, whether it succeeds or fails, remove `/content/hf-token` and confirm the temporary local file is also gone.
 
-For secrets the job itself needs, upload a restricted `--env-file`. The wrapper sources it as shell code, exports its variables, and deletes it before launching the command. Generate this file from trusted, shell-quoted assignments. Never use `colab exec --env` for credentials: the CLI records its values in local history. Colab notebook Secrets are not available through the CLI workflow observed here.
+For secrets the job itself needs, upload a restricted `--env-file`. The wrapper clears Colab's inherited Python overrides before sourcing it as shell code, then exports its variables and deletes it before launching the command, so the file can deliberately override those settings. Generate this file from trusted, shell-quoted assignments. Never use `colab exec --env` for credentials: the CLI records its values in local history. Colab notebook Secrets are not available through the CLI workflow observed here.
 
 The wrapper expects `hf` on PATH or falls back to `uvx --from huggingface_hub hf`. Before spending GPU time, verify that the intended repository is private and writable. The wrapper passes `--private` to uploads; that flag does not replace checking an existing repository's visibility.
 

@@ -116,12 +116,15 @@ EOF
     [ "$(grep -c 'token=hf_secret$' "${HF_LOG}")" -eq "$(wc -l < "${HF_LOG}")" ]
 }
 
-@test "[common] the env file reaches the command and is deleted before it runs" {
+@test "[common] env-file overrides reach the command after clearing Colab values" {
     local env_file="${BATS_TEST_TMPDIR}/job.env"
-    printf 'WANDB_API_KEY=secret-value\n' > "${env_file}"
+    printf 'WANDB_API_KEY=secret-value\nPYTHONPATH=/content/repo/src\nMPLBACKEND=Agg\n' > "${env_file}"
+    export UV_SYSTEM_PYTHON=true
+    export PYTHONPATH=/env/python
+    export MPLBACKEND=module://matplotlib_inline.backend_inline
 
     run "${JOB_SCRIPT}" --job fit --hub-repo user/colab-jobs --env-file "${env_file}" -- \
-        sh -c "test -n \"\${WANDB_API_KEY}\" && test ! -e '${env_file}' && echo env-ok"
+        sh -c "test -n \"\${WANDB_API_KEY}\" && test -z \"\${UV_SYSTEM_PYTHON:-}\" && test \"\${PYTHONPATH:-}\" = /content/repo/src && test \"\${MPLBACKEND:-}\" = Agg && test ! -e '${env_file}' && echo env-ok"
     [ "${status}" -eq 0 ]
     [[ "${output}" == *env-ok* ]]
     [[ "${output}" != *secret-value* ]]
