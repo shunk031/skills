@@ -18,7 +18,7 @@ cp /content/hub/<project>/<run-id>/ckpt/last.ckpt /content/out/ckpt/last.ckpt
 test -s /content/out/ckpt/last.ckpt
 ```
 
-Then pass the explicit path, for example `fit --ckpt_path /content/out/ckpt/last.ckpt`. Confirm from the training log that the checkpoint loaded. Lightning's `ckpt_path="last"` can start fresh when no checkpoint exists, so do not use that fallback to satisfy a request to resume. If download or validation fails, resolve it before allocating more training time. Delete the token file after the download; upload a separate restricted token file when starting the next wrapper run.
+Then pass the explicit path in the next segment's wrapper command, for example `fit --ckpt_path /content/out/ckpt/last.ckpt`. If running the project command outside the wrapper, clear the Colab overrides first as described in [environment.md](environment.md). Confirm from the training log that the checkpoint loaded. Lightning's `ckpt_path="last"` can start fresh when no checkpoint exists, so do not use that fallback to satisfy a request to resume. If download or validation fails, resolve it before allocating more training time. Delete the token file after the download; upload a separate restricted token file when starting the next wrapper run.
 
 Use a new job name for each segment and the same run prefix when continuing the same run. Download the results the user requested locally; leave large checkpoints at the approved destination unless local copies are part of the request.
 

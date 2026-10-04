@@ -4,7 +4,9 @@
 # @brief Run one long GPU job on a Colab VM, sync its results to the Hugging Face Hub, then release the VM.
 # @description
 #   Upload this script to the Colab VM and run it from a busy kernel cell. It
-#   runs the command under a hard `timeout` and tees its output to
+#   clears Colab's inherited Python overrides before loading the optional
+#   `--env-file`, allowing its explicit values to reach the command. It runs
+#   the command under a hard `timeout` and tees its output to
 #   `<work>/logs/job.log`. While the job runs, a background loop uploads the
 #   log directory and every `--sync-path` to a Hub repository each interval; a
 #   failed upload is logged and the job continues. On every exit, success or
@@ -221,6 +223,7 @@ stop_file="${work_dir}/.sync-stop"
 mkdir -p "${log_dir}"
 rm -f -- "${stop_file}"
 
+unset UV_SYSTEM_PYTHON PYTHONPATH MPLBACKEND
 if [ -n "${env_file}" ]; then
     set -a
     # shellcheck source=/dev/null
