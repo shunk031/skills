@@ -189,7 +189,7 @@ function teardown() {
     [ "${job_upload_line}" -lt "${exec_line}" ]
     [[ "$(cat "${COLAB_DRIVER_CAPTURE}")" == *'/content/colab-job.sh'* ]]
     [[ "$(cat "${COLAB_DRIVER_CAPTURE}")" == *'--hub-input'* ]]
-    [ -n "$(rg --files "${XDG_STATE_HOME}/colab-gpu-run" | rg '/ready$')" ]
+    [ -n "$(find "${XDG_STATE_HOME}/colab-gpu-run" -type f -name ready -print)" ]
 }
 
 @test "handoff keeps a post-assignment session watched when local state writing fails" {
@@ -204,8 +204,8 @@ function teardown() {
     [ "$(grep -c ' new --session ' "${COLAB_LOG}")" -eq 1 ]
     [ "$(grep -c ' upload -s ' "${COLAB_LOG}")" -eq 0 ]
     [ "$(grep -c ' exec -s ' "${COLAB_LOG}")" -eq 0 ]
-    [ -n "$(rg --files "${XDG_STATE_HOME}/colab-gpu-run" | rg '/ready$')" ]
-    [ -n "$(rg --files "${XDG_STATE_HOME}/colab-gpu-run" | rg '/recovery\.json$')" ]
+    [ -n "$(find "${XDG_STATE_HOME}/colab-gpu-run" -type f -name ready -print)" ]
+    [ -n "$(find "${XDG_STATE_HOME}/colab-gpu-run" -type f -name recovery.json -print)" ]
 }
 
 @test "if the watchdog dies after allocation the launcher stops only its verified session" {
