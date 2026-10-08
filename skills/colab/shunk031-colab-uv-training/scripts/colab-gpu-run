@@ -345,6 +345,7 @@ version_output="$(colab version 2> /dev/null)" || usage_error 'colab version che
 [ "${version_output}" = 'Version: 0.7.4' ] || usage_error "colab CLI 0.7.4 is required; found ${version_output}"
 
 temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/colab-gpu-run.XXXXXX")" || usage_error 'cannot create a temporary directory'
+# shellcheck disable=SC2329 # Invoked by the EXIT trap.
 function cleanup() {
     rm -rf "${temp_dir}"
 }
@@ -399,6 +400,8 @@ watchdog_log="${state_dir}/watchdog.log"
 watchdog_started="${state_dir}/started"
 watchdog_ready="${state_dir}/ready"
 watchdog_pid_file="${state_dir}/watchdog.pid"
+launcher_pid_file="${state_dir}/launcher.pid"
+client_pid_file="${state_dir}/client.pid"
 handoff_file="${state_dir}/handoff.json"
 recovery_config="${state_dir}/recovery.json"
 sitecustomize_dir="${temp_dir}/python"
@@ -406,11 +409,14 @@ umask 077
 mkdir -p "${state_dir}" "${sitecustomize_dir}"
 : > "${handoff_file}"
 chmod 600 "${handoff_file}"
+printf '%s\n' "$$" > "${launcher_pid_file}"
 cp "${SITE_CUSTOMIZE}" "${sitecustomize_dir}/sitecustomize.py"
 
 nohup python3 "${WATCHDOG}" \
     --session "${session}" \
     --config "${colab_config}" \
+    --launcher-pid-file "${launcher_pid_file}" \
+    --client-pid-file "${client_pid_file}" \
     --handoff-file "${handoff_file}" \
     --recovery-config "${recovery_config}" \
     --idle-timeout "${idle_timeout}" \
@@ -469,4 +475,17 @@ if [ -n "${token_file_abs}" ]; then
     colab "${colab_args[@]}" upload -s "${session}" "${temp_dir}/hf-token" /content/hf-token
     colab "${colab_args[@]}" upload -s "${session}" "${temp_dir}/hf-token" /content/hf-job-token
 fi
-colab "${colab_args[@]}" exec -s "${session}" --timeout "${wall_timeout}" -f "${driver_file}"
+printf '%s\n' "$$" > "${client_pid_file}.tmp"
+mv "${client_pid_file}.tmp" "${client_pid_file}"
+colab "${colab_args[@]}" exec -s "${session}" --timeout "${wall_timeout}" -f "${driver_file}" &
+client_pid=$!
+printf '%s\n' "${client_pid}" > "${client_pid_file}.tmp"
+mv "${client_pid_file}.tmp" "${client_pid_file}"
+exec_status=0
+if wait "${client_pid}"; then
+    exec_status=0
+else
+    exec_status=$?
+fi
+rm -f "${client_pid_file}"
+exit "${exec_status}"

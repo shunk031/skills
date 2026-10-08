@@ -12,7 +12,7 @@ Complete the requested GPU job, preserve its results outside the runtime, and re
 
 Use the repository's existing training command, checkpoint format, and approved artifact destination. The bundled wrapper supports Hugging Face Hub storage. Reuse a repository-specific job command or storage integration inside the launched job when it already provides the needed persistence and teardown.
 
-Start GPU work only with `scripts/colab-gpu-run`. Stage job data in approved durable storage before allocation and declare every downloaded input as `--hub-input NAME=URI`; the launcher checks the Bash job script and local control files, starts a detached watchdog before allocation, uploads only the script and optional restricted token, and starts the bundled wrapper. The watchdog applies to GPU sessions; CPU-only CLI flows remain direct because this guard targets idle GPU allocation.
+Start GPU work only with `scripts/colab-gpu-run`. Stage job data in approved durable storage before allocation and declare every downloaded input as `--hub-input NAME=URI`; the launcher checks the Bash job script and local control files, starts a detached watchdog before allocation, uploads only the script and optional restricted token, and starts the bundled wrapper. Run the launcher as a managed background process with logged output so a tool timeout cannot kill `colab exec`; monitor its log or durable Hub output. The watchdog applies to GPU sessions; CPU-only CLI flows remain direct because this guard targets idle GPU allocation.
 
 ## Before allocating a runtime
 
@@ -31,7 +31,7 @@ Check `colab usage` against the run budget. The launcher requires Colab CLI 0.7.
 
 - `/content` is ephemeral. Save checkpoints and logs off the VM during execution, and leave time for a final upload before the runtime or job limit. Runtime lifetime depends on plan, balance, and availability.
 - A client timeout does not prove the cell stopped. Check task logs and runtime state before relaunching; do not submit duplicate work to a busy kernel.
-- The watchdog treats Colab CLI `IDLE` as idle. It may stop a disconnected cell after the idle limit, so sync checkpoints and results to durable storage during the job.
+- The watchdog treats a live launcher-owned `colab exec` client process as busy; Colab CLI `IDLE`/`BUSY` output is only used to verify the named endpoint because CLI 0.7.4 status synchronizes and rewrites a local snapshot. If the client exits, the idle timer starts even if status still says `BUSY`.
 - Keep secrets out of `colab exec --env`, command text, and logs. Use uploaded, restricted files as described in the launch reference.
 - Recover the only copy of results before releasing a VM retained after an upload failure. A wrapper exit code alone proves neither durable storage nor successful unassignment.
 

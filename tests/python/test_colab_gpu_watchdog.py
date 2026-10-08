@@ -36,6 +36,10 @@ class ColabGpuWatchdogTest(unittest.TestCase):
         self.ready = self.root / "ready"
         self.handoff = self.root / "handoff.json"
         self.recovery = self.root / "recovery.json"
+        self.launcher_pid_file = self.root / "launcher.pid"
+        self.launcher_pid_file.write_text(str(os.getpid()), encoding="utf-8")
+        self.client_pid_file = self.root / "client.pid"
+        self.client_process = None
         self.stub = self.bin / "colab"
         self.stub.write_text(
             """#!/usr/bin/env python3
@@ -86,7 +90,16 @@ else:
         self.env["COLAB_LOG"] = str(self.colab_log)
 
     def tearDown(self):
+        if self.client_process and self.client_process.poll() is None:
+            self.client_process.terminate()
+            self.client_process.wait(timeout=2)
         self.temp.cleanup()
+
+    def start_client(self):
+        self.client_process = subprocess.Popen(
+            ["python3", "-c", "import time; time.sleep(5)"]
+        )
+        self.client_pid_file.write_text(str(self.client_process.pid), encoding="utf-8")
 
     def run_watchdog(self, idle, wall):
         return subprocess.run(
@@ -97,6 +110,10 @@ else:
                 self.session,
                 "--config",
                 str(self.config),
+                "--launcher-pid-file",
+                str(self.launcher_pid_file),
+                "--client-pid-file",
+                str(self.client_pid_file),
                 "--handoff-file",
                 str(self.handoff),
                 "--recovery-config",
@@ -129,11 +146,51 @@ else:
 
     def test_stops_exact_session_at_wall_limit_even_when_busy(self):
         self.status.write_text("busy", encoding="utf-8")
+        self.start_client()
 
         result = self.run_watchdog(idle=2, wall=0.08)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.stops.read_text(encoding="utf-8").splitlines(), [self.session])
+
+    def test_busy_session_is_not_stopped_at_idle_limit(self):
+        self.start_client()
+
+        result = self.run_watchdog(idle=0.05, wall=0.5)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.stops.read_text(encoding="utf-8").splitlines(), [self.session])
+        self.assertIn("wall timeout", result.stdout)
+        self.assertNotIn("idle timeout", result.stdout)
+
+    def test_stale_busy_status_with_dead_client_stops_after_idle_limit(self):
+        self.status.write_text("busy", encoding="utf-8")
+
+        result = self.run_watchdog(idle=0.05, wall=0.5)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.stops.read_text(encoding="utf-8").splitlines(), [self.session])
+        self.assertIn("idle timeout", result.stdout)
+
+    def test_endpoint_wait_exits_at_wall_limit_without_unverified_stop(self):
+        self.config.write_text("{}", encoding="utf-8")
+
+        result = self.run_watchdog(idle=0.01, wall=0.05)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.stops.exists())
+        self.assertIn("wall timeout", result.stdout)
+        self.assertIn("unverified assignment untouched", result.stdout)
+
+    def test_endpoint_wait_exits_when_launcher_disappears(self):
+        self.config.write_text("{}", encoding="utf-8")
+        self.launcher_pid_file.write_text("2147483647", encoding="utf-8")
+
+        result = self.run_watchdog(idle=1, wall=2)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.stops.exists())
+        self.assertIn("launcher exited before the local endpoint was recorded", result.stdout)
 
     def test_stops_at_wall_limit_when_status_is_unavailable(self):
         self.status.write_text("error", encoding="utf-8")

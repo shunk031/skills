@@ -40,6 +40,7 @@ new)
         *) shift ;;
         esac
     done
+    [ -e "${XDG_STATE_HOME}/colab-gpu-run/${session}/started" ] || exit 94
     if [ "${COLAB_EXPECT_TOKEN_PREALLOC:-0}" = 1 ]; then
         token_preallocated=0
         for token_copy in "${TMPDIR:-/tmp}"/colab-gpu-run.*/hf-token; do
@@ -101,10 +102,14 @@ exec)
     driver=''
     while [ "$#" -gt 0 ]; do
         case "$1" in
+        -s) session="$2"; shift 2 ;;
         -f) driver="$2"; shift 2 ;;
         *) shift ;;
         esac
     done
+    client_pid_file="${XDG_STATE_HOME}/colab-gpu-run/${session}/client.pid"
+    [ -f "${client_pid_file}" ] || exit 95
+    [ "$(cat "${client_pid_file}")" = "$$" ] || exit 96
     cp "${driver}" "${COLAB_DRIVER_CAPTURE}"
     ;;
 stop)

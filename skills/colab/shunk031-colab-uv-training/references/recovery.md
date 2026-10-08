@@ -21,9 +21,9 @@ Use a new job name for each segment and the same run prefix when continuing the 
 
 ## Client timeout or stalled launch
 
-A stalled launcher may leave its cell running. Inspect `colab status -s <name>`, the job log, and any exit-code file through the contents API. The detached watchdog keeps monitoring while the launcher client is stalled. If status reports `BUSY`, monitor the job and do not submit duplicate work. If status reports `IDLE`, the watchdog will stop the session after its configured idle limit.
+A stalled launcher may leave its cell running. Inspect the launcher log, Hub output, and any exit-code file through the contents API. The detached watchdog treats its recorded `colab exec` child PID as busy; `colab status -s <name>` is only useful for endpoint presence because its `IDLE`/`BUSY` snapshot can be stale. A foreground tool timeout can terminate the client, after which the watchdog starts the idle timer even if status still says `BUSY`, so run the launcher in the background and sync checkpoints throughout the job.
 
-Stop a stuck local client by its recorded PID before opening another client. Do not resume GPU work with a direct `colab exec`; prepare the retry script and inputs, then use `scripts/colab-gpu-run` after the previous attempt has ended. A retry uses a distinct job name so an old log or exit-code file cannot be mistaken for the new attempt.
+If a stuck client must be stopped, use the PID in the launch's private `client.pid` state file. Do not resume GPU work with a direct `colab exec`; prepare the retry script and inputs, then use `scripts/colab-gpu-run` after the previous attempt has ended. A retry uses a distinct job name so an old log or exit-code file cannot be mistaken for the new attempt.
 
 ## Failed upload or release
 

@@ -56,6 +56,24 @@ def session_record(config: Path, name: str):
     return session if isinstance(session, dict) else None
 
 
+def process_is_alive(path: Path):
+    try:
+        pid = int(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
 def handoff_record(path: Path, name: str):
     try:
         with path.open(encoding="utf-8") as handoff_file:
@@ -127,6 +145,8 @@ def remove_file(path: Path):
 
 def run(args):
     config = Path(args.config).expanduser()
+    launcher_pid_file = Path(args.launcher_pid_file)
+    client_pid_file = Path(args.client_pid_file)
     started_at = time.monotonic()
     idle_since = None
     endpoint = None
@@ -155,6 +175,13 @@ def run(args):
                 log(f"watching {args.session} at its recorded endpoint")
 
         if endpoint is None:
+            elapsed = now - started_at
+            if elapsed >= args.wall_timeout:
+                log(f"wall timeout ({args.wall_timeout}s) passed before the local endpoint was recorded; leaving the unverified assignment untouched")
+                return 0
+            if not process_is_alive(launcher_pid_file):
+                log(f"launcher exited before the local endpoint was recorded for {args.session}; leaving the unverified assignment untouched")
+                return 0
             log(f"waiting for the local endpoint record for {args.session}")
             time.sleep(args.poll_interval)
             continue
@@ -172,14 +199,11 @@ def run(args):
         elif observed_endpoint != endpoint:
             log(f"endpoint mismatch for {args.session}; leaving the other session untouched")
             return 0
-        elif state == "idle":
-            if idle_since is None:
-                idle_since = now
-        elif state == "busy":
+        elif process_is_alive(client_pid_file):
             idle_since = None
         else:
-            idle_since = None
-            log(f"unrecognized status for {args.session}; leaving the session running")
+            if idle_since is None:
+                idle_since = now
 
         elapsed = now - started_at
         reason = None
@@ -216,8 +240,9 @@ def run(args):
             elif confirm_endpoint != endpoint:
                 log(f"endpoint mismatch for {args.session}; leaving the other session untouched")
                 return 0
-            elif reason.startswith("idle timeout") and confirm_state != "idle":
+            elif reason.startswith("idle timeout") and process_is_alive(client_pid_file):
                 idle_since = None
+                log(f"{args.session} still has a live colab exec client; canceling the idle stop")
             elif session_endpoint(active_config, args.session) != endpoint:
                 log(f"local endpoint changed for {args.session}; leaving the other session untouched")
                 return 0
@@ -236,6 +261,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--session", required=True)
     parser.add_argument("--config", required=True)
+    parser.add_argument("--launcher-pid-file", required=True)
+    parser.add_argument("--client-pid-file", required=True)
     parser.add_argument("--handoff-file", required=True)
     parser.add_argument("--recovery-config", required=True)
     parser.add_argument("--idle-timeout", type=float, required=True)
