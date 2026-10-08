@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 
 # @file skills/colab/shunk031-colab-uv-training/scripts/colab-job.sh
-# @brief Run one long GPU job on a Colab VM, sync its results to the Hugging Face Hub, then release the VM.
+# @brief Internal job wrapper invoked by colab-gpu-run on a Colab VM.
 # @description
-#   Upload this script to the Colab VM and run it from a busy kernel cell. It
-#   clears Colab's inherited Python overrides before loading the optional
-#   `--env-file`, allowing its explicit values to reach the command. It runs
+#   The launcher uploads this wrapper and invokes it in the same command that
+#   allocated the GPU. Do not run it directly. It clears Colab's inherited
+#   Python overrides before loading the optional `--env-file`, allowing its
+#   explicit values to reach the command. It runs
 #   the command under a hard `timeout` and tees its output to
 #   `<work>/logs/job.log`. While the job runs, a background loop uploads the
 #   log directory and every `--sync-path` to a Hub repository each interval; a
@@ -30,18 +31,12 @@
 # @option --sync-interval DURATION Seconds between uploads, with an optional `s`, `m`, or `h` suffix (default: `15m`).
 # @option --ttl DURATION Hard limit passed to `timeout`, such as `11h` (default: `11h`).
 # @option --env-file PATH `KEY=VALUE` file exported to the command and deleted before it runs.
-# @option --no-release Keep the VM assigned after the job, for inspection.
 # @arg $@ The command to run, after `--`.
 # @exitcode 2 When the arguments are invalid or the first upload fails.
 # @exitcode * Otherwise the command's exit code; 124 when `timeout` stopped it.
-# @example
-#   bash /content/colab-job.sh --job fit-seg1 --hub-repo <user>/colab-jobs --hub-prefix my-project/fit-seg1 \
-#       --hub-token-file /content/hf-token --sync-path /content/out/ckpt --sync-path /content/out/results \
-#       --ttl 10h -- uv run --no-sync python train.py fit --ckpt_path last
-
 set -Eeuo pipefail
 
-readonly USAGE='usage: colab-job.sh --job NAME --hub-repo REPO [--hub-repo-type TYPE] [--hub-prefix PATH] [--hub-token-file PATH] [--sync-path PATH]... [--sync-interval DURATION] [--ttl DURATION] [--env-file PATH] [--no-release] -- COMMAND [ARGS...]'
+readonly USAGE='usage: colab-job.sh --job NAME --hub-repo REPO [--hub-repo-type TYPE] [--hub-prefix PATH] [--hub-token-file PATH] [--sync-path PATH]... [--sync-interval DURATION] [--ttl DURATION] [--env-file PATH] -- COMMAND [ARGS...]'
 
 job=''
 hub_repo=''
@@ -53,7 +48,6 @@ sync_interval='15m'
 sync_seconds=0
 ttl='11h'
 env_file=''
-release=1
 sync_paths=()
 hf_cmd=()
 work_dir=''
@@ -142,9 +136,7 @@ function finish() {
         uploaded=0
     fi
 
-    if [ "${release}" -eq 0 ]; then
-        say 'self-release disabled; the VM stays assigned until colab stop'
-    elif [ "${uploaded}" -eq 0 ]; then
+    if [ "${uploaded}" -eq 0 ]; then
         say "not releasing the VM: results exist only under ${work_dir}"
     elif [ -z "${TBE_RUNTIME_ADDR:-}" ]; then
         say 'warning: TBE_RUNTIME_ADDR is unset; release the VM with colab stop'
@@ -173,10 +165,6 @@ while [ "$#" -gt 0 ]; do
         --env-file) env_file="$2" ;;
         esac
         shift 2
-        ;;
-    --no-release)
-        release=0
-        shift
         ;;
     --help)
         printf '%s\n' "${USAGE}"

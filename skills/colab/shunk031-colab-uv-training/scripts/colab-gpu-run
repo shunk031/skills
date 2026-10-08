@@ -1,0 +1,472 @@
+#!/usr/bin/env bash
+
+# @file skills/colab/shunk031-colab-uv-training/scripts/colab-gpu-run
+# @brief Preflight and start one guarded Colab GPU job.
+# @description
+#   Validate the local Bash job and bounded control files before allocating a
+#   named GPU session. Start the detached watchdog, upload the wrapper, job
+#   script, and optional token serially, then execute the job through the
+#   bundled wrapper in the same invocation. Job data must come from durable
+#   storage and be downloaded by the job script.
+# @option --gpu GPU Colab GPU type (required: T4, L4, G4, H100, or A100).
+# @option --job NAME Job id used by colab-job.sh (required).
+# @option --hub-repo REPO Private Hub repository for logs and results (required).
+# @option --job-script FILE Local Bash job script (required; maximum 1 MiB).
+# @option --hub-input NAME=URI Named durable input reference passed to the job; repeatable.
+# @option --hub-token-file FILE Restricted local Hub token file (optional; maximum 16 KiB).
+# @option --hub-repo-type TYPE Hub repository type (default: model).
+# @option --hub-prefix PATH Hub folder for this job (default: job id).
+# @option --sync-path PATH Remote file or directory to sync; repeatable.
+# @option --sync-interval DURATION Sync interval for colab-job.sh (default: 15m).
+# @option --ttl DURATION Job command limit for colab-job.sh (default: 11h).
+# @option --idle-timeout SECONDS Stop after this much verified idle time (default: 180).
+# @option --wall-timeout SECONDS Stop after this total session lifetime (default: 43200).
+# @option --colab-config FILE Colab CLI session state file (default: ~/.config/colab-cli/sessions.json).
+# @option --high-mem Request a high-RAM machine shape when Colab supports it.
+# @example
+#   colab-gpu-run --gpu A100 --job fit --hub-repo '<user>/colab-jobs' --job-script ./fit.sh \
+#       --hub-input 'train=hf://<user>/<dataset>/train' --hub-token-file /tmp/hf-token
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+JOB_WRAPPER="${SCRIPT_DIR}/colab-job.sh"
+readonly JOB_WRAPPER
+WATCHDOG="${SCRIPT_DIR}/colab-gpu-watchdog.py"
+readonly WATCHDOG
+SITE_CUSTOMIZE="${SCRIPT_DIR}/colab-gpu-sitecustomize.py"
+readonly SITE_CUSTOMIZE
+readonly MAX_JOB_SCRIPT_BYTES=1048576
+readonly MAX_TOKEN_BYTES=16384
+readonly WATCHDOG_STARTUP_SECONDS=30
+
+gpu=''
+job=''
+hub_repo=''
+job_script=''
+hub_token_file=''
+hub_repo_type='model'
+hub_prefix=''
+sync_interval='15m'
+job_ttl='11h'
+idle_timeout=180
+wall_timeout=43200
+colab_config="${HOME}/.config/colab-cli/sessions.json"
+high_mem=0
+hub_inputs=()
+sync_paths=()
+
+# @description Print usage errors and exit before allocating a session.
+# @arg $1 message The validation error.
+function usage_error() {
+    printf 'colab-gpu-run: %s\n' "$1" >&2
+    exit 2
+}
+
+# @description Read the endpoint recorded for this exact session name.
+# @stdout The endpoint, when one is recorded.
+function local_session_endpoint() {
+    python3 - "${colab_config}" "${handoff_file}" "${session}" << 'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as state_file:
+        session = json.load(state_file).get(sys.argv[3])
+except (OSError, json.JSONDecodeError, AttributeError):
+    session = None
+if not isinstance(session, dict):
+    try:
+        with open(sys.argv[2], encoding="utf-8") as handoff_file:
+            handoff = json.load(handoff_file)
+        session = handoff.get("session") if handoff.get("name") == sys.argv[3] else None
+    except (OSError, json.JSONDecodeError, AttributeError):
+        raise SystemExit(0)
+
+endpoint = session.get("endpoint") if isinstance(session, dict) else None
+if isinstance(endpoint, str) and endpoint:
+    print(endpoint)
+PY
+}
+
+# @description Stop only this session after its local and reported endpoints match.
+# @exitcode 1 When the exact session endpoint cannot be verified or stopped.
+function stop_if_owned_session() {
+    python3 - "${colab_config}" "${session}" "${handoff_file}" "${recovery_config}" << 'PY'
+import json
+import os
+import subprocess
+import sys
+
+config, name, handoff_path, recovery_config = sys.argv[1:]
+try:
+    with open(config, encoding="utf-8") as state_file:
+        session = json.load(state_file).get(name)
+except (OSError, json.JSONDecodeError):
+    session = None
+active_config = config
+if not isinstance(session, dict):
+    try:
+        with open(handoff_path, encoding="utf-8") as handoff_file:
+            handoff = json.load(handoff_file)
+    except (OSError, json.JSONDecodeError):
+        raise SystemExit(1)
+    if handoff.get("name") != name or not isinstance(handoff.get("session"), dict):
+        raise SystemExit(1)
+    session = handoff["session"]
+    active_config = recovery_config
+    with open(active_config, "w", encoding="utf-8") as output:
+        json.dump({name: session}, output)
+    os.chmod(active_config, 0o600)
+
+endpoint = session.get("endpoint") if isinstance(session, dict) else None
+if not isinstance(endpoint, str) or not endpoint:
+    raise SystemExit(1)
+
+prefix = ["colab", "--config", active_config]
+try:
+    status = subprocess.run(
+        prefix + ["status", "-s", name],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+except (OSError, subprocess.TimeoutExpired):
+    raise SystemExit(1)
+if status.returncode:
+    raise SystemExit(1)
+
+expected_prefix = f"[{name}] "
+matches = []
+for line in status.stdout.splitlines():
+    if line.startswith(expected_prefix) and " | Status: " in line:
+        details = line[len(expected_prefix) :].split(" | Status: ", 1)[0]
+        matches.append(details.split(" | ", 1)[0])
+if matches != [endpoint]:
+    raise SystemExit(1)
+
+try:
+    stopped = subprocess.run(
+        prefix + ["stop", "-s", name],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+except (OSError, subprocess.TimeoutExpired):
+    raise SystemExit(1)
+raise SystemExit(stopped.returncode)
+PY
+}
+
+# @description Wait for a watchdog marker while its detached process stays alive.
+# @arg $1 marker Path created by the watchdog.
+# @exitcode 1 When the watchdog exits or the startup deadline passes.
+function wait_for_watchdog_marker() {
+    local marker="$1"
+    local waited=0
+
+    while [ ! -e "${marker}" ] && [ "${waited}" -lt "${WATCHDOG_STARTUP_SECONDS}" ]; do
+        kill -0 "${watchdog_pid}" 2> /dev/null || return 1
+        sleep 1
+        waited=$((waited + 1))
+    done
+    [ -e "${marker}" ] && kill -0 "${watchdog_pid}" 2> /dev/null
+}
+
+# @description Stop and reap the watchdog when allocation did not create a session.
+function stop_watchdog() {
+    kill "${watchdog_pid}" 2> /dev/null || true
+    wait "${watchdog_pid}" 2> /dev/null || true
+}
+
+# @description Resolve a local regular file to an absolute path.
+# @arg $1 path Local file path.
+# @stdout The absolute path.
+# @exitcode 1 When the path does not name a regular file.
+function absolute_file() {
+    local file="$1"
+    local directory
+    local name
+
+    [ -f "${file}" ] || return 1
+    directory="$(cd "$(dirname "${file}")" && pwd)" || return 1
+    name="$(basename "${file}")"
+    printf '%s/%s\n' "${directory}" "${name}"
+}
+
+# @description Convert the wrapper's positive duration syntax to seconds.
+# @arg $1 duration A positive integer followed by s, m, h, or no suffix.
+# @stdout The duration in seconds.
+# @exitcode 1 When the value is malformed.
+function duration_seconds() {
+    local duration="$1"
+    local value
+    local multiplier
+
+    case "${duration}" in
+    *h)
+        value="${duration%h}"
+        multiplier=3600
+        ;;
+    *m)
+        value="${duration%m}"
+        multiplier=60
+        ;;
+    *s)
+        value="${duration%s}"
+        multiplier=1
+        ;;
+    *)
+        value="${duration}"
+        multiplier=1
+        ;;
+    esac
+    [[ "${value}" =~ ^[1-9][0-9]*$ ]] && [ "${#value}" -le 9 ] || return 1
+    printf '%s\n' "$((value * multiplier))"
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+    --gpu | --job | --hub-repo | --job-script | --hub-input | --hub-token-file | --hub-repo-type | --hub-prefix | --sync-path | --sync-interval | --ttl | --idle-timeout | --wall-timeout | --colab-config)
+        [ "$#" -ge 2 ] || usage_error "missing value for $1"
+        case "$1" in
+        --gpu) gpu="$2" ;;
+        --job) job="$2" ;;
+        --hub-repo) hub_repo="$2" ;;
+        --job-script) job_script="$2" ;;
+        --hub-input) hub_inputs+=("$2") ;;
+        --hub-token-file) hub_token_file="$2" ;;
+        --hub-repo-type) hub_repo_type="$2" ;;
+        --hub-prefix) hub_prefix="$2" ;;
+        --sync-path) sync_paths+=("$2") ;;
+        --sync-interval) sync_interval="$2" ;;
+        --ttl) job_ttl="$2" ;;
+        --idle-timeout) idle_timeout="$2" ;;
+        --wall-timeout) wall_timeout="$2" ;;
+        --colab-config) colab_config="$2" ;;
+        esac
+        shift 2
+        ;;
+    --high-mem)
+        high_mem=1
+        shift
+        ;;
+    --help)
+        sed -n '1,45p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
+    *) usage_error "unknown option: $1" ;;
+    esac
+done
+
+[ -n "${gpu}" ] || usage_error '--gpu is required'
+[ -n "${job}" ] || usage_error '--job is required'
+[ -n "${hub_repo}" ] || usage_error '--hub-repo is required'
+[ -n "${job_script}" ] || usage_error '--job-script is required'
+case "${gpu}" in
+T4 | L4 | G4 | H100 | A100) ;;
+*) usage_error "unsupported GPU: ${gpu}" ;;
+esac
+case "${job}" in
+*/* | .*) usage_error "invalid job id: ${job}" ;;
+esac
+[[ "${idle_timeout}" =~ ^[1-9][0-9]*$ ]] || usage_error '--idle-timeout must be positive seconds'
+[[ "${wall_timeout}" =~ ^[1-9][0-9]*$ ]] || usage_error '--wall-timeout must be positive seconds'
+[ "${#idle_timeout}" -le 9 ] || usage_error '--idle-timeout is too large'
+[ "${#wall_timeout}" -le 9 ] || usage_error '--wall-timeout is too large'
+job_ttl_seconds="$(duration_seconds "${job_ttl}")" || usage_error "invalid --ttl: ${job_ttl}"
+[ "${job_ttl_seconds}" -le "${wall_timeout}" ] || usage_error '--ttl must not exceed --wall-timeout'
+duration_seconds "${sync_interval}" > /dev/null || usage_error "invalid --sync-interval: ${sync_interval}"
+
+input_names=()
+for input in "${hub_inputs[@]+${hub_inputs[@]}}"; do
+    case "${input}" in
+    *=*)
+        input_name="${input%%=*}"
+        input_uri="${input#*=}"
+        ;;
+    *) usage_error "--hub-input must be NAME=URI: ${input}" ;;
+    esac
+    [[ "${input_name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || usage_error "invalid Hub input name: ${input_name}"
+    [ -n "${input_uri}" ] || usage_error "empty Hub input URI for ${input_name}"
+    case "${input_uri}" in
+    *[[:space:]]*) usage_error "Hub input URI contains whitespace: ${input_uri}" ;;
+    esac
+    case "${input_uri}" in
+    hf://?* | gs://?* | https://?*) ;;
+    *) usage_error "Hub input must be a durable hf://, gs://, or https:// URI: ${input_uri}" ;;
+    esac
+    for previous_name in "${input_names[@]+${input_names[@]}}"; do
+        [ "${previous_name}" != "${input_name}" ] || usage_error "duplicate Hub input name: ${input_name}"
+    done
+    input_names+=("${input_name}")
+done
+
+job_script="$(absolute_file "${job_script}")" || usage_error "job script does not exist: ${job_script}"
+wrapper="$(absolute_file "${JOB_WRAPPER}")" || usage_error "job wrapper does not exist: ${JOB_WRAPPER}"
+job_script_bytes="$(wc -c < "${job_script}" | tr -d '[:space:]')"
+[ "${job_script_bytes}" -le "${MAX_JOB_SCRIPT_BYTES}" ] || usage_error 'job script exceeds 1 MiB; store job data in durable storage'
+bash -n "${wrapper}" || usage_error 'bundled job wrapper failed bash -n'
+bash -n "${job_script}" || usage_error 'job script failed bash -n'
+command -v python3 > /dev/null 2>&1 || usage_error 'python3 is required for the watchdog'
+[ -f "${WATCHDOG}" ] || usage_error 'bundled watchdog is missing'
+python3 - "${WATCHDOG}" "${SITE_CUSTOMIZE}" << 'PY' || usage_error 'bundled watchdog or handoff failed Python syntax validation'
+import sys
+
+for path in sys.argv[1:]:
+    with open(path, encoding="utf-8") as source:
+        compile(source.read(), path, "exec")
+PY
+
+token_file_abs=''
+token_cleanup=0
+if [ -n "${hub_token_file}" ]; then
+    token_file_abs="$(absolute_file "${hub_token_file}")" || usage_error "Hub token file does not exist: ${hub_token_file}"
+    token_bytes="$(wc -c < "${token_file_abs}" | tr -d '[:space:]')"
+    [ "${token_bytes}" -gt 0 ] || usage_error 'Hub token file is empty'
+    [ "${token_bytes}" -le "${MAX_TOKEN_BYTES}" ] || usage_error 'Hub token file exceeds 16 KiB'
+    python3 - "${token_file_abs}" << 'PY' || usage_error 'Hub token file must have mode 0600'
+import os
+import stat
+import sys
+
+if stat.S_IMODE(os.stat(sys.argv[1]).st_mode) != 0o600:
+    raise SystemExit(1)
+PY
+    token_cleanup=1
+fi
+
+command -v colab > /dev/null 2>&1 || usage_error 'colab CLI is not installed'
+command -v nohup > /dev/null 2>&1 || usage_error 'nohup is required to detach the watchdog'
+version_output="$(colab version 2> /dev/null)" || usage_error 'colab version check failed'
+[ "${version_output}" = 'Version: 0.7.4' ] || usage_error "colab CLI 0.7.4 is required; found ${version_output}"
+
+temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/colab-gpu-run.XXXXXX")" || usage_error 'cannot create a temporary directory'
+function cleanup() {
+    rm -rf "${temp_dir}"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+driver_file="${temp_dir}/remote-driver.py"
+remote_argv=(bash /content/colab-job.sh --job "${job}" --hub-repo "${hub_repo}" --hub-repo-type "${hub_repo_type}" --ttl "${job_ttl}")
+[ -z "${hub_prefix}" ] || remote_argv+=(--hub-prefix "${hub_prefix}")
+[ -z "${token_file_abs}" ] || remote_argv+=(--hub-token-file /content/hf-token)
+remote_argv+=(--sync-interval "${sync_interval}")
+for sync_path in "${sync_paths[@]+${sync_paths[@]}}"; do
+    remote_argv+=(--sync-path "${sync_path}")
+done
+remote_argv+=(-- bash /content/colab-user-job.sh)
+for input in "${hub_inputs[@]+${hub_inputs[@]}}"; do
+    remote_argv+=(--hub-input "${input}")
+done
+
+python3 - "${driver_file}" "${token_cleanup}" "${remote_argv[@]}" << 'PY'
+import json
+import sys
+
+path, token_cleanup, *argv = sys.argv[1:]
+with open(path, "w", encoding="utf-8") as driver:
+    driver.write("import os\nimport subprocess\n")
+    if token_cleanup == "1":
+        driver.write("try:\n")
+        driver.write("    result = subprocess.call(" + json.dumps(argv) + ")\n")
+        driver.write("finally:\n")
+        driver.write("    try:\n        os.remove('/content/hf-job-token')\n")
+        driver.write("    except FileNotFoundError:\n        pass\n")
+        driver.write("raise SystemExit(result)\n")
+    else:
+        driver.write("raise SystemExit(subprocess.call(" + json.dumps(argv) + "))\n")
+PY
+
+if [ -n "${token_file_abs}" ]; then
+    cp "${token_file_abs}" "${temp_dir}/hf-token"
+    chmod 600 "${temp_dir}/hf-token"
+fi
+
+random_suffix="$(od -An -N16 -tx1 /dev/urandom | tr -d '[:space:]')"
+[ "${#random_suffix}" -eq 32 ] || usage_error 'could not generate a unique session name'
+session="cgr-${random_suffix}"
+colab_args=(--config "${colab_config}")
+state_root="${XDG_STATE_HOME:-${HOME}/.local/state}/colab-gpu-run"
+state_dir="${state_root}/${session}"
+watchdog_log="${state_dir}/watchdog.log"
+watchdog_started="${state_dir}/started"
+watchdog_ready="${state_dir}/ready"
+watchdog_pid_file="${state_dir}/watchdog.pid"
+handoff_file="${state_dir}/handoff.json"
+recovery_config="${state_dir}/recovery.json"
+sitecustomize_dir="${temp_dir}/python"
+umask 077
+mkdir -p "${state_dir}" "${sitecustomize_dir}"
+: > "${handoff_file}"
+chmod 600 "${handoff_file}"
+cp "${SITE_CUSTOMIZE}" "${sitecustomize_dir}/sitecustomize.py"
+
+nohup python3 "${WATCHDOG}" \
+    --session "${session}" \
+    --config "${colab_config}" \
+    --handoff-file "${handoff_file}" \
+    --recovery-config "${recovery_config}" \
+    --idle-timeout "${idle_timeout}" \
+    --wall-timeout "${wall_timeout}" \
+    --started-file "${watchdog_started}" \
+    --ready-file "${watchdog_ready}" \
+    >> "${watchdog_log}" 2>&1 < /dev/null &
+watchdog_pid=$!
+printf '%s\n' "${watchdog_pid}" > "${watchdog_pid_file}"
+
+if ! wait_for_watchdog_marker "${watchdog_started}"; then
+    stop_watchdog
+    usage_error "watchdog did not start before allocation; see ${watchdog_log}"
+fi
+
+new_args=("${colab_args[@]}" new --session "${session}" --gpu "${gpu}")
+[ "${high_mem}" -eq 0 ] || new_args+=(--high-mem)
+new_status=0
+if COLAB_GPU_HANDOFF_FILE="${handoff_file}" \
+    COLAB_GPU_HANDOFF_SESSION="${session}" \
+    PYTHONPATH="${sitecustomize_dir}${PYTHONPATH:+:${PYTHONPATH}}" \
+    colab "${new_args[@]}"; then
+    new_status=0
+else
+    new_status=$?
+fi
+
+if ! wait_for_watchdog_marker "${watchdog_ready}"; then
+    endpoint="$(local_session_endpoint)"
+    if [ -n "${endpoint}" ]; then
+        if stop_if_owned_session; then
+            printf 'colab-gpu-run: watchdog failed to verify %s; stopped its verified session\n' "${session}" >&2
+            stop_watchdog
+            rm -f "${handoff_file}" "${recovery_config}"
+        else
+            printf 'colab-gpu-run: watchdog failed to verify %s and its endpoint could not be safely stopped; see %s\n' "${session}" "${watchdog_log}" >&2
+        fi
+    else
+        stop_watchdog
+    fi
+    if [ "${new_status}" -ne 0 ]; then
+        exit "${new_status}"
+    fi
+    usage_error "watchdog did not verify ${session}; see ${watchdog_log}"
+fi
+
+if [ "${new_status}" -ne 0 ]; then
+    printf 'colab-gpu-run: allocation failed after watchdog observed %s; the watchdog remains active\n' "${session}" >&2
+    exit "${new_status}"
+fi
+
+printf 'Colab session: %s\nWatchdog log: %s\n' "${session}" "${watchdog_log}"
+colab "${colab_args[@]}" upload -s "${session}" "${wrapper}" /content/colab-job.sh
+colab "${colab_args[@]}" upload -s "${session}" "${job_script}" /content/colab-user-job.sh
+if [ -n "${token_file_abs}" ]; then
+    colab "${colab_args[@]}" upload -s "${session}" "${temp_dir}/hf-token" /content/hf-token
+    colab "${colab_args[@]}" upload -s "${session}" "${temp_dir}/hf-token" /content/hf-job-token
+fi
+colab "${colab_args[@]}" exec -s "${session}" --timeout "${wall_timeout}" -f "${driver_file}"

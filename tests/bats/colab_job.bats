@@ -74,11 +74,10 @@ EOF
     [ "$(grep -c '/logs fit/logs/fit' "${HF_LOG}")" -ge 3 ]
 }
 
-@test "[common] --no-release keeps the VM assigned" {
+@test "[common] --no-release is rejected" {
     run "${JOB_SCRIPT}" --job fit --hub-repo user/colab-jobs --no-release -- true
-    [ "${status}" -eq 0 ]
-    [ ! -e "${CURL_LOG}" ]
-    [[ "${output}" == *'self-release disabled'* ]]
+    [ "${status}" -eq 2 ]
+    [[ "${output}" == *'usage: colab-job.sh'* ]]
 }
 
 @test "[common] a missing TBE_RUNTIME_ADDR warns instead of releasing" {
