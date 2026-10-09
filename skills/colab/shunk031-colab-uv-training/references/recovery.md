@@ -6,33 +6,30 @@ Read the relevant section for a resumed run, a failed connection or upload, or a
 
 Use the repository's checkpoint writer and resume command. Store checkpoints in a synced directory and choose a save interval that limits lost work if the VM disappears. For Lightning, `ModelCheckpoint` supports `save_last=True` and `train_time_interval`; configure its output directory to match a `--sync-path`.
 
-For a Hub-backed Lightning run, download the selected checkpoint before starting the next segment. Run this as an uploaded shell script so the token stays out of IPython command expansion and CLI history. Use the CLI's interpreter or `uvx --from huggingface_hub hf` if `hf` is unavailable.
-
-If a previous wrapper has already run, follow [Hub operations after the wrapper](running-jobs.md#hub-operations-after-the-wrapper) to upload and preflight a fresh restricted token file before this download.
+For a Hub-backed Lightning run, download the selected checkpoint inside the next job script before starting the training command. The launcher passes the declared `--hub-input` references to that script and makes the restricted token available at `/content/hf-job-token` when one was provided.
 
 ```bash
-set -euo pipefail
-HF_TOKEN="$(cat /content/hf-token)" hf download <user>/colab-jobs --include '<project>/<run-id>/ckpt/last.ckpt' --local-dir /content/hub
+HF_TOKEN="$(cat /content/hf-job-token)" hf download <user>/colab-jobs --include '<project>/<run-id>/ckpt/last.ckpt' --local-dir /content/hub
 mkdir -p /content/out/ckpt
 cp /content/hub/<project>/<run-id>/ckpt/last.ckpt /content/out/ckpt/last.ckpt
 test -s /content/out/ckpt/last.ckpt
 ```
 
-Then pass the explicit path in the next segment's wrapper command, for example `fit --ckpt_path /content/out/ckpt/last.ckpt`. If running the project command outside the wrapper, clear the Colab overrides first as described in [environment.md](environment.md). Confirm from the training log that the checkpoint loaded. Lightning's `ckpt_path="last"` can start fresh when no checkpoint exists, so do not use that fallback to satisfy a request to resume. If download or validation fails, resolve it before allocating more training time. Delete the token file after the download; upload a separate restricted token file when starting the next wrapper run.
+Then pass the explicit path to the training command in the same job script, for example `fit --ckpt_path /content/out/ckpt/last.ckpt`. Start that script through `scripts/colab-gpu-run` with a new job name, the checkpoint declared as `--hub-input`, and a synced output path. Confirm from the training log that the checkpoint loaded. Lightning's `ckpt_path="last"` can start fresh when no checkpoint exists, so do not use that fallback to satisfy a request to resume. If download or validation fails, resolve it before allocating more training time. The launcher removes its remote input-token copy when the job finishes.
 
 Use a new job name for each segment and the same run prefix when continuing the same run. Download the results the user requested locally; leave large checkpoints at the approved destination unless local copies are part of the request.
 
 ## Client timeout or stalled launch
 
-A failed `colab exec` can leave its cell running. Inspect `colab status -s <name>`, the job log, and any exit-code file through the contents API. If work is progressing, monitor it. The absence of a log alone does not prove the cell was never submitted.
+A stalled launcher may leave its cell running. Inspect the launcher log, Hub output, and any exit-code file through the contents API. The detached watchdog treats its recorded `colab exec` child PID as busy; `colab status -s <name>` is only useful for endpoint presence because its `IDLE`/`BUSY` snapshot can be stale. A foreground tool timeout can terminate the client, after which the watchdog starts the idle timer even if status still says `BUSY`, so run the launcher in the background and sync checkpoints throughout the job.
 
-Stop a stuck local client by its recorded PID before opening another client. Relaunch only after establishing that the earlier command did not start or has stopped; otherwise report the uncertain state and preserve the VM while resolving it. A retry uses a distinct job name once the previous attempt is known to have ended, so an old log or exit-code file cannot be mistaken for the new attempt.
+If a stuck client must be stopped, use the PID in the launch's private `client.pid` state file. Do not resume GPU work with a direct `colab exec`; prepare the retry script and inputs, then use `scripts/colab-gpu-run` after the previous attempt has ended. A retry uses a distinct job name so an old log or exit-code file cannot be mistaken for the new attempt.
 
 ## Failed upload or release
 
-When the wrapper retains the VM after a final upload failure, recover all required sync paths and logs by repairing the upload or downloading them. Verify that recovery succeeded before `colab stop`. The wrapper deletes its token file at startup, so use [Hub operations after the wrapper](running-jobs.md#hub-operations-after-the-wrapper) to upload and preflight a fresh restricted token file for any retry.
+When the wrapper retains the VM after a final upload failure, recover all required sync paths and logs with `colab download` before the watchdog's idle limit expires. Verify that recovery succeeded before `colab stop`. To retry a Hub operation on a GPU, put it in a job script and start it through `scripts/colab-gpu-run` with a fresh restricted token file.
 
-If storage remains unavailable, report the endpoint, remaining results, and ongoing allocation. Do not let a scheduled or manually invoked sweep erase the only copy. A hard cost cap may conflict with retention; use the user's existing loss-versus-cost decision or ask for that decision rather than silently choosing.
+If storage remains unavailable, report the endpoint and remaining results. The watchdog still stops an idle GPU session at its idle limit or wall-clock limit, so retrieve the only remaining copy before that deadline. Do not use an account-wide sweep to recover one job.
 
 Once results are safe, retry release for this task and verify the endpoint is gone. `colab sessions` can prune stale local records after self-release. A local record disappearing is not evidence that an unknown assigned endpoint belongs to this task.
 

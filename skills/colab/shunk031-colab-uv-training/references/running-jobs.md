@@ -1,52 +1,52 @@
 # Running long jobs
 
-Use this reference when launching or monitoring a job. Keep the repository's own runner and approved storage when they already meet the task's needs. The example below uses the bundled Hub wrapper.
+Use this reference when launching or monitoring a job. Reuse the repository's job command and approved storage inside `scripts/colab-gpu-run` when they meet the task's needs. The bundled `colab-job.sh` wrapper writes logs and selected outputs to a private Hugging Face Hub repository.
 
 ## Prepare durable storage
 
-Use an approved private Hub repository and a unique prefix such as `<project>/<run-id>`. Give each segment a distinct `--job` name so its logs land in `<prefix>/logs/<job>`. Each `--sync-path` lands at `<prefix>/<basename>`; choose distinct basenames and include every required checkpoint and result directory.
+Use an approved private Hub repository and a unique prefix such as `<project>/<run-id>`. Give each segment a distinct `--job` name so its logs land at `<prefix>/logs/<job>`. Each `--sync-path` lands at `<prefix>/<basename>`; choose distinct basenames and include every required checkpoint and result directory.
 
-Use a fine-grained token scoped to that repository. Write it to a local file with mode 0600, upload it to `/content/hf-token`, restrict the remote file to mode 0600, and remove the temporary local copy. The wrapper reads and deletes the remote copy before the job starts and passes that token only to the uploader. Do not separately export the Hub token into the job's environment.
+Stage datasets and other large inputs in approved durable storage before allocating a GPU. Declare every input that the job downloads with `--hub-input NAME=URI`; the launcher validates the name and passes the declaration to the Bash job script. The job script must download the data inside the VM. The launcher uploads only the job script, which is capped at 1 MiB, and an optional token file, which is capped at 16 KiB.
 
-## Hub operations after the wrapper
+Use a fine-grained token scoped to the output repository and write it to a local file with mode `0600`. Pass it with `--hub-token-file`. The launcher verifies the mode and uploads two restricted copies serially: `/content/hf-token` for the wrapper and `/content/hf-job-token` for private input downloads. The wrapper reads and deletes its copy before the job starts; the remote driver removes the input copy when the job finishes. The original local token file is left in place. Do not pass token values in command text or `colab exec --env`.
 
-The wrapper reads and deletes its remote token file before the job starts. Any later Hugging Face Hub API operation, including listing or downloading artifacts and retrying an upload, needs a fresh restricted copy of the fine-grained token from the authorized secret source.
+Before spending GPU time, verify that the output repository is private and writable. The wrapper passes `--private` to uploads; that flag does not replace checking an existing repository's visibility.
 
-Write the token to a temporary local file with mode `0600`, then upload it to `/content/hf-token` with `colab upload -s <name> <local-token-file> /content/hf-token`. Restrict the VM copy to mode `0600` and remove the local file after the upload succeeds; if the upload fails, remove it before retrying. Before the Hub operation, run `colab ls -s <name> /content` and verify that `hf-token` is present; `colab ls` uses the contents API. If it is absent, upload a fresh copy rather than assuming the wrapper's token remains.
+## Launch a GPU job
 
-Run the operation with the token read from `/content/hf-token`; do not pass token values in command text or `colab exec --env`. When the operation finishes, whether it succeeds or fails, remove `/content/hf-token` and confirm the temporary local file is also gone.
+Start every GPU job with `scripts/colab-gpu-run`. Do not allocate with `colab new --gpu`, `colab run --gpu`, or start work with a direct `colab exec`. The launcher checks the local job script with `bash -n`, validates local files and named inputs, starts the watchdog, allocates a unique named GPU session, uploads control files one at a time, and invokes `colab-job.sh` in the same command. Large data must be staged in durable storage and downloaded by the job script.
 
-For secrets the job itself needs, upload a restricted `--env-file`. The wrapper clears Colab's inherited Python overrides before sourcing it as shell code, then exports its variables and deletes it before launching the command, so the file can deliberately override those settings. Generate this file from trusted, shell-quoted assignments. Never use `colab exec --env` for credentials: the CLI records its values in local history. Colab notebook Secrets are not available through the CLI workflow observed here.
-
-The wrapper expects `hf` on PATH or falls back to `uvx --from huggingface_hub hf`. Before spending GPU time, verify that the intended repository is private and writable. The wrapper passes `--private` to uploads; that flag does not replace checking an existing repository's visibility.
-
-## Launch a busy kernel cell
-
-Without background execution, keep the job in one busy kernel cell and keep the local client connected. The CLI keep-alive ping alone does not establish runtime liveness. A detached driver leaves the kernel idle, and its survival for a long unattended run has not been verified.
-
-Upload `scripts/colab-job.sh` from this skill to `/content/colab-job.sh`. This example runs a new training job with a 10-hour command limit; replace the command, directories, and timeouts to fit the actual run. For a resumed run, first follow [recovery.md](recovery.md).
+This example runs a ten-hour training segment. The job script downloads `train` from the named durable URI, runs the repository's training command, and writes results under `/content/out` for periodic upload. Start the launcher in the background with a local log so a foreground tool timeout cannot kill its `colab exec` client.
 
 ```bash
-cat > /abs/path/launch.py << 'EOF_PY'
-!bash /content/colab-job.sh --job fit-seg1 --hub-repo <user>/colab-jobs --hub-prefix <project>/<run-id> --hub-token-file /content/hf-token --sync-path /content/out/ckpt --sync-path /content/out/results --ttl 10h -- bash -c 'cd /content/repo && CUDA_VISIBLE_DEVICES=0 uv run --no-sync --package <member> python -m <module> fit --config <config>'
-EOF_PY
-timeout 38400 colab exec -s <name> --timeout 37800 -f /abs/path/launch.py > fit-seg1.out 2>&1
+mkdir -p logs
+launcher_log="logs/fit-seg1-colab.log"
+nohup scripts/colab-gpu-run \
+    --gpu A100 \
+    --job fit-seg1 \
+    --hub-repo '<user>/colab-jobs' \
+    --hub-prefix <project>/<run-id> \
+    --job-script /abs/path/run-fit.sh \
+    --hub-input 'train=hf://<user>/<dataset>/train.csv' \
+    --hub-token-file /abs/path/hf-token \
+    --sync-path /content/out/ckpt \
+    --sync-path /content/out/results \
+    --ttl 10h >"${launcher_log}" 2>&1 < /dev/null &
+printf 'launcher_pid=%s\nlauncher_log=%s\n' "$!" "${launcher_log}"
 ```
 
-The local `timeout` must be available. Use an absolute path for `-f`. Run the client in a managed background process if the agent needs to continue monitoring, and keep the local machine awake and connected.
+The launcher requires Colab CLI 0.7.4, Bash, and Python 3. It defaults to a 180-second idle limit and a 43,200-second wall-clock limit; set `--idle-timeout` or `--wall-timeout` to choose different positive values in seconds. The job `--ttl` must not exceed the wall-clock limit. CPU-only sessions do not use this launcher or watchdog.
 
-Set the client timeout above the job TTL with room for final uploads, and the outer timeout above the client timeout. The outer timeout bounds a known CLI hang; it does not cancel a remote cell. Choose the job TTL below the runtime limit with an upload margin. Colab's FAQ describes typical limits up to 12 hours and up to 24 hours for eligible Pro+ execution, with availability and balance constraints.
+The watchdog runs detached on the local machine and logs to the path printed by the launcher under `${XDG_STATE_HOME:-~/.local/state}/colab-gpu-run/`. For Colab CLI 0.7.4, the launcher records the assigned endpoint before the CLI's own state write and the watchdog can recover from a failed local write using a private state file. It treats the launcher-owned `colab exec` child PID as the busy signal; `colab status -s <name>` is used only to confirm the exact session name and endpoint before a stop. Each status call synchronizes and rewrites the local session snapshot, so its `IDLE`/`BUSY` label can be stale and never controls the idle timer. A status error prevents an idle stop; at the wall limit, the watchdog may stop after a status error only when the local endpoint is unchanged and any endpoint in the error output matches. Keep the local machine awake while the runtime is allocated; a machine shutdown or sleep can pause the watchdog.
 
-IPython expands `$name` in `!` lines before the shell sees it. Put shell commands needing variables in an uploaded script instead. A quoted heredoc also prevents local expansion while writing that script. Upload revisions under a new name rather than overwriting a script that Bash is executing.
-
-Prefer `colab new` and `colab exec` for this workflow. The observed `colab run` implementation can release the VM after a websocket drop and can leave it assigned after local signal termination; recheck those behaviors before relying on it for a long job.
+In Colab CLI 0.7.4, `status` reports the locally stored `running` field, not server-side kernel activity, and `sync_sessions()` can write a stale snapshot back to disk. The watchdog ignores that field for busy/idle decisions: a live `colab exec` child PID is busy; once the client exits, the idle timer runs even if status still says `BUSY`. Sync checkpoints and results during the job so an interrupted run can resume from durable storage.
 
 ## Monitor and finish
 
-Confirm that `/content/colab-jobs/<job>/logs/job.log` appears and progresses. Poll with `colab download` or `colab ls`, which use the contents API while the kernel is busy. The Hub copy is another view that survives the VM. Choose the polling interval for the job's expected progress rate; do not send a second `exec` into the busy kernel.
+Use `tail -f "${launcher_log}"` or the durable Hub output to monitor progress. Use the session name printed in the log with `colab status -s <name>` only to inspect endpoint presence; do not rely on its `IDLE`/`BUSY` label or send a second `exec` into the kernel. Download requested results from the Hub after the job finishes; `colab download` is appropriate only for recovering files that remain on the VM.
 
-The wrapper first uploads logs and any existing sync paths, then runs the command under `timeout` and tees its output. It syncs every 15 minutes by default, writes `logs/<job>/exit_code`, uploads again, and requests self-release via `TBE_RUNTIME_ADDR`. `bash colab-job.sh --help` lists its options. Use `--no-release` when authorized post-job inspection requires the runtime to stay assigned.
+The wrapper is invoked only by the launcher. It uploads logs and existing sync paths before the command, then runs the job under `timeout`, tees its output, syncs every 15 minutes by default, writes `logs/<job>/exit_code`, uploads again, and requests self-release via `TBE_RUNTIME_ADDR`. The watchdog remains active until the session disappears.
 
-Verify the expected artifacts in durable storage, not just the wrapper's return code. Periodic upload failures do not stop the job. A final upload failure retains the VM, while an initial upload failure aborts before the job and leaves release to the caller. Recover required results using [recovery.md](recovery.md) before manual teardown. If results are safe and automatic release failed, stop this named session and verify its endpoint is no longer assigned with `colab sessions`.
+Verify the expected artifacts in durable storage, not just the wrapper's return code. If periodic or final upload fails, the wrapper retains the runtime so its local files can be recovered, but the watchdog will still stop an idle session after its configured limit. Recover any required files immediately with `colab download`, then verify the endpoint is no longer assigned with `colab sessions`. A watchdog stop at the wall-clock limit is unconditional, including while the client is busy.
 
-Self-release is best effort. Uploads and the release request can fail or stall; the command TTL does not bound those operations. If the client disconnects, inspect the current state rather than assuming either success or a stopped job.
+If `colab new` receives a server assignment but exits before the site hook records its endpoint, the watchdog cannot safely identify that runtime and leaves the unverified assignment untouched. Inspect `colab sessions` for an assignment shown as `[?]`, establish its ownership and endpoint, and stop only the assignment verified to belong to this launch.
