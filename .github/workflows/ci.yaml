@@ -15,8 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  # Runs the same offline pre-commit hooks developers run. Shuhari hooks are in
-  # the manual stage and never run on a hosted runner.
+  # Runs the same offline pre-commit hooks developers run.
   gate:
     runs-on: ubuntu-latest
 

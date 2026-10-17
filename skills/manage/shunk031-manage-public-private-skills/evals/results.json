@@ -21,7 +21,7 @@
   },
   "assertions": [
     {
-      "case_id": "1",
+      "case_id": 1,
       "assertion": "The response proposes `shunk031-research-before-implementation skill` as the portable reference for shared prose and eval prompts. It keeps agent-specific `$skill-name` and `/skill-name` forms only in sections that explicitly document Codex or Claude Code invocation syntax.",
       "with_skill": 1,
       "without_skill": 0.6666666666666666,

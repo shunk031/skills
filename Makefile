@@ -1,14 +1,3 @@
-TRIALS ?= 3
-JOBS ?= 8
-TIMEOUT ?= 600
-
-# The full backend name matches mise's disabled tool setting. Evaluation targets
-# opt in to this tool without activating it for setup, hooks, or other commands.
-SHUHARI_TOOL := go:github.com/shunk031/shuhari/cmd/shuhari
-
-# Keep in step with the `go` pin in mise.toml.
-GO_VERSION ?= 1.26.5
-
 # Keep in step with the `python` pin in mise.toml.
 PYTHON_VERSION ?= 3.14.6
 
@@ -21,62 +10,14 @@ setup:
 	mise install
 	mise exec -- prek install
 
-# shuhari ships no git tags, so its module version list is empty and mise cannot
-# resolve `latest`. mise.toml therefore pins the pseudo-version of a specific
-# `main` commit. This re-resolves that pin against current `main`.
-#
-# `GOPROXY=direct` is required, not a preference: proxy.golang.org serves a
-# cached `@latest` that can lag a merge by a long time, and bumping to a stale
-# commit looks like success. Direct resolution reads the repository.
-#
-# `mise x go@...` runs only the Go toolchain, so this still works when the
-# current shuhari pin is unresolvable. Do not route it through `mise exec`,
-# which resolves every pinned tool first and would fail before the recipe runs.
-.PHONY: bump-shuhari
-bump-shuhari:
-	@version="$$(GOPROXY=direct mise x go@$(GO_VERSION) -- \
-	    go list -m -f '{{.Version}}' github.com/shunk031/shuhari@latest 2>/dev/null)"; \
-	if [ -z "$$version" ]; then \
-	    echo "failed to resolve a shuhari version from the module source" >&2; \
-	    exit 1; \
-	fi; \
-	version="$${version#v}"; \
-	sed -i.bak \
-	    "s|^\"go:github.com/shunk031/shuhari/cmd/shuhari\" = .*|\"go:github.com/shunk031/shuhari/cmd/shuhari\" = \"$$version\"|" \
-	    mise.toml; \
-	rm -f mise.toml.bak; \
-	echo "pinned shuhari to $$version"
-	mise install
-
 #
 # Gates
 #
 
-# Offline skill layout checks. Shuhari schema validation remains available from
-# the manual pre-commit stage when evaluation work resumes.
+# Offline skill layout checks.
 .PHONY: validate
 validate:
 	./scripts/check_skill_layout.sh
-
-# Live model calls against every skill. Deliberately a manual, occasional run;
-# the pre-commit hooks gate incrementally.
-.PHONY: eval
-eval:
-	@set -e; \
-	find skills -type f -path '*/evals/evals.json' -print | while IFS= read -r eval_file; do \
-	    dir="$${eval_file%/evals/evals.json}"; \
-	    MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
-	        ./scripts/shuhari_staged_targets.sh eval "$$dir/SKILL.md"; \
-	done
-
-.PHONY: check-triggers
-check-triggers:
-	@set -e; \
-	find skills -type f -path '*/evals/triggers.json' -print | while IFS= read -r trigger_file; do \
-	    dir="$${trigger_file%/evals/triggers.json}"; \
-	    MISE_ENABLE_TOOLS=$(SHUHARI_TOOL) mise exec -- \
-	        shuhari check trigger --trials $(TRIALS) --jobs $(JOBS) --timeout $(TIMEOUT) "$$dir"; \
-	done
 
 #
 # Documentation
@@ -127,8 +68,7 @@ test: test-python test-bats
 test-python:
 	uv run --python $(PYTHON_VERSION) --no-project -- python -m unittest discover -s tests/python
 
-# The same offline hooks CI runs. Shuhari hooks use the manual stage and are not
-# part of this run.
+# The same offline hooks CI runs.
 .PHONY: gate
 gate:
 	mise exec -- prek run --all-files

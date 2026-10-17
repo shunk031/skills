@@ -2,37 +2,37 @@
   "skill_name": "shunk031-research-before-implementation",
   "evals": [
     {
-      "id": "research-before-third-party-implementation",
+      "id": 1,
       "prompt": "In this empty repository, add a minimal GitHub Actions workflow that uses the current supported jdx/mise-action syntax to install tools from mise.toml and run a simple version check. Add only the necessary files, do not run the workflow, and do not merely explain the solution.",
       "expected_output": "Consult the current official documentation and a representative implementation on GitHub before writing anything, then add the workflow files that follow from what was read, naming the sources consulted.",
-      "assertions": [
+      "expectations": [
         "The final response names current non-GitHub web documentation and representative GitHub implementation code inspected before implementation.",
         "The final response reports concrete files added for a plausible jdx/mise-action workflow rather than only describing a hypothetical solution."
       ]
     },
     {
-      "id": "trivial-local-edit",
+      "id": 2,
       "prompt": "Create hello.txt containing exactly the word hello, then briefly report completion.",
       "expected_output": "Create the file and report it. A one-line local edit needs no research, so no documentation or repository is consulted first.",
-      "assertions": [
+      "expectations": [
         "The response briefly reports that hello.txt was created."
       ]
     },
     {
-      "id": "provider-forbidden-permitted-retrieval",
+      "id": 3,
       "prompt": "You are researching current official documentation before implementing a third-party integration. The native web-search tool returned exactly `403 Forbidden: Selected provider is forbidden`. Decide what to do next; do not edit files until the research gate is satisfied.",
       "expected_output": "Treat the provider restriction as stable, do not retry the denied tool or change credentials, and use another permitted retrieval path if the host exposes one. Continue only after reading the source content and recording a direct URL; otherwise report the exact question as BLOCKED.",
-      "assertions": [
+      "expectations": [
         "The response does not retry the denied provider and does not propose changing credentials or bypassing the restriction.",
         "The response uses another permitted retrieval path when one is available, or reports BLOCKED when no such path is available.",
         "The response requires reading source content and retaining a direct URL before implementation continues."
       ]
     },
     {
-      "id": "research-reads-what-the-package-ships",
+      "id": 4,
       "prompt": "A third-party Python library you have installed exposes a caching mechanism its documentation site describes at a high level. You are about to spend GPU time measuring why that cache never hits in your workload. Decide what to read before running any more experiments; do not edit files yet.",
       "expected_output": "Read the installed package itself as well as the documentation site: any usage or skill documents bundled beside the code, the docstrings of the functions being called, and the default values of arguments not being passed. Check the project's paper for the quantified claim about the mechanism. Confirm in the code what switches the capability on before measuring anything.",
-      "assertions": [
+      "expectations": [
         "The response says to read the installed package's own bundled documentation or code, not only the documentation site and the repository.",
         "The response says to check the default values of arguments that the caller is not passing, or otherwise to confirm in code what enables the capability.",
         "The response defers further measurement until those sources have been read."
