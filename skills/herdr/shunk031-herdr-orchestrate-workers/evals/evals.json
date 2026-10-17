@@ -16,6 +16,19 @@
       "assertions": [
         "The response gives the existing macOS-only job a disposition."
       ]
+    },
+    {
+      "id": "inbox-item-needs-plain-language-clarification",
+      "prompt": "You are continuing a Herdr orchestration conversation. The inbox already contains one unanswered user decision with this exact text: ‘Codex の Stop hook: 但し書きを足すかどうか決めてください。毎回 reviewer への指示で打ち消す運用でよければ、hook は変えません。’ The current Stop hook says that when the user gives a correction or a failure is verified, you must add it to the unfinished work, fix and verify it, then report the cause and a minimal prevention measure. The proposed caveat would clarify how independent reviewer feedback should interact with that rule; without it, the reviewer must override the hook in each review. The user has twice replied with questions rather than a choice: ‘これなんでしたっけ’ and ‘なんですかこれ’. Write the next short user-facing report in Japanese. Do not run commands.",
+      "expected_output": "The next report makes the existing policy choice understandable enough for the user to answer without another clarification.",
+      "assertions": [
+        "Explains in plain Japanese what the Stop hook requires and what adding the reviewer-feedback caveat would change.",
+        "Asks the user to choose explicitly between adding the standing caveat and leaving the hook unchanged while handling overrides in reviewer instructions.",
+        "Explains why the choice is needed or what it blocks, and gives a recommendation.",
+        "States what the orchestrator will do if the user does not answer.",
+        "Clarifies the existing item without presenting it as a fresh inbox item or creating a duplicate.",
+        "Does not treat either request for an explanation as the user's decision, claim that a decision was made, or say that the inbox item was closed."
+      ]
     }
   ]
 }
