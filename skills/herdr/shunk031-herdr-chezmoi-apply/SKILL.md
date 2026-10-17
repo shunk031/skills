@@ -44,6 +44,14 @@ ssh <target> 'GITHUB_TOKEN="$(gh auth token)" chezmoi --source "$HOME/.local/sha
 
 For `Local`, run the command inside the quotes directly. Token lookup happens on the target and is scoped to that invocation; do not copy tokens between machines, switch accounts automatically, or print credential values.
 
+## Diagnose a stopped apply
+
+Identify the failing command before retrying. If `gitHubLatestReleaseAssetURL` fails with a GitHub API 403 rate limit, check that public apply used the token-scoped command above. An anonymous rate limit does not justify changing the external template.
+
+If `mise install` fails to download a pinned tool with a connection reset, test the reported URL directly and through the target's available proxy. When only the proxy works, scope `HTTP_PROXY` and `HTTPS_PROXY` to the failed `mise install`, then retry apply after the tool is installed. Keep the pinned tool and its installer.
+
+If apply stops producing output during skill reconciliation, inspect its child process before interrupting it. When `skills update` is stuck cloning a private `git@github.com:` URL and SSH is unreachable, verify HTTPS access to that repository with an already authorized `gh` account. For the retry, scope that account's `GH_TOKEN` and a Git URL rewrite to the apply invocation with `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf`, and `GIT_CONFIG_VALUE_0=git@github.com:`. Do not change global Git configuration or choose a different account without user direction; stop if HTTPS access is unavailable.
+
 ## Report
 
 On failure, stop that target's remaining steps and continue with the others. Inspect the error and current state before any retry; retry once only after correcting the cause. Do not blindly repeat an interrupted apply.
