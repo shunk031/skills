@@ -149,7 +149,6 @@ def read_skill(skill_dir: Path) -> dict[str, Any] | None:
         "description": fields.get("description", ""),
         "body": body.strip(),
         "has_evals": (skill_dir / "evals" / "evals.json").is_file(),
-        "has_triggers": (skill_dir / "evals" / "triggers.json").is_file(),
         "references": references,
         "results": results,
     }
