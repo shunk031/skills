@@ -38,10 +38,8 @@ An orchestrator delegates independent tasks to worker agents, one git worktree t
 4. Start Codex in the destination pane, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Do not reuse the pre-move root pane ID:
 
    ```bash
-   herdr agent start <your-name>-<task> --kind codex --pane <destination-pane-id>
+   herdr agent start <your-name>-<task> --kind codex --pane <destination-pane-id> -- -m gpt-6-luna -c model_reasoning_effort=xhigh
    ```
-
-   The active Codex config supplies the model and reasoning effort; keep model selection there instead of pinning a version in this skill.
 
 5. Before each dispatch, record the worker's current `state_change_seq`. Dispatch with `herdr agent prompt <worker-name> "$task_prompt"` without `--wait`. Do not treat the CLI `agent_prompted` response as a receipt. This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding. After each receipt is observed, start one background lifecycle wait for that outstanding worker with `herdr agent wait <worker-name> &`; omit `--until` so Herdr's settled-state defaults apply. When the wait settles, read the worker's deliverable and transcript directly and verify the result; do not use report arrival to detect completion. A blocking `agent wait` is lifecycle waiting, not polling. Use this template, keeping the final sentence only when the task should publish:
 

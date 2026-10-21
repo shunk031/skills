@@ -33,6 +33,10 @@
 - Published numbers: a passing or failing `shuhari eval skill` writes `skills/<category>/<name>/evals/results.json`, which the documentation site reads. The gate does it, not you — the workspace it derives from is gitignored, so it can only be written where the run happened, and leaving that to a person meant it did not happen. Commit the file with the change that produced it.
 - Skills without evals: A skill may ship without `evals/`. The gate wrapper skips it rather than failing. Adding evals to an existing skill is a welcome change on its own.
 
+## Model and Reasoning-Effort Changes
+
+- When changing a model or reasoning-effort specification, search the rest of the repository—including skills, scripts, eval harnesses, and tests—for other specifications, then ask the owner whether each should change too. Do not change or silently exclude those specifications before the owner decides.
+
 ## Development Setup
 
 - In every new clone or worktree, run `make setup` before editing or committing. It installs the routine toolchain and pre-commit hooks. Mise keeps shuhari disabled, so setup does not install it.
