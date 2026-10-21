@@ -2,19 +2,32 @@
   "skill_name": "shunk031-herdr-orchestrate-workers",
   "evals": [
     {
-      "id": "structural-variant-design-record-order",
+      "id": 1,
       "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch; do not execute commands.",
       "expected_output": "The report states the intended workflow shape, removals, retained elements and reasons, and user-owned choices before the worker dispatch.",
-      "assertions": [
+      "expectations": [
         "The four-part design record precedes the worker dispatch."
       ]
     },
     {
-      "id": "structural-variant-questions-redundant-job",
+      "id": 2,
       "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch, and decide the existing job's fate before dispatching. Do not execute commands.",
       "expected_output": "The orchestrator gives the existing macOS-only job a disposition: remove it, retain it with a reason, or offer the choice to the user.",
-      "assertions": [
+      "expectations": [
         "The response gives the existing macOS-only job a disposition."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "You are continuing a Herdr orchestration conversation. The inbox already contains one unanswered user decision with this exact text: ‘Codex の Stop hook: 但し書きを足すかどうか決めてください。毎回 reviewer への指示で打ち消す運用でよければ、hook は変えません。’ The current Stop hook says that when the user gives a correction or a failure is verified, you must add it to the unfinished work, fix and verify it, then report the cause and a minimal prevention measure. The proposed caveat would clarify how independent reviewer feedback should interact with that rule; without it, the reviewer must override the hook in each review. The user has twice replied with questions rather than a choice: ‘これなんでしたっけ’ and ‘なんですかこれ’. Write the next short user-facing report in Japanese. Do not run commands.",
+      "expected_output": "The next report makes the existing policy choice understandable enough for the user to answer without another clarification.",
+      "expectations": [
+        "Explains in plain Japanese what the Stop hook requires and what adding the reviewer-feedback caveat would change.",
+        "Asks the user to choose explicitly between adding the standing caveat and leaving the hook unchanged while handling overrides in reviewer instructions.",
+        "Explains why the choice is needed or what it blocks, and gives a recommendation.",
+        "States what the orchestrator will do if the user does not answer.",
+        "Clarifies the existing item without presenting it as a fresh inbox item or creating a duplicate.",
+        "Does not treat either request for an explanation as the user's decision, claim that a decision was made, or say that the inbox item was closed."
       ]
     }
   ]

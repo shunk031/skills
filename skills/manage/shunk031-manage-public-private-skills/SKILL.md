@@ -1,6 +1,6 @@
 ---
 name: shunk031-manage-public-private-skills
-description: Route coding-agent skill work between the public and private source repositories. Use when an installed skill change vanished, when adding, editing, renaming, splitting, or removing a skill, or when writing its evals and trigger cases.
+description: Route coding-agent skill work between the public and private source repositories. Use when an installed skill change vanished, when adding, editing, renaming, splitting, or removing a skill, or when authoring its behavior evaluation cases.
 ---
 
 > [!NOTE]
@@ -12,12 +12,12 @@ Skill content lives in two dedicated repositories. Neither dotfiles repository h
 
 ## Where a skill lives
 
-| Repository | Holds |
-| --- | --- |
-| `shunk031/skills` | Every publishable skill |
-| `shunk031/skills-private` | Skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process |
-| `shunk031/dotfiles` | The reconcile script and the public subscriptions. No skill content |
-| `shunk031/dotfiles-private` | The private subscriptions. No skill content |
+| Repository                  | Holds                                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `shunk031/skills`           | Every publishable skill                                                                                  |
+| `shunk031/skills-private`   | Skills whose body names an internal host, a credential, an internal endpoint, or an org-internal process |
+| `shunk031/dotfiles`         | The reconcile script and the public subscriptions. No skill content                                      |
+| `shunk031/dotfiles-private` | The private subscriptions. No skill content                                                              |
 
 The deciding test is that single question about the skill body. Being written for work does not make a skill private; naming an internal system does. When a skill is close to the line, prefer private and say why.
 
@@ -54,11 +54,11 @@ edit in the skill repository worktree
 DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply    # or: make skills-update
 ```
 
-| Skill source | Subscription handling |
-| --- | --- |
-| `shunk031/skills` | The repository-wide subscription discovers additions; the reconciliation script removes names reported as upstream deletions, while renames or cases the warning does not cover add the old name to `SKILLS_RETIRED_NAMES` in `shunk031/dotfiles` |
-| `shunk031/skills-private` | Add or remove its entry in `home/dot_config/agents/skills-private.allowlist` in `shunk031/dotfiles-private` |
-| Third-party repository | Add or remove its selected entry in `install/common/skills.sh` in `shunk031/dotfiles` |
+| Skill source              | Subscription handling                                                                                                                                                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shunk031/skills`         | The repository-wide subscription discovers additions; the reconciliation script removes names reported as upstream deletions, while renames or cases the warning does not cover add the old name to `SKILLS_RETIRED_NAMES` in `shunk031/dotfiles` |
+| `shunk031/skills-private` | Add or remove its entry in `home/dot_config/agents/skills-private.allowlist` in `shunk031/dotfiles-private`                                                                                                                                       |
+| Third-party repository    | Add or remove its selected entry in `install/common/skills.sh` in `shunk031/dotfiles`                                                                                                                                                             |
 
 After merging a public skill change, use `DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply` or `make skills-update` to bypass the daily discovery throttle. Ordinary reconciliation discovers additions within one day and removes names reported by the `skills update` upstream-deletion warning. Keep `SKILLS_RETIRED_NAMES` for renames or deletions that the warning does not expose.
 
@@ -73,13 +73,12 @@ In that file only a leading `#` starts a comment, because an entry may carry a `
 - One directory per skill at `skills/<category>/<name>/`, holding `SKILL.md`. Frontmatter `name` must equal the leaf directory name.
 - Never put a `SKILL.md` at a repository root. The `skills` CLI stops discovery there and returns only that skill, hiding every other one from installers.
 - Keep the category layout exactly one level below `skills/`: `skills/<category>/<name>/`.
-- `evals/` is reserved: shuhari looks for `evals/evals.json` and `evals/triggers.json` at fixed paths.
-- Never commit `skills/<category>/<name>-workspace/`. Those are shuhari run artifacts holding verbatim agent transcripts.
+- `evals/evals.json` uses the Anthropic skill-creator format for optional behavior cases.
 - Scripts a skill needs at runtime go inside the skill directory. The CLI copies the whole skill directory into the pool, so anything outside it will not be there when the skill runs.
 
 ## Writing evals
 
-Behavior cases go in `evals/evals.json`; trigger cases go in `evals/triggers.json`. Read [references/eval-authoring.md](references/eval-authoring.md) when adding or changing either file. It covers case scope, near-miss controls, trial variance, network-required cases, and gate order.
+Behavior cases go in `evals/evals.json`. Read [references/eval-authoring.md](references/eval-authoring.md) when adding or changing them. This repository does not provide a command to run or grade these cases.
 
 ## Authoring and reviewing a skill
 

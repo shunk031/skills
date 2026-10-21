@@ -3,9 +3,8 @@
 # @file scripts/check_skill_layout.sh
 # @brief Enforce the repository's skill layout and naming rules.
 # @description
-#   Shuhari validates only the skills that carry eval files, and the `skills`
-#   CLI reports discovery problems as missing skills rather than as errors. This
-#   script covers the gap with offline checks that need no agent:
+#   The `skills` CLI reports discovery problems as missing skills rather than
+#   as errors. This script covers the gap with offline checks that need no agent:
 #
 #   1. No `SKILL.md` at the repository root, which would stop CLI discovery and
 #      hide every other skill.
@@ -14,11 +13,10 @@
 #      `description`.
 #   4. The frontmatter `name` equals the skill directory name.
 #   5. Each skill opens with a read-receipt NOTE naming that skill.
-#   6. `evals/evals.json` and `evals/triggers.json` agree with that name.
+#   6. `evals/evals.json`, when present, agrees with that name.
 #   7. Each `shunk031-` skill names an allowed domain right after the prefix.
 #   8. Every `SKILL.md` is at `skills/<category>/<name>/SKILL.md`.
-#   9. No Shuhari workspace directory is tracked by git.
-#  10. The README skill index lists every skill exactly once and no removed skill.
+#   9. The README skill index lists every skill exactly once and no removed skill.
 # @exitcode 0 When every check passes.
 # @exitcode 1 When any check fails.
 # @example
@@ -38,7 +36,7 @@ readonly README_FILE="${REPO_ROOT}/README.md"
 # Widening this list is a deliberate edit, which is the point: it is the only
 # place a new domain can be introduced.
 readonly OWNED_PREFIX="shunk031-"
-readonly ALLOWED_DOMAINS="codex github herdr manage python research shellscript writing"
+readonly ALLOWED_DOMAINS="codex colab github herdr manage python research shellscript writing"
 
 failures=()
 
@@ -118,7 +116,7 @@ function is_valid_read_receipt() {
     [ -n "${emoji}" ]
 }
 
-# @description Read `skill_name` from a Shuhari eval or trigger file.
+# @description Read `skill_name` from a behavior eval file.
 # @arg $1 file The JSON file path.
 # @stdout The `skill_name` value, or nothing when it is absent.
 function eval_skill_name() {
@@ -143,17 +141,10 @@ function skill_dirs() {
     while IFS= read -r skill_file; do
         [ -n "${skill_file}" ] || continue
         dirname -- "${skill_file}"
-    done < <(
-        find "${SKILLS_ROOT}" \
-            -type d -name '*-workspace' -prune -o \
-            -type f -name 'SKILL.md' -print 2> /dev/null
-    )
+    done < <(find "${SKILLS_ROOT}" -type f -name 'SKILL.md' -print 2> /dev/null)
 }
 
 # @description Reject a `SKILL.md` outside `skills/<category>/<name>/`.
-# @description
-#   Shuhari workspaces are pruned: they are run artifacts that can contain a
-#   copy of the skill under evaluation, which is not a layout violation.
 function assert_no_nested_skill_files() {
     local file relative
     while IFS= read -r file; do
@@ -163,7 +154,7 @@ function assert_no_nested_skill_files() {
         */*/SKILL.md) ;;
         *) fail "SKILL.md must be under skills/<category>/<name>/: ${file#"${REPO_ROOT}/"}" ;;
         esac
-    done < <(find "${SKILLS_ROOT}" -type d -name '*-workspace' -prune -o -name 'SKILL.md' -print 2> /dev/null)
+    done < <(find "${SKILLS_ROOT}" -name 'SKILL.md' -print 2> /dev/null)
 }
 
 # @description Find a skill directory by its leaf name.
@@ -272,28 +263,13 @@ function check_skill() {
         fail "${skill_path}/SKILL.md has an invalid read receipt for ${name}"
     fi
 
-    local eval_file
-    for eval_file in evals.json triggers.json; do
-        local eval_path="${skill_dir}/evals/${eval_file}"
-        [ -f "${eval_path}" ] || continue
-
+    local eval_path="${skill_dir}/evals/evals.json"
+    if [ -f "${eval_path}" ]; then
         local declared_eval_name
         declared_eval_name="$(eval_skill_name "${eval_path}")"
         if [ "${declared_eval_name}" != "${name}" ]; then
-            fail "${skill_path}/evals/${eval_file} declares skill_name ${declared_eval_name:-<missing>}, which does not match its directory"
+            fail "${skill_path}/evals/evals.json declares skill_name ${declared_eval_name:-<missing>}, which does not match its directory"
         fi
-    done
-}
-
-# @description Reject tracked Shuhari workspace directories.
-# @description
-#   Workspaces hold verbatim agent transcripts. `.gitignore` covers them, but a
-#   forced add would slip past it.
-function assert_no_tracked_workspaces() {
-    local tracked
-    tracked="$(git -C "${REPO_ROOT}" ls-files -- 'skills/*-workspace/*' 'skills/*/*-workspace/*' 2> /dev/null || true)"
-    if [ -n "${tracked}" ]; then
-        fail 'Shuhari workspace artifacts are tracked by git; they contain agent transcripts'
     fi
 }
 
@@ -337,7 +313,6 @@ function assert_readme_skill_index() {
 function main() {
     assert_no_root_skill_file
     assert_no_nested_skill_files
-    assert_no_tracked_workspaces
     assert_readme_skill_index
 
     local skill_dir
