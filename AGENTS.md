@@ -26,6 +26,10 @@
 - Eval authoring: Read `skills/manage/shunk031-manage-public-private-skills/references/eval-authoring.md` when writing or revising cases.
 - Results: Existing `evals/results.json` files are dated snapshots shown on the documentation site. Documentation builds do not update them.
 
+## Model and Reasoning-Effort Changes
+
+- When changing a model or reasoning-effort specification, search the rest of the repository—including skills, scripts, eval harnesses, and tests—for other specifications, then ask the owner whether each should change too. Do not change or silently exclude those specifications before the owner decides.
+
 ## Development Setup
 
 - In every new clone or worktree, run `make setup` before editing or committing. It installs the routine toolchain and pre-commit hooks.
