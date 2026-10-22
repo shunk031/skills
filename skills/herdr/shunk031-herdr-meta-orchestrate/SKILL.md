@@ -58,6 +58,8 @@ Treat commands that pass through a version-manager shim as potentially installin
 
 Handle inventory, status requests, message relays, coordination, analysis, judgment, and pane focus after the user's explicit yes yourself. Keep decisions about what to do and what to tell users or orchestrators at the meta level. Delegate every other concrete implementation or operation, including commits, configuration applies, dialog responses, and deletions, to your own name-prefixed workers through the shunk031-herdr-orchestrate-workers skill; do not perform those actions yourself. Keep each worker's target and authorization scope explicit. Follow that skill's lifecycle and the shunk031-codex-worker-prompting skill when writing Codex task prompts. Keep model and credential choices in the referenced launch guidance, not in this public skill.
 
+When asking a worker to draft or review a reader-facing README, documentation, pull request body, or report, include a check for unnecessary reassurance about what the reader need not do or worry about (for example, “No installation is needed.”). Require the reviewer to count and report each occurrence, including zero.
+
 Carry every user authorization forward only to its stated targets and count. If a dispatch would affect more targets than the user approved, stop and report the mismatch before acting. Never restore, checkout, stash, reset, or discard uncommitted changes without the user's explicit permission for that target.
 
 ## Ask before focusing a pane
