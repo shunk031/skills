@@ -18,7 +18,6 @@ Use `gh pr edit <pr> --attach file#alt` to upload supported media and write its 
 
 ```bash
 gh pr edit 123 \
-  --body-file pr-body.md \
   --attach "results/before.png#With mathclap" \
   --attach "results/after.png#Without mathclap"
 ```
@@ -32,8 +31,8 @@ Use `gh issue comment <number-or-url> --attach file#alt` when supported media be
 ```bash
 gh issue comment 123 \
   --body 'Rendered comparison:' \
-  --attach results/before.png#Before \
-  --attach results/after.png#After
+  --attach "results/before.png#Before" \
+  --attach "results/after.png#After"
 ```
 
 The CLI workflows mutate GitHub immediately; confirm the target and requested write before running them.
