@@ -38,6 +38,12 @@ Before relaying a reply, verify it against a fresh read or transcript. An agent 
 
 Quote each orchestrator's reply unchanged and identify which orchestrator it came from. Pass the user's instruction to its owning orchestrator unchanged, together with the question the instruction answers. Keep any interpretation of your own separate and label it as such.
 
+## Follow up and patrol
+
+Immediately after each message or question to a root, start a background wait with `herdr [--machine <label>] agent wait <root>`. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled.
+
+Ask the user to approve recurring checks and agree on an interval before starting them. At each approved check, refresh the local and each enabled saved-machine agent list using the inventory commands above. Review roots' `agent_status` and each agent entry's `tokens.inbox` when present for unanswered user requests. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
+
 ## Delegate task work
 
 Handle inventory, status requests, message relays, coordination, analysis, judgment, and pane focus after the user's explicit yes yourself. Keep decisions about what to do and what to tell users or orchestrators at the meta level. Delegate every other concrete implementation or operation, including commits, configuration applies, dialog responses, and deletions, to your own name-prefixed workers through the shunk031-herdr-orchestrate-workers skill; do not perform those actions yourself. Keep each worker's target and authorization scope explicit. Follow that skill's lifecycle and the shunk031-codex-worker-prompting skill when writing Codex task prompts. Keep model and credential choices in the referenced launch guidance, not in this public skill.

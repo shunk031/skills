@@ -81,6 +81,16 @@
         "Assigns launching and managing its own workers to the orchestrate-workers skill.",
         "Does not issue Herdr commands before reading the skills."
       ]
+    },
+    {
+      "id": 9,
+      "prompt": "In an offline dry run, do not run commands. The user asks for a one-time check of whether any root needs a decision. A fresh `herdr agent list` result shows the verified saved-machine root's `agent_status` is `blocked` and its `tokens.inbox` contains `May I continue with the staged update?`. The user has not seen this request. What do you report, and should you start recurring checks?",
+      "expected_output": "Reports that the root is blocked and raises the pending question to the user verbatim, asking for a decision. Does not start recurring checks without user approval.",
+      "expectations": [
+        "Reports the blocked state using `agent_status`.",
+        "Quotes `May I continue with the staged update?` unchanged and asks the user for a decision.",
+        "Does not start recurring checks because the user has not approved them."
+      ]
     }
   ]
 }
