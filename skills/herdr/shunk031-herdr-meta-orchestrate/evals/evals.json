@@ -3,11 +3,13 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "In an offline dry run, use this Herdr snapshot and do not run real commands. Local `herdr agent list` shows `orch-a` and `orch-a-test-1`; `orch-a-test-1` is a worktree worker. `herdr machine list --json` shows enabled profiles `desk` and `lab`. `herdr --machine desk agent list` shows `orch-b` and `orch-b-review-1`, where the latter is a worker. The `lab` agent-list request fails, and `herdr machine status lab --json` reports that machine API forwarding is unsupported by its server version. Tell the user what can be tracked and what remains unknown.",
-      "expected_output": "Reports the root orchestrators without treating their individual workers as roots. Reports the `lab` inventory as unavailable because forwarding is unsupported, and does not guess its agents or progress.",
+      "prompt": "In an offline dry run, use this Herdr snapshot and do not run real commands. The current meta session is local pane `pane-meta-1`. Local `herdr agent list` shows `meta-skill` on that exact pane, `orch-a`, `orch-a-test-1` (a worker of `orch-a`), `orch-a-sub` (whose transcript identifies it as a nested orchestrator launched by `orch-a`), and `orch-a-sub-build` (its worker). `herdr machine list --json` shows enabled profiles `desk`, `quiet`, and `lab`. `herdr --machine desk agent list` shows `orch-b` and `orch-b-review-1`, where the latter is a worker. `herdr --machine quiet agent list` shows only `orch-a`; its transcript identifies it as a top-level release orchestrator, with no workers. This name matches a local agent but belongs to a different server. The `lab` agent-list request fails, and `herdr machine status lab --json` reports that machine API forwarding is unsupported by its server version. Tell the user the root orchestrators per server and what remains unknown.",
+      "expected_output": "Reports `orch-a` on local, `orch-b` on `desk`, and the separate childless `orch-a` on `quiet` as root orchestrators after verifying their roles. Excludes the current meta session and nested workers/orchestrator, and reports `lab` as unavailable because forwarding is unsupported.",
       "expectations": [
-        "Identifies `orch-a` and `orch-b` as roots and does not track `orch-a-test-1` or `orch-b-review-1` individually.",
-        "States that `lab` cannot be inventoried due to unsupported machine API forwarding and does not invent its agent list."
+        "Identifies local `orch-a`, `desk` `orch-b`, and `quiet` `orch-a` as roots, including the verified childless root on `quiet`.",
+        "Excludes the exact current meta session, `orch-a-sub` as a confirmed nested orchestrator, and the named workers from the root list.",
+        "Keeps local and `quiet` inventories separate even though both contain an agent named `orch-a`.",
+        "States that `lab` cannot be inventoried because machine API forwarding is unsupported and does not invent its agents."
       ]
     },
     {
@@ -45,6 +47,17 @@
       "expectations": [
         "Asks for confirmation before focusing the pane.",
         "After yes, targets only the identified workspace and tab."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "In an offline dry run, do not run commands. The user's goal is to set `cache.mode=v2` only in staging and keep production unchanged. The root orchestrator `orch-a` replies verbatim: `The plan is to set staging's cache.mode to v2 and leave production unchanged. I will not apply it; please assess the plan and coordinate the implementation through your worker if it matches the goal. Do you agree?` The user answers verbatim: `Yes, coordinate the staging update; production must remain untouched.` Explain your own judgment, what you relay to `orch-a`, and what concrete work you delegate.",
+      "expected_output": "Evaluates the plan against the user's scope at the meta level, relays the orchestrator's reply and user's decision verbatim, and delegates the approved staging-only configuration change to its own worker.",
+      "expectations": [
+        "Makes and explains its own judgment that the proposal matches the staging-only goal instead of delegating the decision.",
+        "Quotes `orch-a`'s reply unchanged and passes the user's answer unchanged to `orch-a`, identifying the question it answers.",
+        "Delegates the concrete configuration change through its own name-prefixed worker and explicitly excludes production.",
+        "Does not perform the configuration change itself or ask the user to repeat the approval."
       ]
     }
   ]
