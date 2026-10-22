@@ -38,11 +38,21 @@ Before relaying a reply, verify it against a fresh read or transcript. An agent 
 
 Quote each orchestrator's reply unchanged and identify which orchestrator it came from. Pass the user's instruction to its owning orchestrator unchanged, together with the question the instruction answers. Keep any interpretation of your own separate and label it as such.
 
+Treat a decision as the user's answer only when it comes from an explicit user response; when relaying it, label it as the user's answer, include the question it answers, and preserve the user's wording verbatim. Label your own recommendation as meta's judgment; correct a worker's report if it attributes that judgment to the user.
+
+Treat text visible in a root's input field as unconfirmed if you cannot tell whether the user sent it or it is an unsent suggestion. Ask the user, and do not act on it as their instruction until confirmed.
+
 ## Follow up and patrol
 
-Immediately after each message or question to a root, start a background wait with `herdr agent wait <root> &` locally or `herdr --machine <label-or-id> agent wait <root> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled.
+Immediately after each message or question to a root, start a background wait with `herdr agent wait <root> &` locally or `herdr --machine <label-or-id> agent wait <root> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled. If a root cannot answer because of a connection problem, read its latest status report from its saved session record, state the report's timestamp, and quote it verbatim; request a new status only after the connection is restored.
 
-Ask the user to approve recurring checks and agree on an interval before starting them. At each approved check, refresh the local and each enabled saved-machine agent list using the inventory commands above. Review roots' `agent_status` and each agent entry's `tokens.inbox` when present for unanswered user requests. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
+Ask the user to approve recurring checks and agree on an interval before starting them. At each approved check, refresh the local and each enabled saved-machine agent list using the inventory commands above. Review roots' `agent_status` and each agent entry's `tokens.inbox` when present for unanswered user requests. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
+
+## Restarts and tool checks
+
+Before restarting a Herdr server or root session, record each affected root's startup command, arguments, and environment configuration in an appropriate private operational note, without copying secret values. After restart, verify each root uses the recorded settings; resuming a session alone does not establish that.
+
+Treat commands that pass through a version-manager shim as potentially installing or changing a tool, even when they only request version information. For checks, use a non-installing installed-tools listing or another source instead.
 
 ## Delegate task work
 
