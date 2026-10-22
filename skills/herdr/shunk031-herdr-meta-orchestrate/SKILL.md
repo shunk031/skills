@@ -1,6 +1,6 @@
 ---
 name: shunk031-herdr-meta-orchestrate
-description: Coordinate root Herdr orchestrators across the local server and enabled saved machines. Ask for their current work and progress, relay messages verbatim, and route task execution through workers. Use when one session oversees multiple Herdr orchestrators; use the herdr skill for a single-pane or single-agent task.
+description: Coordinate root Herdr orchestrators across the local server and enabled saved machines. Ask for their current work and progress, relay messages verbatim, and route task execution through workers. Pair with the shunk031-herdr-orchestrate-workers skill for worker dispatch. Use when one session oversees multiple Herdr orchestrators; use the herdr skill for a single-pane or single-agent task.
 ---
 
 > [!NOTE]
@@ -8,7 +8,21 @@ description: Coordinate root Herdr orchestrators across the local server and ena
 
 # Meta-orchestrate Herdr sessions
 
-Use this skill to keep track of root orchestrators, ask what they are doing, pass user decisions to the right orchestrator, and report their replies without paraphrasing them.
+Use this skill together with the shunk031-herdr-orchestrate-workers skill, and read both before starting work. This skill tracks root orchestrators, requests status, and relays messages; the shunk031-herdr-orchestrate-workers skill launches and manages your own workers for concrete task work.
+
+```mermaid
+flowchart TD
+    Meta["Meta-orchestrator<br/>shunk031-herdr-meta-orchestrate skill"]
+    MetaWorkers["Meta's name-prefixed workers<br/>shunk031-herdr-orchestrate-workers skill"]
+    LocalRoot["Local root orchestrator<br/>overseen by shunk031-herdr-meta-orchestrate skill"]
+    LocalWorkers["Local root's workers<br/>managed by shunk031-herdr-orchestrate-workers skill"]
+    RemoteRoot["Saved-machine root orchestrator<br/>overseen by shunk031-herdr-meta-orchestrate skill"]
+    RemoteWorkers["Root's workers<br/>managed by shunk031-herdr-orchestrate-workers skill"]
+
+    Meta --> MetaWorkers
+    Meta --> LocalRoot --> LocalWorkers
+    Meta --> RemoteRoot --> RemoteWorkers
+```
 
 ## Find and ask root orchestrators
 

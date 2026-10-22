@@ -70,6 +70,17 @@
         "Does not address a status question to `orch-local-build` or `orch-remote-test`.",
         "Does not invent status replies from any orchestrator or worker."
       ]
+    },
+    {
+      "id": 8,
+      "prompt": "You need to oversee root orchestrators on local and saved Herdr servers, request their status, and coordinate a concrete task. You have not checked guidance yet. Before planning or issuing commands, read the relevant skills. Then state which skills you read and how their responsibilities differ for this request. Do not issue Herdr commands.",
+      "expected_output": "Reads both the `shunk031-herdr-meta-orchestrate` skill and the `shunk031-herdr-orchestrate-workers` skill before planning. Assigns root inventory, status requests, and relays to the meta-orchestrate skill, and worker launch and lifecycle to the orchestrate-workers skill.",
+      "expectations": [
+        "Reads both skills before planning or acting.",
+        "Assigns root inventory, status requests, and relays to the meta-orchestrate skill.",
+        "Assigns launching and managing its own workers to the orchestrate-workers skill.",
+        "Does not issue Herdr commands before reading the skills."
+      ]
     }
   ]
 }
