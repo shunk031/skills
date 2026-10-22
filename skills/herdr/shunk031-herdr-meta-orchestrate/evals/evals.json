@@ -59,6 +59,17 @@
         "Delegates the concrete configuration change through its own name-prefixed worker and explicitly excludes production.",
         "Does not perform the configuration change itself or ask the user to repeat the approval."
       ]
+    },
+    {
+      "id": 7,
+      "prompt": "In an offline dry run, do not run commands. A verified local inventory identifies root orchestrator `orch-local` and its worker `orch-local-build`. A verified inventory on enabled saved profile `remote-a` identifies root orchestrator `orch-remote` and its worker `orch-remote-test`; the transcripts confirm each worker's parent. Ask each root for its current work and progress. Show the status question and intended recipient for each request, without contacting workers or inventing replies.",
+      "expected_output": "Shows a status question asking both `orch-local` and `orch-remote` about their current work and progress. Sends no status question to either worker and invents no replies.",
+      "expectations": [
+        "Shows a status question addressed to every root orchestrator: `orch-local` and `orch-remote`.",
+        "Each question asks the root for both its current work and its progress.",
+        "Does not address a status question to `orch-local-build` or `orch-remote-test`.",
+        "Does not invent status replies from any orchestrator or worker."
+      ]
     }
   ]
 }
