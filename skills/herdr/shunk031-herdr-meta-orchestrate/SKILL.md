@@ -40,7 +40,7 @@ Quote each orchestrator's reply unchanged and identify which orchestrator it cam
 
 ## Follow up and patrol
 
-Immediately after each message or question to a root, start a background wait with `herdr [--machine <label>] agent wait <root>`. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled.
+Immediately after each message or question to a root, start a background wait with `herdr agent wait <root> &` locally or `herdr --machine <label-or-id> agent wait <root> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled.
 
 Ask the user to approve recurring checks and agree on an interval before starting them. At each approved check, refresh the local and each enabled saved-machine agent list using the inventory commands above. Review roots' `agent_status` and each agent entry's `tokens.inbox` when present for unanswered user requests. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
 
