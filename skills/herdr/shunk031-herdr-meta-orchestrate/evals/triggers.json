@@ -1,0 +1,10 @@
+[
+  {
+    "query": "From this session, oversee root orchestrators across the local Herdr server and enabled saved machines. Ask each root for its current work and progress, relay the replies, and route any concrete task through workers.",
+    "should_trigger": true
+  },
+  {
+    "query": "Help me split this Herdr pane and start one Codex worker for a coding task in the current worktree; no other root orchestrator or saved machine is involved.",
+    "should_trigger": false
+  }
+]
