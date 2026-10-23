@@ -138,16 +138,12 @@ EOF
         sleep 0.1
     done
     [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -ge 1 ]
-    [ "$(<"${HERDR_OBSERVER_STUB_STATE}/pane_reads")" -ge 7 ]
+    [ "$(< "${HERDR_OBSERVER_STUB_STATE}/pane_reads")" -ge 7 ]
     grep -F 'OBSERVER orch264: bounded reconciliation required' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     grep -F 'worker=complete ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     ! grep -Fq 'worker=moving ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
 
-    for _ in {1..50}; do
-        [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ] && break
-        sleep 0.1
-    done
-    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]
+    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 1 ]
     grep -F 'worker=stale ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     ! grep -Fq 'worker=foreign ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     ! grep -Fq 'pr-wait' "${HERDR_OBSERVER_STUB_STATE}/prompts"
@@ -160,16 +156,16 @@ EOF
         sleep 0.1
     done
     [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")" -gt "${sample_count}" ]
-    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]
+    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 1 ]
 
     sample_count="$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")"
     for _ in {1..50}; do
-        if [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")" -gt "${sample_count}" ] && [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 3 ]; then
+        if [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")" -gt "${sample_count}" ] && [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]; then
             break
         fi
         sleep 0.1
     done
-    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 3 ]
+    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]
     printf '%s\n' '{"result":{"agents":[]},"type":"agent_list"}' > "${HERDR_OBSERVER_STUB_STATE}/agents.json"
 
     for _ in {1..50}; do
