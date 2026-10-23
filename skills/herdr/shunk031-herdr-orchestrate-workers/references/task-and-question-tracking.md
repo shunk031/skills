@@ -14,7 +14,7 @@ Use these procedures when the inbox mod is available.
 - Include each blocking user decision or action in the user-facing report so the mod's post-turn update adds it to the `Needs you` list. Do not repeat open inbox items in later reports.
 - Use questions for choices that block continued work, and tasks only for actions the user can take that block continuing or finishing.
 - Make each item stand alone: state what the user should decide or do, why it is needed or what it blocks, your recommendation, and what you will do if there is no answer. Include the exact command or link when relevant.
-- Use `mcp__inbox__record_finding` for in-progress task tracking and out-of-scope issues or opportunities, not user blockers.
+- Use `mcp__inbox__record_finding` for out-of-scope issues or opportunities, not user decisions or actions that block progress.
 
 ## Close user items
 
