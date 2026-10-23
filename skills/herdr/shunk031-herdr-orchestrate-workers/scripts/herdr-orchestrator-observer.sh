@@ -19,6 +19,7 @@ if [[ "${HERDR_ENV:-}" != 1 ]]; then
     exit 2
 fi
 
+SCRIPT_DIRECTORY="$(cd "$(dirname "$0")" && pwd)"
 ORCHESTRATOR=''
 INTERVAL_SECONDS=60
 STALE_SAMPLES=3
@@ -211,12 +212,15 @@ function observe_once() {
             printf '%s\n' "${report_lines[@]}"
             printf '%s\n' 'Reconcile Herdr state/transcript and relevant worktree/PR/CI truth; this observer is read-only and the report is not terminal.'
         )"
-        if herdr agent prompt "${ORCHESTRATOR}" "${nudge}" > /dev/null 2>&1; then
+        if "$SCRIPT_DIRECTORY/herdr-agent-prompt-if-input-empty.sh" "${ORCHESTRATOR}" "${nudge}" > /dev/null; then
             for name in "${pending_names[@]}"; do
                 next_alerted="$(map_set "${next_alerted}" "${name}" 1)"
             done
         else
-            printf '%s\n' 'observer: orchestrator nudge failed; episode remains armed' >&2
+            prompt_status=$?
+            if ((prompt_status != 75)); then
+                printf '%s\n' 'observer: orchestrator nudge failed; episode remains armed' >&2
+            fi
         fi
     fi
 
