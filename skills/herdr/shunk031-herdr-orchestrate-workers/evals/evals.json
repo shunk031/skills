@@ -29,6 +29,17 @@
         "Clarifies the existing item without presenting it as a fresh inbox item or creating a duplicate.",
         "Does not treat either request for an explanation as the user's decision, claim that a decision was made, or say that the inbox item was closed."
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "You are a Herdr orchestrator. In an offline dry run, do not run commands. You need to dispatch a task to worker worker-1; its ANSI input line contains only the prompt glyph followed by text styled with the ANSI SGR dim code 2 and then reset. Another read shows ordinary text after the prompt glyph on every check. What guarded command do you use, and what happens in each case?",
+      "expected_output": "Uses the bundled input guard, which treats the dim placeholder or suggestion as empty and sends through herdr agent prompt only after confirming the field is empty. With ordinary text present, it waits 30 seconds and retries five times; if the text remains, it leaves the message unsent and reports the complete message as undelivered.",
+      "expectations": [
+        "Names the bundled helper as the prompt path and keeps herdr agent prompt as its transport.",
+        "Treats ANSI dim text after the prompt glyph as a placeholder or suggestion rather than typed input.",
+        "Waits 30 seconds between up to five rechecks when ordinary input is present.",
+        "Does not send the dispatch if the input remains occupied or unclear after the retry budget, and reports the complete message as undelivered."
+      ]
     }
   ]
 }

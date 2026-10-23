@@ -23,7 +23,7 @@ function teardown() {
     export PATH
 }
 
-@test "[common] observer coalesces scoped lifecycle truth and stops cleanly" {
+@test "[common] observer retries rejected nudges and coalesces scoped lifecycle truth" {
     HERDR_OBSERVER_STUB_STATE="${BATS_TEST_TMPDIR}/observer-state"
     export HERDR_OBSERVER_STUB_STATE
     mkdir -p "${HERDR_OBSERVER_STUB_STATE}"
@@ -59,6 +59,23 @@ case "${command_name}" in
         one_line="${report//$'\n'/ }"
         printf '%s\n' "${one_line}" >> "${state_dir}/prompts"
         ;;
+    "agent get")
+        target="$1"
+        [[ "$target" == orch264 ]] || exit 1
+        printf '%s\n' '{"result":{"agent":{"pane_id":"w9:p9"}}}'
+        ;;
+    "pane read")
+        [[ "$1" == w9:p9 ]] || exit 1
+        pane_reads=0
+        [[ ! -f "${state_dir}/pane_reads" ]] || pane_reads="$(<"${state_dir}/pane_reads")"
+        pane_reads=$((pane_reads + 1))
+        printf '%s\n' "${pane_reads}" > "${state_dir}/pane_reads"
+        if ((pane_reads <= 6)); then
+            printf '%s\n' '❯ user text'
+        else
+            printf '%s\n' '❯'
+        fi
+        ;;
     "tab get")
         case "${1:?}" in
             w1:t1) printf '%s\n' '{"result":{"tab":{"label":"🚧 stale task"}}}' ;;
@@ -74,6 +91,14 @@ case "${command_name}" in
 esac
 EOF
     chmod +x "${BATS_TEST_TMPDIR}/observer-bin/herdr"
+    cat > "${BATS_TEST_TMPDIR}/observer-bin/sleep" << 'EOF'
+#!/usr/bin/env bash
+if [[ "${1:-}" == 30 ]]; then
+    exit 0
+fi
+exec /bin/sleep "$@"
+EOF
+    chmod +x "${BATS_TEST_TMPDIR}/observer-bin/sleep"
     cat > "${HERDR_OBSERVER_STUB_STATE}/agents.json" << 'EOF'
 {"result":{"agents":[
   {"name":"stale","agent_status":"working","revision":1,"state_change_seq":1,"pane_id":"w1:p1","tab_id":"w1:t1"},
@@ -113,15 +138,12 @@ EOF
         sleep 0.1
     done
     [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -ge 1 ]
+    [ "$(< "${HERDR_OBSERVER_STUB_STATE}/pane_reads")" -ge 7 ]
     grep -F 'OBSERVER orch264: bounded reconciliation required' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     grep -F 'worker=complete ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     ! grep -Fq 'worker=moving ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
 
-    for _ in {1..50}; do
-        [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ] && break
-        sleep 0.1
-    done
-    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]
+    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 1 ]
     grep -F 'worker=stale ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     ! grep -Fq 'worker=foreign ' "${HERDR_OBSERVER_STUB_STATE}/prompts"
     ! grep -Fq 'pr-wait' "${HERDR_OBSERVER_STUB_STATE}/prompts"
@@ -134,16 +156,16 @@ EOF
         sleep 0.1
     done
     [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")" -gt "${sample_count}" ]
-    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]
+    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 1 ]
 
     sample_count="$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")"
     for _ in {1..50}; do
-        if [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")" -gt "${sample_count}" ] && [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 3 ]; then
+        if [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/samples")" -gt "${sample_count}" ] && [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]; then
             break
         fi
         sleep 0.1
     done
-    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 3 ]
+    [ "$(wc -l < "${HERDR_OBSERVER_STUB_STATE}/prompts")" -eq 2 ]
     printf '%s\n' '{"result":{"agents":[]},"type":"agent_list"}' > "${HERDR_OBSERVER_STUB_STATE}/agents.json"
 
     for _ in {1..50}; do

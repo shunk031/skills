@@ -34,6 +34,16 @@ If a remote agent list fails because its Herdr server does not support machine A
 
 Before relaying a reply, verify it against a fresh read or transcript. An agent name can move to another pane when its session is resumed or opened elsewhere, so re-identify the live agent by pane ID and transcript instead of relying on a stale name.
 
+## Send only into an empty root input
+
+Before every meta-to-root relay, build the exact message in a quoted variable and use the helper bundled with the required shunk031-herdr-orchestrate-workers skill:
+
+~~~bash
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <root> "$message"
+~~~
+
+The helper resolves the root pane with herdr agent get and checks herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. Treat an input line with no non-dim text after ❯ or › as empty; ignore placeholder or suggestion text styled with ANSI \e[2m. If the line has ordinary text or cannot be read, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
+
 ## Relay exactly
 
 Quote each orchestrator's reply unchanged and identify which orchestrator it came from. Pass the user's instruction to its owning orchestrator unchanged, together with the question the instruction answers. Keep any interpretation of your own separate and label it as such.
