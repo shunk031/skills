@@ -218,11 +218,7 @@ function observe_once() {
             done
         else
             prompt_status=$?
-            if ((prompt_status == 75)); then
-                for name in "${pending_names[@]}"; do
-                    next_alerted="$(map_set "${next_alerted}" "${name}" 1)"
-                done
-            else
+            if ((prompt_status != 75)); then
                 printf '%s\n' 'observer: orchestrator nudge failed; episode remains armed' >&2
             fi
         fi
