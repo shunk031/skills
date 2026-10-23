@@ -112,6 +112,17 @@
         "Requires post-restart verification that both roots' launch settings match the record.",
         "Does not treat resuming by session ID alone as verification."
       ]
+    },
+    {
+      "id": 12,
+      "prompt": "In an offline dry run, do not run commands or contact anyone. You must relay the user's exact answer Keep the fixture. Continue with the current plan. to root orch-a. A fresh ANSI pane read shows ordinary text after ❯; five 30-second rechecks remain non-empty. What guarded command do you use, and what should you tell the user?",
+      "expected_output": "Routes the exact answer through the helper bundled with the required orchestrate-workers skill. Because the root's input remains occupied after five rechecks, it sends nothing and reports the full answer as undelivered.",
+      "expectations": [
+        "Uses the prompt guard bundled with the required shunk031-herdr-orchestrate-workers skill for the root relay.",
+        "Does not call herdr agent prompt directly while ordinary text is present.",
+        "Waits 30 seconds between up to five rechecks and leaves the message unsent if the input stays occupied.",
+        "Reports the complete user answer as undelivered without changing its wording."
+      ]
     }
   ]
 }

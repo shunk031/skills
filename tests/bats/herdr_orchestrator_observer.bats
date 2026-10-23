@@ -59,6 +59,15 @@ case "${command_name}" in
         one_line="${report//$'\n'/ }"
         printf '%s\n' "${one_line}" >> "${state_dir}/prompts"
         ;;
+    "agent get")
+        target="$1"
+        [[ "$target" == orch264 ]] || exit 1
+        printf '%s\n' '{"result":{"agent":{"pane_id":"w9:p9"}}}'
+        ;;
+    "pane read")
+        [[ "$1" == w9:p9 ]] || exit 1
+        printf '%s\n' '❯'
+        ;;
     "tab get")
         case "${1:?}" in
             w1:t1) printf '%s\n' '{"result":{"tab":{"label":"🚧 stale task"}}}' ;;
