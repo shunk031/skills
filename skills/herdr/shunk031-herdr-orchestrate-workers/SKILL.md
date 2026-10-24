@@ -76,6 +76,43 @@ Before every prompt send in this skill, run the guarded sender at ~/.agents/skil
 
    Only when the user explicitly requests active observation, optionally run `scripts/herdr-orchestrator-observer.sh` with fixed worker/pane/tab IDs, a conservative interval, and unchanged-sample threshold from `observer_runtime="$(mktemp -d "${TMPDIR:-/tmp}/herdr-observer.XXXXXX")"`; launch with `... >"$observer_runtime/observer.log" 2>&1 & observer_pid=$!` and validate it with `kill -0 "$observer_pid"`. The read-only sampler keeps fingerprints and coalescing in-process, skips only unreadable workers, sends one quoted advisory nudge through the guarded sender, and exits when no scoped workers remain; stop that PID after the requested observation. The per-worker lifecycle waits and direct reads remain the completion path; the observer and any report prompts are advisory, and a missing report does not block a result already collected from state.
 
+   ### Supplemental health watchers
+
+   Use the worker stall and runner failure watchers when passive alerts would help with the active task. After workers and state sources are available, run each script once in the foreground with `--once`; continue only when it exits successfully and prints `OK`. Resolve any alert or startup error before starting a background copy. Set the worker prefix, state-file globs, and optional SSH destination from the current task; repeat `--state-glob` or `--remote-state-glob` for additional patterns. Do not persist machine-specific values in this skill.
+
+   ```bash
+   worker_watch_args=(--agent-prefix "$WORKER_PREFIX" --interval-seconds 900)
+   if [[ -n "${ORCHESTRATOR_NAME:-}" ]]; then
+       worker_watch_args+=(--exclude-agent "$ORCHESTRATOR_NAME")
+   fi
+   runner_watch_args=(--state-glob "$STATE_GLOB" --interval-seconds 600)
+   if [[ -n "${REMOTE_HOST:-}" ]]; then
+       runner_watch_args+=(--remote-host "$REMOTE_HOST" --remote-port "${REMOTE_PORT:-22}" --remote-state-glob "$REMOTE_STATE_GLOB")
+   fi
+
+   if ! HERDR_ENV=1 scripts/herdr-worker-stall-watch.sh "${worker_watch_args[@]}" --once; then
+       printf '%s\n' 'Resolve the worker watcher alert before starting background watchers.' >&2
+       exit 1
+   fi
+   if ! scripts/herdr-run-failure-watch.sh "${runner_watch_args[@]}" --once; then
+       printf '%s\n' 'Resolve the runner watcher alert before starting background watchers.' >&2
+       exit 1
+   fi
+
+   watch_runtime="$(mktemp -d "${TMPDIR:-/tmp}/herdr-watchers.XXXXXX")"
+   HERDR_ENV=1 scripts/herdr-worker-stall-watch.sh "${worker_watch_args[@]}" >"$watch_runtime/workers.log" 2>&1 &
+   worker_watch_pid=$!
+   scripts/herdr-run-failure-watch.sh "${runner_watch_args[@]}" >"$watch_runtime/runners.log" 2>&1 &
+   runner_watch_pid=$!
+   if ! kill -0 "$worker_watch_pid" || ! kill -0 "$runner_watch_pid"; then
+       kill "$worker_watch_pid" "$runner_watch_pid" 2>/dev/null || true
+       printf 'Watcher startup failed; inspect %s/*.log.\n' "$watch_runtime" >&2
+       exit 1
+   fi
+   ```
+
+   Stop both watcher processes after reconciling the scoped work. These scripts are backstops; keep one lifecycle wait per worker and use the launcher's own self-watch for its process. Watcher output does not establish completion or replace direct state and transcript reads.
+
    An actionable `REJECT` from an independent review worker is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <owner> "$answer"` path; use the step-5 receipt contract, record the exact rejected head and `re-review pending`, and after the owner publishes a corrected head route that exact head back to the same reviewer with the same contract. Before asking the user to merge and immediately before squash merging, verify the live PR head matches the head SHA recorded with the reviewer's `ACCEPT`, and check whether it is mergeable, behind, or conflicting. If behind, route the branch update and CI follow-up to the owning worker; if conflicting, route conflict resolution and CI follow-up to that worker. If the head differs or either repair changes it, withhold the handoff or merge, re-review that exact head, and ask the user again only after a fresh `ACCEPT`.
 
    When a user flags one defective passage in a worker-owned deliverable, treat it as an instance of a class, not a spot-fix request. The orchestrator defines the class, quotes the flagged passage as the model case, dispatches a sweep to every owner whose artifact can carry that class, and requires each report to include found and fixed counts.
