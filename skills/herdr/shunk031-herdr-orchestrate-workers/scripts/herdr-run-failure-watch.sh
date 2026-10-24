@@ -242,7 +242,7 @@ def sample(args, ignored):
             if pid not in alive:
                 alerts.append("ALERT REMOTE {} marked running but PID {} is gone".format(name, pid))
 
-    return alerts, len(local_contents) + len(remote_contents)
+    return alerts, len(local_contents), len(remote_contents)
 
 
 def main():
@@ -250,7 +250,7 @@ def main():
     ignored = {name.strip() for name in os.environ.get("WATCH_IGNORE", "").split(",") if name.strip()}
     while True:
         try:
-            alerts, file_count = sample(args, ignored)
+            alerts, local_file_count, remote_file_count = sample(args, ignored)
         except (OSError, RuntimeError, subprocess.SubprocessError) as error:
             print("runner failure watcher: {}".format(error), file=sys.stderr)
             return 1
@@ -260,11 +260,16 @@ def main():
                 print(alert, flush=True)
             return 3 if args.once else 0
         if args.once:
-            if file_count == 0:
-                print("runner failure watcher: no recent state files matched the configured globs", file=sys.stderr)
+            if args.state_glob and local_file_count == 0:
+                print("runner failure watcher: no recent local state files matched the configured globs", file=sys.stderr)
+                return 1
+            if args.remote_host and remote_file_count == 0:
+                print("runner failure watcher: no recent remote state files matched the configured globs", file=sys.stderr)
                 return 1
             print(
-                "OK: checked {} recent state file(s); no recent failures or dead PIDs.".format(file_count),
+                "OK: checked {} local and {} remote recent state file(s); no recent failures or dead PIDs.".format(
+                    local_file_count, remote_file_count
+                ),
                 flush=True,
             )
             return 0

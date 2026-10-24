@@ -84,11 +84,11 @@ Before every prompt send in this skill, run the guarded sender at ~/.agents/skil
    fi
 
    if ! HERDR_ENV=1 scripts/herdr-worker-stall-watch.sh "${worker_watch_args[@]}" --once; then
-       printf '%s\n' 'Resolve the worker watcher alert before starting background watchers.' >&2
+       printf '%s\n' 'Check the worker watcher output and resolve any alert or startup error before backgrounding.' >&2
        exit 1
    fi
    if ! scripts/herdr-run-failure-watch.sh "${runner_watch_args[@]}" --once; then
-       printf '%s\n' 'Resolve the runner watcher alert before starting background watchers.' >&2
+       printf '%s\n' 'Check the runner watcher output and resolve any alert or startup error before backgrounding.' >&2
        exit 1
    fi
 
