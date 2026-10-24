@@ -3,9 +3,9 @@
 # @file skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh
 # @brief Send an agent prompt only after its visible input line is empty.
 # @description
-#   Read the target pane's visible ANSI input line before sending. Ignore plain
-#   dim placeholder and suggestion spans, retry a busy or unclear line five
-#   times, then report the unsent prompt.
+#   Read the target pane's visible ANSI input line before sending. Ignore SGR-dim
+#   suggestion text, including spans without an explicit reset. Retry a busy or
+#   unclear line five times, then report the unsent prompt.
 # @arg $1 Target agent name or pane ID.
 # @arg $2 Prompt text, passed as one argument.
 # @example
