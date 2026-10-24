@@ -9,7 +9,6 @@ function setup() {
     cat > "$PATROL_STUB_STATE/bin/herdr" << 'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
-state_dir="$PATROL_STUB_STATE"
 machine=''
 if [[ "${1:-}" == --machine ]]; then
     machine="$2"
