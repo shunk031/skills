@@ -3,10 +3,9 @@
 # @file skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh
 # @brief Send an agent prompt only after its visible input line is empty.
 # @description
-#   Read the target pane's visible ANSI input line before sending. Ignore plain
-#   dim placeholder and suggestion spans, retry a busy or unclear line five
-#   times, then report the unsent prompt.
-#   shortcut: handle nested ANSI inside dim spans if live output starts showing it.
+#   Read the target pane's visible ANSI input line before sending. Ignore all
+#   text from the dim suggestion marker to the line end, retry a busy or unclear
+#   line five times, then report the unsent prompt.
 # @arg $1 Target agent name or pane ID.
 # @arg $2 Prompt text, passed as one argument.
 # @example
@@ -40,8 +39,8 @@ function visible_input_state() {
     printf '%s\n' "$snapshot" | LC_ALL=C awk '
         {
             line = $0
-            gsub(/\033\[2m[^\033]*\033\[0m/, "", line)
-            gsub(/\033\[[0-9;?]*[A-Za-z]/, "", line)
+            sub(/\033\[2m.*/, "", line)
+            gsub(/\033\[[0-?]*[ -\/]*[@-~]/, "", line)
             if (match(line, /^[[:space:]]*(❯|›)/)) {
                 found = 1
                 rest = substr(line, RSTART + RLENGTH)
