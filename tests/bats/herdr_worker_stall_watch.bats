@@ -61,7 +61,7 @@ JSON
 
     [ "${status}" -eq 0 ]
     [[ "${output}" == *'OK: scanned 1 matching agent(s)'* ]]
-    [ "$(<"${WORKER_STUB_STATE}/pane-reads")" = 'w2:p2' ]
+    [ "$(< "${WORKER_STUB_STATE}/pane-reads")" = 'w2:p2' ]
 }
 
 @test "[common] worker watcher alerts on a gateway retry loop" {
