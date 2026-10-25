@@ -38,15 +38,17 @@ Before relaying a reply, verify it against a fresh read or transcript. An agent 
 
 Before every meta-to-root relay, build the exact message in a quoted variable and use the helper bundled with the required shunk031-herdr-orchestrate-workers skill:
 
-~~~bash
+```bash
 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <root> "$message"
-~~~
+```
 
 The helper resolves the root pane with herdr agent get and checks herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. Treat an input line with no non-dim text after ❯ or › as empty; ignore placeholder or suggestion text styled with ANSI \e[2m. If the line has ordinary text or cannot be read, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
 
 ## Relay exactly
 
-Quote each orchestrator's reply unchanged and identify which orchestrator it came from. Pass the user's instruction to its owning orchestrator unchanged, together with the question the instruction answers. Keep any interpretation of your own separate and label it as such.
+Quote each orchestrator's reply unchanged and identify its source. Label a relay `Transport note from meta: Verbatim from <source> follows.`, put explicit start and end markers around the transferred text, and keep meta's own explanation outside those markers. Pass the user's instruction to its owning orchestrator unchanged, together with the question it answers.
+
+At initial dispatch, if a worker cannot prompt meta, tell it to end its turn with a final `STATUS <worker-name>:`, `BLOCKED <worker-name>:`, or `DONE <worker-name>:` report; meta will read the transcript and relay it. For a review result, require the report's first line to contain the verdict and full PR URL (for example, `ACCEPT <PR URL>` or `REJECT <PR URL>`); put details afterward. For long drafts or instructions, have the worker write the complete text as Markdown to `/tmp/<file>.md` and reply only `WROTE <path>`. Read it directly when available on the same machine; across SSH, transfer the Base64-encoded bytes, decode them at the destination, and compare source and destination SHA-256 hashes before relaying the text verbatim. Do not use `fold -w` for transfer because it inserts line breaks.
 
 Treat a decision as the user's answer only when it comes from an explicit user response; when relaying it, label it as the user's answer, include the question it answers, and preserve the user's wording verbatim. Label your own recommendation as meta's judgment; correct a worker's report if it attributes that judgment to the user.
 
@@ -54,7 +56,7 @@ Treat text visible in a root's input field as unconfirmed if you cannot tell whe
 
 ## Follow up and patrol
 
-Immediately after each message or question to a root, start a background wait with `herdr agent wait <root> &` locally or `herdr --machine <label-or-id> agent wait <root> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled. If a root cannot answer because of a connection problem, report the connection issue and mark its current status unverified; request a fresh status after the connection is restored.
+After each message or question to a root, set a response deadline and start a bounded background wait with `herdr agent wait <root> --timeout <milliseconds> &` locally or `herdr --machine <label-or-id> agent wait <root> --timeout <milliseconds> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled. If the expected verdict has not arrived by its deadline, send one chase through the guarded sender when the input is empty, then start one more bounded wait. If it is still missing, report that and leave the result unverified; never wait indefinitely for a verdict. If a root cannot answer because of a connection problem, report the connection issue and mark its current status unverified; request a fresh status after the connection is restored.
 
 Ask the user to approve recurring checks and agree on an interval before starting them. On an initial or one-time check, or at each approved recurring check, refresh the local and each enabled saved-machine agent list using the inventory commands above. Review each root's `agent_status` and each agent entry's `tokens.inbox` when present for unanswered user requests. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
 
