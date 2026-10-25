@@ -44,7 +44,7 @@ case "$command_name" in
     "pane read")
         [[ "$2" == --source && "$3" == visible && "$4" == --format && "$5" == ansi && "$#" == 5 ]] || exit 3
         case "$machine:$1" in
-            :local:p1) printf '❯ earlier text\n\033[36m❯\033[0m \033[2mSuggested completion without reset\n' ;;
+            :local:p1) printf '❯ earlier text\n\033[36m❯\033[0m\302\240\033[2mSuggested completion without reset\r\n' ;;
             remote-ok:remote:p1) printf '\033[35m›\033[0m typed text \033[2mSuggestion\033[0m\n' ;;
             remote-ok:unreadable:p1) printf 'terminal output without a prompt\n' ;;
             *) exit 2 ;;
@@ -73,6 +73,7 @@ EOF
     jq -se 'any(.[]; .kind == "root_input_occupied" and .machine == "remote-ok" and .agent == "root")' <<< "$output" > /dev/null
     jq -se 'any(.[]; .kind == "root_input_unreadable" and .machine == "remote-ok" and .agent == "unreadable")' <<< "$output" > /dev/null
     jq -se 'any(.[]; .kind == "root_machine_not_enabled" and .machine == "disabled")' <<< "$output" > /dev/null
+    ! jq -se 'any(.[]; .kind == "root_input_occupied" and .machine == "local" and .agent == "meta")' <<< "$output" > /dev/null
     ! grep -Eq 'typed text|private|Suggested completion' <<< "$output"
 }
 

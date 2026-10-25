@@ -74,6 +74,7 @@ function visible_input_state() {
     LC_ALL=C awk '
         {
             line = $0
+            gsub("\302\240", " ", line)
             sub(/\033\[2m.*/, "", line)
             gsub(/\033\[[0-?]*[ -\/]*[@-~]/, "", line)
             if (match(line, /^[[:space:]]*(❯|›)/)) {
