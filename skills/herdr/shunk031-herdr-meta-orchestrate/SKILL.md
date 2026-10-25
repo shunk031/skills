@@ -55,7 +55,7 @@ Before every meta-to-root relay, build the exact message in a quoted variable an
 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <root> "$message"
 ```
 
-The helper resolves the root pane with herdr agent get and reads it with herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. It checks the last line containing ❯ or ›, discards text from the ANSI dim marker onward, strips remaining ANSI and whitespace, then treats only non-empty text as occupied. If the read fails or the line is unclear, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
+The helper resolves the root pane with herdr agent get and reads it with herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. It checks the last line containing ❯ or ›, normalizes NBSP and strips a trailing CR, and removes CSI sequences while tracking SGR dim spans. Only non-dim, non-whitespace text after the prompt glyph counts as occupied. If the read fails or the line is unclear, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
 
 ## Relay exactly
 
