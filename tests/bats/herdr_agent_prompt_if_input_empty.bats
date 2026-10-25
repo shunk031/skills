@@ -20,7 +20,7 @@ case "$command_name" in
         printf '%s\n' '{"result":{"agent":{"pane_id":"w1:p1"}}}'
         ;;
     "pane read")
-        [[ "$1" == w1:p1 ]] || exit 1
+        [[ "$1" == w1:p1 && "$2" == --source && "$3" == visible && "$4" == --format && "$5" == ansi && "$#" == 5 ]] || exit 1
         read_count="$(wc -l < "$state_dir/reads" | tr -d '[:space:]')"
         read_count=$((read_count + 1))
         printf '%s\n' read >> "$state_dir/reads"
@@ -116,6 +116,26 @@ EOF
     [ "$(wc -l < "$STUB_STATE/reads" | tr -d '[:space:]')" = 2 ]
     [ "$(wc -l < "$STUB_STATE/sleeps" | tr -d '[:space:]')" = 1 ]
     [ "$(cat "$STUB_STATE/prompt_message")" = message ]
+}
+
+@test "[common] ignores suggestions after the dim marker but still blocks typed text" {
+    printf '❯ earlier text\n› \033[2mSuggested completion without reset\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" worker "message"
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$STUB_STATE/prompt_message")" = message ]
+
+    rm -f "$STUB_STATE/prompt_target" "$STUB_STATE/prompt_message"
+    : > "$STUB_STATE/reads"
+    : > "$STUB_STATE/sleeps"
+    printf '❯ typed text \033[2mSuggested completion without reset\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" worker "message"
+
+    [ "$status" -eq 75 ]
+    [[ "$output" == *"target input was occupied"* ]]
+    [ ! -f "$STUB_STATE/prompt_target" ]
 }
 
 @test "[common] reports the full message without sending after the retry budget" {

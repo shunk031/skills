@@ -24,9 +24,22 @@ flowchart TD
     Meta --> RemoteRoot --> RemoteWorkers
 ```
 
+## Run the patrol
+
+Start each one-time or approved recurring patrol with the bundled read-only script. Supply verified root agents through `HERDR_PATROL_ROOTS_JSON`:
+
+```bash
+export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"},{"machine":"saved-machine-label","agent":"root"}]'
+~/.agents/skills/shunk031-herdr-meta-orchestrate/scripts/herdr-meta-patrol.sh
+```
+
+Each array item has a `machine` and `agent`: use `null` for the local server or the exact enabled saved-machine label, and the live agent name for `agent`. Include only roots whose role and parentage you verified below. The script lists local agents and agents on every enabled saved machine, then reports blocked agents, non-null `.tokens.inbox` values, and non-empty root input lines. It reads pane output as ANSI, tracks dim SGR state across combined parameters and resets, and counts only non-dim text after the prompt glyph. The shared parser is bundled with the required shunk031-herdr-orchestrate-workers skill. The patrol continues after a saved machine is unavailable.
+
+Output is JSON Lines with one object per finding; no output means no findings. Findings include agent attention, occupied or unreadable root input, unavailable servers, and invalid root targets. Use the script for these standard checks instead of recreating them ad hoc. Inspect reported inbox entries and unclear root roles in the corresponding pane or transcript before relaying anything.
+
 ## Find and ask root orchestrators
 
-Read the herdr skill before using Herdr commands. List local agents with `herdr agent list`; list saved machine profiles with `herdr machine list --json`, then list agents on each enabled profile with `herdr --machine <label-or-id> agent list`.
+Read the herdr skill before using Herdr commands. Run the bundled patrol first to refresh local and enabled saved-machine agent state. For role and parentage verification or diagnosis of a finding, inspect the relevant server with `herdr agent list`, `herdr machine list --json`, and `herdr --machine <label-or-id> agent list`.
 
 Inventory each Herdr server separately. Identify your current session by its exact pane or session identity and exclude only that session. Treat every other listed agent as a candidate, even if it has no workers. Within each server, use the longest matching `<agent-name>-` prefix only as a clue to possible parent-child relationships; verify candidate ancestry and role from pane or transcript evidence before excluding it as a worker or nested orchestrator. Never infer parentage from names on another server. Include candidates verified as top-level orchestrators, with or without workers, and report unclear roles or parentage as unverified rather than guessing. Do not create a separate inventory of individual worktree workers.
 
@@ -42,7 +55,7 @@ Before every meta-to-root relay, build the exact message in a quoted variable an
 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <root> "$message"
 ```
 
-The helper resolves the root pane with herdr agent get and checks herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. Treat an input line with no non-dim text after ❯ or › as empty; ignore placeholder or suggestion text styled with ANSI \e[2m. If the line has ordinary text or cannot be read, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
+The helper resolves the root pane with herdr agent get and reads it with herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. It checks the last line containing ❯ or ›, normalizes NBSP and strips a trailing CR, and removes CSI sequences while tracking SGR dim spans. Only non-dim, non-whitespace text after the prompt glyph counts as occupied. If the read fails or the line is unclear, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
 
 ## Relay exactly
 
@@ -58,7 +71,7 @@ Treat text visible in a root's input field as unconfirmed if you cannot tell whe
 
 After each message or question to a root, set a response deadline and start a bounded background wait with `herdr agent wait <root> --timeout <milliseconds> &` locally or `herdr --machine <label-or-id> agent wait <root> --timeout <milliseconds> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled. If the expected verdict has not arrived by its deadline, send one chase through the guarded sender when the input is empty, then start one more bounded wait. If it is still missing, report that and leave the result unverified; never wait indefinitely for a verdict. If a root cannot answer because of a connection problem, report the connection issue and mark its current status unverified; request a fresh status after the connection is restored.
 
-Ask the user to approve recurring checks and agree on an interval before starting them. On an initial or one-time check, or at each approved recurring check, refresh the local and each enabled saved-machine agent list using the inventory commands above. Review each root's `agent_status` and each agent entry's `tokens.inbox` when present for unanswered user requests. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
+Ask the user to approve recurring checks and agree on an interval before starting them. For an initial check and each approved recurring check, rerun the bundled patrol with the current root configuration and review its JSON Lines findings. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
 
 ## Restarts and tool checks
 
