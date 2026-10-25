@@ -59,6 +59,7 @@ function visible_input_state() {
 
         {
             line = $0
+            gsub("\302\240", " ", line)
             sub(/\r$/, "", line)
             plain = ""
             dim_mask = ""
@@ -84,6 +85,7 @@ function visible_input_state() {
 
             if (match(plain, /^[[:space:]]*(❯|›)/)) {
                 found = 1
+                occupied = 0
                 for (i = RSTART + RLENGTH; i <= length(plain); i++) {
                     char = substr(plain, i, 1)
                     if (substr(dim_mask, i, 1) == "0" && char ~ /[^[:space:]]/) {

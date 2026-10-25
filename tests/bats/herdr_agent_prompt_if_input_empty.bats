@@ -86,6 +86,26 @@ EOF
     [[ "$output" == *"report"* ]]
 }
 
+@test "[common] the last matching prompt glyph line determines occupancy" {
+    printf '❯ typed earlier\n› \033[2mDraft suggestion\033[0m\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" worker "report"
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$STUB_STATE/prompt_target")" = worker ]
+    [ "$(cat "$STUB_STATE/prompt_message")" = report ]
+}
+
+@test "[common] Claude prompt NBSP before a dim placeholder counts as empty" {
+    printf '❯\302\240\033[2mDraft suggestion\033[0m\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" claude "relay"
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$STUB_STATE/prompt_target")" = claude ]
+    [ "$(cat "$STUB_STATE/prompt_message")" = relay ]
+}
+
 @test "[common] waits for the input to clear before sending" {
     printf '❯ user text\n' > "$STUB_STATE/snapshot_1"
     printf '› \033[2mAsk Codex to do anything\033[0m\n' > "$STUB_STATE/snapshot_2"
