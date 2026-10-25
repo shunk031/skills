@@ -33,7 +33,7 @@ export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"},{"machine":"sav
 ~/.agents/skills/shunk031-herdr-meta-orchestrate/scripts/herdr-meta-patrol.sh
 ```
 
-Each array item has a `machine` and `agent`: use `null` for the local server or the exact enabled saved-machine label, and the live agent name for `agent`. Include only roots whose role and parentage you verified below. The script lists local agents and agents on every enabled saved machine, then reports blocked agents, non-null `.tokens.inbox` values, and non-empty root input lines. It reads pane output as ANSI, ignores text from the dim `ESC[2m` suggestion marker onward, and continues after a saved machine is unavailable.
+Each array item has a `machine` and `agent`: use `null` for the local server or the exact enabled saved-machine label, and the live agent name for `agent`. Include only roots whose role and parentage you verified below. The script lists local agents and agents on every enabled saved machine, then reports blocked agents, non-null `.tokens.inbox` values, and non-empty root input lines. It reads pane output as ANSI, tracks dim SGR state across combined parameters and resets, and counts only non-dim text after the prompt glyph. The shared parser is bundled with the required shunk031-herdr-orchestrate-workers skill. The patrol continues after a saved machine is unavailable.
 
 Output is JSON Lines with one object per finding; no output means no findings. Findings include agent attention, occupied or unreadable root input, unavailable servers, and invalid root targets. Use the script for these standard checks instead of recreating them ad hoc. Inspect reported inbox entries and unclear root roles in the corresponding pane or transcript before relaying anything.
 

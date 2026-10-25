@@ -71,25 +71,12 @@ function emit_root_finding() {
 }
 
 function visible_input_state() {
-    LC_ALL=C awk '
-        {
-            line = $0
-            gsub("\302\240", " ", line)
-            sub(/\033\[2m.*/, "", line)
-            gsub(/\033\[[0-?]*[ -\/]*[@-~]/, "", line)
-            if (match(line, /^[[:space:]]*(❯|›)/)) {
-                found = 1
-                rest = substr(line, RSTART + RLENGTH)
-                occupied = rest ~ /[^[:space:]]/
-            }
-        }
-
-        END {
-            if (!found) print "unknown"
-            else if (occupied) print "occupied"
-            else print "empty"
-        }
-    '
+    local parser="${HOME:-}/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-visible-input-state.awk"
+    if [[ ! -r "$parser" ]]; then
+        printf '%s\n' unknown
+        return 0
+    fi
+    LC_ALL=C awk -f "$parser"
 }
 
 function check_root_inputs() {
