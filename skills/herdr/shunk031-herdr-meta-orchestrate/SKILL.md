@@ -73,6 +73,8 @@ After each message or question to a root, set a response deadline and start a bo
 
 Ask the user to approve recurring checks and agree on an interval before starting them. For an initial check and each approved recurring check, rerun the bundled patrol with the current root configuration and review its JSON Lines findings. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
 
+For each merged change to a skill or agent guidance that running agents depend on, decide at merge time which machines need it, when each will receive it, and whether deployment will use skills sync or dotfiles apply; record that plan in the orchestrator's ledger. Mark the change done only after verifying that the deployed file behaves as intended on every target machine. A merge alone does not complete it.
+
 ## Restarts and tool checks
 
 Before restarting a Herdr server or root session, record each affected root's startup command, arguments, and environment configuration in an appropriate private operational note, without copying secret values. After restart, verify each root uses the recorded settings; resuming a session alone does not establish that.

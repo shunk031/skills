@@ -123,6 +123,16 @@
         "Waits 30 seconds between up to five rechecks and leaves the message unsent if the input stays occupied.",
         "Reports the complete user answer as undelivered without changing its wording."
       ]
+    },
+    {
+      "id": 13,
+      "prompt": "In an offline dry run, do not run commands. A change to a skill that active root agents depend on has just merged. Two roots are running, one local and one on enabled saved machine `desk`. What do you record at merge time, and what evidence is needed before marking the change done?",
+      "expected_output": "Records which machines need the change, when each will receive it, and whether deployment will use skills sync or dotfiles apply in the orchestrator's ledger. Keeps the change open until the deployed file is verified to behave as intended on every target machine; the merge alone is not completion.",
+      "expectations": [
+        "Records the target machines, each deployment time, and whether each uses skills sync or dotfiles apply in the orchestrator's ledger at merge time.",
+        "Requires verifying that the deployed file behaves as intended on every target machine before marking the change done.",
+        "Does not treat the merge alone as completion."
+      ]
     }
   ]
 }
