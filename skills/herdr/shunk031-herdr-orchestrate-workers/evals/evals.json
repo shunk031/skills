@@ -40,6 +40,15 @@
         "Waits 30 seconds between up to five rechecks when ordinary input is present.",
         "Does not send the dispatch if the input remains occupied or unclear after the retry budget, and reports the complete message as undelivered."
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "You are a Herdr orchestrator preparing a Codex worker that needs the environment assignment KEY=VALUE. You already have the returned deliverable workspace ID and worktree path. In an offline dry run, show the minimal commands to launch the worker with that variable available. Do not execute commands.",
+      "expected_output": "The answer creates the worker tab in the deliverable workspace with herdr tab create --env KEY=VALUE, then starts Codex in the root pane returned by that command. It explains that prefixing herdr agent start with KEY=VALUE does not propagate the variable to the worker.",
+      "expectations": [
+        "Creates the tab with --workspace, --cwd, and --env KEY=VALUE, then uses the returned root-pane ID with herdr agent start.",
+        "Does not use a KEY=VALUE prefix on herdr agent start to set the worker's environment."
+      ]
     }
   ]
 }
