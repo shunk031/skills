@@ -10,7 +10,7 @@ Use these procedures when the inbox mod is available.
 
 ## User blockers
 
-- Include each blocking user decision or action in the user-facing report so the mod's post-turn update adds it to the `Needs you` list. Do not repeat open inbox items in later reports. If an unanswered inbox question expires, keep it marked expired in the ledger's `User waiting` column and include it once as a one-line reminder in the next user-facing report; leave it in the ledger until the user answers, and do not recreate or repeat it in later reports.
+- Include each blocking user decision or action in the user-facing report so the mod's post-turn update adds it to the `Needs you` list. Do not repeat open inbox items in later reports. If an unanswered inbox question expires, keep it marked expired in the ledger's `User waiting` column and include it once as a one-line reminder in the next user-facing report; leave it in the ledger until the user answers, and do not recreate or repeat it in later reports. After sending the reminder, mark its entry `reminder sent` in the same column; keep it there until answered and do not resend while that marker remains.
 - Use questions for choices that block continued work, and tasks only for actions the user can take that block continuing or finishing.
 - Make each item stand alone: state what the user should decide or do, why it is needed or what it blocks, your recommendation, and what you will do if there is no answer. Include the exact command or link when relevant.
 - Use `mcp__inbox__record_finding` for out-of-scope issues or opportunities, not user decisions or actions that block progress.
