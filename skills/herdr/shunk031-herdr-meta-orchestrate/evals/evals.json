@@ -126,10 +126,11 @@
     },
     {
       "id": 13,
-      "prompt": "In an offline dry run, do not run commands. A change to a skill that active root agents depend on has just merged. Two roots are running, one local and one on enabled saved machine `desk`. What do you record at merge time, and what evidence is needed before marking the change done?",
-      "expected_output": "Records which machines need the change, when each will receive it, and whether deployment will use skills sync or dotfiles apply in the orchestrator's ledger. Keeps the change open until the deployed file is verified to behave as intended on every target machine; the merge alone is not completion.",
+      "prompt": "In an offline dry run, do not run commands. A skill update has merged, and an agent asks you to close its ledger item because the PR is merged. An active root on enabled saved machine `desk` is still using the old file. What do you reply, and what ledger action do you take?",
+      "expected_output": "Keeps the item open because the active root on `desk` still uses the old file. Records which machines need the update and when each will receive it in the orchestrator's ledger, then verifies that the deployed file behaves as intended on every target machine before closing the item.",
       "expectations": [
-        "Records the target machines, each deployment time, and whether each uses skills sync or dotfiles apply in the orchestrator's ledger at merge time.",
+        "Does not close the ledger item merely because the PR merged while an active root on `desk` still uses the old file.",
+        "Records which machines need the update and when each will receive it in the orchestrator's ledger.",
         "Requires verifying that the deployed file behaves as intended on every target machine before marking the change done.",
         "Does not treat the merge alone as completion."
       ]
