@@ -4,8 +4,7 @@ Use these procedures when the inbox mod is available.
 
 ## In-progress tasks
 
-- Keep the durable ledger as the source of truth; an inbox finding mirrors a ledger row but does not own task state.
-- Use `mcp__inbox__record_finding` to create one finding for each in-progress task.
+- Keep the durable ledger as the source of truth. Use `mcp__inbox__record_finding` to maintain exactly one finding per in-progress row, syncing its task, owner, state, and next action whenever the row changes. Findings mirror the ledger but do not own task state.
 - Close a finding only when its task is verified done or dropped, using `mcp__inbox__close` with the finding's `id` and a short reason.
 - Reserve inbox `task` entries for actions only the user can take; do not use them for worker-owned in-progress tasks.
 
