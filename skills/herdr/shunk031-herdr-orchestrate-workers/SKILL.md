@@ -29,7 +29,7 @@ Before every prompt send in this skill, run the guarded sender at ~/.agents/skil
 
 ## Launch each worker
 
-3. Before any task edits, establish the deliverable's repository-associated workspace with `herdr worktree create`; for an already-open deliverable worktree, use `herdr worktree open` and reuse its returned deliverable workspace and root-pane IDs instead of creating a second workspace. Do not substitute manual `git worktree add` plus `herdr tab create`. For every implementer, reviewer, or other related tab for that deliverable, move the returned root pane into a new tab in that deliverable workspace before starting the agent; keep the orchestrator workspace for the orchestrator only. Read the returned deliverable workspace, destination tab, and pane IDs from each response and use those destination IDs for all subsequent commands:
+3. Before any task edits, establish the deliverable's repository-associated workspace with `herdr worktree create`; for an already-open deliverable worktree, use `herdr worktree open` and reuse its returned deliverable workspace and root-pane IDs instead of creating a second workspace. Do not substitute manual `git worktree add` plus `herdr tab create`. For every implementer, reviewer, or other related tab for that deliverable, move the returned root pane into a new tab in that deliverable workspace before starting the agent; keep the orchestrator workspace for the orchestrator only. For a worker that needs environment variables, use the direct tab-creation path in step 4 instead of moving the root pane. Read the returned deliverable workspace, destination tab, and pane IDs from each response and use those destination IDs for all subsequent commands:
 
    ```bash
    # Choose exactly one for the deliverable:
@@ -39,10 +39,17 @@ Before every prompt send in this skill, run the guarded sender at ~/.agents/skil
    herdr pane move <returned-root-pane-id> --new-tab --workspace <returned-deliverable-workspace-id> --label "🚧 <short task>" --no-focus
    ```
 
-4. Start Codex in the destination pane, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Do not reuse the pre-move root pane ID:
+4. Start Codex in the destination pane, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
 
    ```bash
    herdr agent start <your-name>-<task> --kind codex --pane <destination-pane-id> -- -m gpt-6-luna -c model_reasoning_effort=xhigh
+   ```
+
+   Set worker environment variables on the pane's shell when creating the tab with `herdr tab create --env KEY=VALUE`; `herdr agent start` launches Codex in the existing shell, so prefixing that command with `KEY=VALUE` does not propagate the variable to the worker. Use this path instead of the `pane move` path:
+
+   ```bash
+   herdr tab create --workspace <returned-deliverable-workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --env KEY=VALUE --no-focus
+   herdr agent start <your-name>-<task> --kind codex --pane <returned-root-pane-id>
    ```
 
 5. Before each dispatch, record the worker's current `state_change_seq`. Dispatch with `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <worker-name> "$task_prompt"` without `--wait`. Do not treat the CLI `agent_prompted` response as a receipt. This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding. After each receipt is observed, start one background lifecycle wait for that outstanding worker with `herdr agent wait <worker-name> &`; omit `--until` so Herdr's settled-state defaults apply. When the wait settles, read the worker's deliverable and transcript directly and verify the result; do not use report arrival to detect completion. A blocking `agent wait` is lifecycle waiting, not polling. Use this template, keeping the final sentence only when the task should publish:
