@@ -69,6 +69,16 @@
         "Does not rely only on the worker's milestone or final report.",
         "Sends the user periodic updates with counts, elapsed time, and an ETA."
       ]
+    },
+    {
+      "id": 8,
+      "prompt": "You are a Herdr worker whose DONE report was rejected with agent_blocked while the orchestrator was waiting for an answer to a user question. In an offline dry run, describe what you do next and what the orchestrator must do immediately after the user answers. Do not execute commands.",
+      "expected_output": "The worker preserves and retries the same report every five minutes for up to 24 retries, then leaves the full report in its transcript and sets its tab to the blocked status if delivery still fails. After the interactive wait ends, the orchestrator immediately reconciles every dispatched worker with herdr agent get and herdr agent read before other work.",
+      "expectations": [
+        "Keeps the exact report and retries the guarded send every five minutes for at most 24 retries.",
+        "Leaves the full report in the worker transcript and sets the blocked tab status when retries are exhausted.",
+        "Requires immediate reconciliation of every dispatched worker with herdr agent get and herdr agent read after the user question, before other work."
+      ]
     }
   ]
 }
