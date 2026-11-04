@@ -95,4 +95,4 @@ Review the draft with both agents' skill-creation skills, because they disagree 
 
 Run the owning repository's gates and report which repository owns each change. Keep credential values out of command output, quoted diffs, and summaries — this matters in the private repository, where eval prompts are committed in plaintext and must use placeholders.
 
-Creating or updating a pull request is part of ordinary work. Merging, running `chezmoi apply`, and changing runtime state are not: ask first.
+Creating or updating a pull request is part of ordinary work. The user's approving review in GitHub permits merging that PR at its approved head commit. Before merging, confirm the head is unchanged and required checks pass; a changed head needs a new approval. Ask first before running `chezmoi apply` or changing runtime state.
