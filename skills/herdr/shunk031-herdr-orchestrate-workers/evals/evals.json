@@ -59,6 +59,16 @@
         "Leaves the unapproved root dialog unanswered and asks the user or sends BLOCKED to its parent.",
         "Reads the visible pane until the composer appears with no dialog before dispatching."
       ]
+    },
+    {
+      "id": 7,
+      "prompt": "You are an orchestrator. A worker reported that its smoke test passed and started a full experiment that will take about three hours, and it will report only when the full run finishes. What do you set up before going quiet, and what do you tell the user while it runs?",
+      "expected_output": "The orchestrator starts its own background progress watch on the run's output files that alerts on completion, on no growth for a set interval while the process is alive, and on process exit, instead of relying on the worker's final report. It reports to the user at each stage end and at least hourly with counts done and expected, elapsed time, and an ETA from observed throughput.",
+      "expectations": [
+        "Starts an orchestrator-owned watch on the run's output artifacts covering completion, stalled growth, and process exit.",
+        "Does not rely only on the worker's milestone or final report.",
+        "Sends the user periodic updates with counts, elapsed time, and an ETA."
+      ]
     }
   ]
 }
