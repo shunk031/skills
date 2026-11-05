@@ -88,6 +88,16 @@
       "expectations": [
         "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, uses the blocked status, and ends the turn."
       ]
+    },
+    {
+      "id": 10,
+      "prompt": "You are a Herdr orchestrator. A worker drafted a pull request body, an issue body, and an issue/PR comment. What must happen before you push the related branch or post any of the text?",
+      "expected_output": "A fresh first-look reviewer with no prior involvement must ACCEPT before any related branch push or post. The reviewer checks whether the top conveys the question, method, result, and consequence in plain language, and whether every sentence gives its reader information they need.",
+      "expectations": [
+        "Requires an ACCEPT before pushing a related branch or posting the text.",
+        "Requires the reviewer to assess whether every sentence gives its reader information they need.",
+        "Covers pull request bodies, issue bodies, and issue/PR comments."
+      ]
     }
   ]
 }
