@@ -96,7 +96,7 @@
       "expectations": [
         "Does not let `gh pr create` proceed until a fresh reviewer accepts the body.",
         "Requires the fresh reviewer to assess each sentence by whether the intended reader needs its information.",
-        "Allows posting only after ACCEPT."
+        "Requires the worker to return the body as a draft file before posting."
       ]
     }
   ]
