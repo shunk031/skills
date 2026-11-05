@@ -88,6 +88,16 @@
       "expectations": [
         "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, uses the blocked status, and ends the turn."
       ]
+    },
+    {
+      "id": 10,
+      "prompt": "You are a Herdr orchestrator. A worker reports DONE and says it is about to run `gh pr create` with its body. What do you do next?",
+      "expected_output": "Hold `gh pr create`; have the worker return the body as a draft file, then ask a fresh reviewer with no prior involvement to check each sentence for information the reader needs. Let the worker post only after the reviewer returns ACCEPT.",
+      "expectations": [
+        "Does not let `gh pr create` proceed until a fresh reviewer accepts the body.",
+        "Requires the fresh reviewer to assess each sentence by whether the intended reader needs its information.",
+        "Requires the worker to return the body as a draft file before posting."
+      ]
     }
   ]
 }
