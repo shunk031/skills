@@ -80,6 +80,14 @@
         "If the deadline expires, leaves the full report in the worker transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn.",
         "Requires immediate reconciliation of every dispatched worker with herdr agent get and herdr agent read after the user question, before other work."
       ]
+    },
+    {
+      "id": 9,
+      "prompt": "You are a Herdr worker whose report send failed with agent_blocked. During recovery, herdr agent get or herdr agent wait returns agent_not_found because the orchestrator's name has vanished. In an offline dry run, what do you do next? Do not execute commands.",
+      "expected_output": "The worker immediately, without waiting for the deadline and without a resend, leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends the turn.",
+      "expectations": [
+        "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, uses the blocked status, and ends the turn."
+      ]
     }
   ]
 }
