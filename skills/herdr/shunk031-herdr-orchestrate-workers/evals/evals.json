@@ -69,6 +69,17 @@
         "Does not rely only on the worker's milestone or final report.",
         "Sends the user periodic updates with counts, elapsed time, and an ETA."
       ]
+    },
+    {
+      "id": 8,
+      "prompt": "You are a Herdr worker whose DONE report was rejected with agent_blocked, or whose guarded sender exited 75 and printed the unsent report because the orchestrator's input stayed busy. The orchestrator was waiting for an answer to a user question. In an offline dry run, describe the worker's recovery and what the orchestrator must do immediately after the user answers. Do not execute commands.",
+      "expected_output": "The worker keeps the exact report, treats both agent_blocked and exit 75 as undelivered, and waits for a lifecycle change with herdr agent wait before one guarded resend; it repeats only after another such failure and stays within a two-hour deadline. If delivery still fails, it leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn. After the interactive wait ends, the orchestrator immediately reconciles every dispatched worker with herdr agent get and herdr agent read before other work.",
+      "expectations": [
+        "Treats exit 75 as an undelivered report that was printed by the helper, as well as treating agent_blocked as undelivered.",
+        "Waits for a lifecycle change with herdr agent wait before a single guarded resend, repeats only after another undelivered result, and keeps the total recovery window to two hours instead of polling at a fixed interval.",
+        "If the deadline expires, leaves the full report in the worker transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn.",
+        "Requires immediate reconciliation of every dispatched worker with herdr agent get and herdr agent read after the user question, before other work."
+      ]
     }
   ]
 }
