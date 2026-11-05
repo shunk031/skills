@@ -91,12 +91,12 @@
     },
     {
       "id": 10,
-      "prompt": "You are a Herdr orchestrator. A worker drafted a pull request body, an issue body, and an issue/PR comment. What must happen before you push the related branch or post any of the text?",
-      "expected_output": "A fresh first-look reviewer with no prior involvement must ACCEPT before any related branch push or post. The reviewer checks whether the top conveys the question, method, result, and consequence in plain language, and whether every sentence gives its reader information they need.",
+      "prompt": "You are a Herdr orchestrator. A worker reports DONE and says it is about to run `gh pr create` with its body. What do you do next?",
+      "expected_output": "Hold `gh pr create`; have the worker return the body as a draft file, then ask a fresh reviewer with no prior involvement to check each sentence for information the reader needs. Let the worker post only after the reviewer returns ACCEPT.",
       "expectations": [
-        "Requires an ACCEPT before pushing a related branch or posting the text.",
-        "Requires the reviewer to assess whether every sentence gives its reader information they need.",
-        "Covers pull request bodies, issue bodies, and issue/PR comments."
+        "Does not let `gh pr create` proceed until a fresh reviewer accepts the body.",
+        "Requires the fresh reviewer to assess each sentence by whether the intended reader needs its information.",
+        "Allows posting only after ACCEPT."
       ]
     }
   ]
