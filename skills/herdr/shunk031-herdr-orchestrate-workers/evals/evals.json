@@ -116,6 +116,15 @@
         "Sends a report beginning with `BLOCKED orch-retry:` to the orchestrator.",
         "The report proposes a split plan or a simpler design."
       ]
+    },
+    {
+      "id": 13,
+      "prompt": "You are a Herdr orchestrator. Worker orch-memo committed a research memo on its branch and opened no pull request. You have read the memo and the worker's transcript, verified the result, and will send it nothing more. What do you do with its pane, worktree, and branch before ending this turn? Do not execute commands.",
+      "expected_output": "Close the worker's pane now with herdr pane close instead of leaving it idle, and keep its worktree and branch because no merged pull request permits removing them.",
+      "expectations": [
+        "Closes the worker's pane with `herdr pane close` before ending the turn.",
+        "Does not remove the worktree or delete the branch."
+      ]
     }
   ]
 }
