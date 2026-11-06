@@ -1,6 +1,6 @@
 ---
 name: shunk031-agy-japanese
-description: Use this skill whenever you prepare Japanese PR or issue bodies or comments, Markdown documents, report bodies, posts, or Japanese strings in code or HTML. It routes writing and mandatory review through separate agy agents in Herdr panes. Do not use it for chat replies or English deliverables.
+description: MUST be used before writing, editing, or publishing any Japanese deliverable, including PR or issue bodies and comments, commit messages, Markdown documents, report bodies, posts, or Japanese strings in code or HTML. Never write or rewrite Japanese wording yourself; route it through the agy writer and mandatory fresh agy reviewer in Herdr panes. Not for chat replies or English deliverables.
 ---
 
 > [!NOTE]
@@ -8,7 +8,7 @@ description: Use this skill whenever you prepare Japanese PR or issue bodies or 
 
 # Japanese deliverables with agy
 
-Use this procedure only for Japanese deliverables: PR and issue bodies and comments, Markdown documents, report bodies, posts, and Japanese strings in code or HTML. It does not apply to chat replies. Keep English out of scope and decide whether to add it after one week of Japanese-only use.
+You must follow this procedure for every Japanese deliverable: PR and issue bodies and comments, commit messages, Markdown documents, report bodies, posts, and Japanese strings in code or HTML. Chat replies and English deliverables are out of scope. Keep English out of scope for the first week; decide whether to add it after one week of Japanese-only use.
 
 ## Write
 
