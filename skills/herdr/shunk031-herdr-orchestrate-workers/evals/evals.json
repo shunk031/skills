@@ -106,6 +106,16 @@
       "expectations": [
         "Rejects artifacts containing user chat, instructions given to agents, approval statements, or statements about who decided what."
       ]
+    },
+    {
+      "id": 12,
+      "prompt": "You are Herdr worker orch-retry in worktree ~/src/app=feat-retry; your orchestrator is agent orch. Your task is to add retry support to the HTTP client and open a pull request. Your design needs about 650 changed lines of core code, excluding tests and documentation. What do you do before implementing? Do not execute commands.",
+      "expected_output": "The worker does not implement or push the over-budget design; it reports BLOCKED orch-retry: to the orchestrator with a split plan or a simpler design.",
+      "expectations": [
+        "Does not implement or push the 650-line design.",
+        "Sends a report beginning with `BLOCKED orch-retry:` to the orchestrator.",
+        "The report proposes a split plan or a simpler design."
+      ]
     }
   ]
 }
