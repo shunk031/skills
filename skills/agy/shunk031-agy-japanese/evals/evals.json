@@ -1,0 +1,35 @@
+{
+  "skill_name": "shunk031-agy-japanese",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "次の文章を公開向けの自然な日本語に書き直してください。数値、URL、コード、HTML コメントは変えないでください。入力: 2026年の結果は20件です。詳しくは https://example.test/report を確認してください。`run(20)` <!-- table:cases -->",
+      "expected_output": "The calling agent routes the complete Markdown through agy rewrite, accepts only a candidate that preserves the number, URL, inline code, and placeholder exactly, then obtains a fresh agy review before handoff.",
+      "expectations": [
+        "Uses the whole-text rewrite path for prose-first Markdown.",
+        "Checks that 2026, 20, the URL, inline code, and HTML comment are unchanged.",
+        "Uses a fresh agy reviewer and holds the text unless it returns ACCEPT."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "HTML テンプレート中の「送信する」を自然な日本語に直してください。文書にこの文字列が1回だけあります。変更後の HTML を出力し、他のコードは保持してください。",
+      "expected_output": "The calling agent uses the JSON-pair path, applies the exact unique old/new pair, preserves all protected facts and non-target code, and sends the complete result through a fresh review.",
+      "expectations": [
+        "Uses old/new JSON replacement pairs for Japanese embedded in HTML.",
+        "Requires the old string to occur exactly once before applying the pair.",
+        "Runs a separate fresh review after applying the replacement."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "候補文を agy でレビューし、REJECT なら指摘を直して最大2回まで書き直してください。最後に ACCEPT された本文だけを公開対象にしてください。",
+      "expected_output": "The calling agent follows the bounded reject/rewrite procedure, records only the exact bytes that a fresh agy session accepts, and holds the deliverable if agy is unavailable or the final review rejects it.",
+      "expectations": [
+        "Allows no more than two REJECT-triggered rewrites and performs a final fresh review.",
+        "Records the exact accepted text hash only on ACCEPT.",
+        "Holds the deliverable on an agy auth, limit, timeout, or other failure."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,582 @@
+#!/usr/bin/env python3
+"""Rewrite and review Japanese deliverables with fresh, restricted agy sessions."""
+
+from __future__ import annotations
+
+import argparse
+from collections import Counter
+from datetime import datetime, timezone
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import time
+
+
+MODEL = "gemini-4-argon-high"
+PRINT_TIMEOUT = "120s"
+PRINT_TIMEOUT_SECONDS = 120
+LANGUAGE = "Japanese"
+STYLE_CRITERIA = {
+    "Japanese": (
+        "Activate shunk031-writing-router and follow the writing skill it selects "
+        "from natural-japanese, shunk031-writing-kosshi, shunk031-writing-telegraph, "
+        "tanteki, and yomiyasu. Do not add style rules of your own."
+    )
+}
+DENIED_TOOLS = ["write_file(*)", "command(*)", "mcp(*)", "execute_url(*)"]
+FACTS = {
+    "numbers": re.compile(r"\d+(?:[.,]\d+)*"),
+    "urls": re.compile(
+        r"(?:[a-z][a-z0-9+.-]*://|mailto:|www\.)[^\s<>\"')\]]+", re.IGNORECASE
+    ),
+    "placeholders": re.compile(r"<!--[\s\S]*?-->"),
+}
+PROTECTED_FACTS = ("numbers", "urls", "inline code", "fenced code", "placeholders")
+INLINE_CODE = re.compile(r"(?<!`)(?P<ticks>`+).*?(?P=ticks)(?!`)", re.DOTALL)
+GREETING = re.compile(
+    r"^(?:[^\w\s]+\s*)?(?:I read .+\.|私は .+ を読みました。)$"
+)
+EXIT_CODES = {"auth": 20, "limit": 21, "timeout": 22, "error": 23}
+ACCEPTED_FILE = "accepted.jsonl"
+CALLS_FILE = "calls.jsonl"
+
+
+class ScriptFailure(Exception):
+    pass
+
+
+class AgyFailure(Exception):
+    def __init__(self, outcome: str):
+        self.outcome = outcome
+        super().__init__(
+            f"agy {outcome} failure; hold the deliverable and tell the user "
+            f"(exit code {EXIT_CODES[outcome]})."
+        )
+
+
+def state_directory() -> Path:
+    root = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+    return Path(root) / "shunk031-agy-japanese"
+
+
+def timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def append_jsonl(path: Path, value: dict) -> None:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    descriptor = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        data = (json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
+        offset = 0
+        while offset < len(data):
+            written = os.write(descriptor, data[offset:])
+            if written == 0:
+                raise OSError("short write while appending JSONL record")
+            offset += written
+        os.fsync(descriptor)
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
+
+
+def is_kana(character: str) -> bool:
+    """Return whether a character is in the hiragana or katakana Unicode blocks."""
+    return "\u3040" <= character <= "\u309f" or "\u30a0" <= character <= "\u30ff"
+
+
+def requires_review(text: str) -> bool:
+    """Keep the language-specific prose threshold in one replaceable function."""
+    return sum(is_kana(character) for character in text) >= 20
+
+
+def strip_greeting_lines(text: str) -> str:
+    lines = text.splitlines()
+    while lines and (not lines[0].strip() or GREETING.fullmatch(lines[0].strip())):
+        lines.pop(0)
+    return "\n".join(lines)
+
+
+def strip_json_greetings(value):
+    if isinstance(value, str):
+        return strip_greeting_lines(value)
+    if isinstance(value, list):
+        return [strip_json_greetings(item) for item in value]
+    if isinstance(value, dict):
+        return {key: strip_json_greetings(item) for key, item in value.items()}
+    return value
+
+
+def fact_tokens(name: str, text: str) -> Counter:
+    if name == "inline code":
+        text = without_fenced_code(text)
+        return Counter(match.group(0) for match in INLINE_CODE.finditer(text))
+    if name == "fenced code":
+        return Counter(fenced_code_blocks(text))
+    return Counter(FACTS[name].findall(text))
+
+
+def fenced_code_blocks(text: str) -> list[str]:
+    blocks = []
+    opening = None
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        content = line.rstrip("\r\n")
+        if opening is None:
+            match = re.match(r"^ {0,3}(`{3,}|~{3,})[^\n]*$", content)
+            if match:
+                marker = match.group(1)
+                opening = (offset, marker[0], len(marker))
+        else:
+            start, marker, length = opening
+            close = re.match(rf"^ {{0,3}}{re.escape(marker)}{{{length},}}[ \t]*$", content)
+            if close:
+                blocks.append(text[start : offset + len(line)])
+                opening = None
+        offset += len(line)
+    if opening is not None:
+        blocks.append(text[opening[0] :])
+    return blocks
+
+
+def without_fenced_code(text: str) -> str:
+    blocks = fenced_code_blocks(text)
+    for block in blocks:
+        start = text.find(block)
+        text = text[:start] + "\n" + text[start + len(block) :]
+    return text
+
+
+def changed_facts(before: str, after: str, names: tuple[str, ...]) -> list[str]:
+    return [name for name in names if fact_tokens(name, before) != fact_tokens(name, after)]
+
+
+def preserve_rewrite_facts(before: str, after: str) -> None:
+    changed = changed_facts(before, after, PROTECTED_FACTS)
+    if changed:
+        raise ScriptFailure("fact-preservation failed: " + ", ".join(changed) + " changed")
+
+
+def apply_pairs(source: str, pairs: object) -> str:
+    if not isinstance(pairs, list):
+        raise ScriptFailure("agy pairs output must contain a replacements array")
+    positions = []
+    seen = set()
+    for pair in pairs:
+        if not isinstance(pair, dict) or not isinstance(pair.get("old"), str) or not isinstance(pair.get("new"), str):
+            raise ScriptFailure("each replacement must contain string old and new values")
+        old = pair["old"]
+        if not old:
+            raise ScriptFailure("replacement old values must not be empty")
+        if old in seen:
+            raise ScriptFailure(f"replacement old value is repeated: {old!r}")
+        seen.add(old)
+        start = source.find(old)
+        if start < 0:
+            raise ScriptFailure(f"replacement old value was not found: {old!r}")
+        if source.find(old, start + 1) >= 0:
+            raise ScriptFailure(f"replacement old value is not unique: {old!r}")
+        positions.append((start, start + len(old), pair["new"]))
+
+    positions.sort(key=lambda item: item[0])
+    for previous, current in zip(positions, positions[1:]):
+        if current[0] < previous[1]:
+            raise ScriptFailure("replacement old values overlap")
+
+    output = []
+    masked = []
+    cursor = 0
+    for index, (start, end, new) in enumerate(positions):
+        output.extend((source[cursor:start], new))
+        masked.extend((source[cursor:start], f"AGY_TARGET_{index}"))
+        cursor = end
+    output.append(source[cursor:])
+    masked.append(source[cursor:])
+    result = "".join(output)
+    mask_result = "".join(masked)
+
+    changed = changed_facts(source, result, ("numbers", "urls", "placeholders"))
+    changed.extend(changed_facts(source, mask_result, ("fenced code", "inline code")))
+    if changed:
+        raise ScriptFailure("fact-preservation failed: " + ", ".join(changed) + " changed")
+    return result
+
+
+def settings_override() -> str:
+    # The CLI probe showed that --mode plan still permits write_file; deny rules take precedence over always-proceed.
+    return json.dumps(
+        {
+            "toolPermission": "always-proceed",
+            "permissions": {"deny": DENIED_TOOLS},
+        }
+    )
+
+
+def classify_error(message: str) -> str:
+    text = message.lower()
+    if any(term in text for term in ("timeout", "timed out", "deadline_exceeded")):
+        return "timeout"
+    if any(term in text for term in ("429", "quota", "rate limit", "resource exhausted", "limit exceeded")):
+        return "limit"
+    if any(term in text for term in ("401", "403", "unauthorized", "authentication", "not logged in", "login required", "credential")):
+        return "auth"
+    return "error"
+
+
+def parse_agy_output(stdout: str) -> dict:
+    try:
+        envelope = json.loads(stdout)
+    except json.JSONDecodeError as error:
+        raise AgyFailure(classify_error(stdout)) from error
+    if not isinstance(envelope, dict) or envelope.get("status") != "SUCCESS":
+        if isinstance(envelope, dict):
+            detail = envelope.get("error") or envelope.get("response") or stdout
+        else:
+            detail = stdout
+        raise AgyFailure(classify_error(str(detail)))
+    structured = envelope.get("structured_output")
+    if isinstance(structured, dict):
+        return strip_json_greetings(structured)
+    response = strip_greeting_lines(str(envelope.get("response", "")))
+    try:
+        value = json.loads(response)
+    except json.JSONDecodeError as error:
+        raise ScriptFailure("agy did not return the required JSON structure") from error
+    if not isinstance(value, dict):
+        raise ScriptFailure("agy JSON output must be an object")
+    return strip_json_greetings(value)
+
+
+def agy_arguments(prompt: str, schema: dict) -> list[str]:
+    return [
+        "agy",
+        "--model",
+        MODEL,
+        "--mode",
+        "plan",
+        "--sandbox",
+        "--settings",
+        settings_override(),
+        "--print-timeout",
+        PRINT_TIMEOUT,
+        "--output-format",
+        "json",
+        "--json-schema",
+        json.dumps(schema, separators=(",", ":")),
+        f"--print={prompt}",
+    ]
+
+
+def call_agy(
+    operation: str,
+    prompt: str,
+    schema: dict,
+    validator,
+    review_round: int | None = None,
+) -> dict:
+    outcome = "error"
+    pending_error = None
+    result = None
+    with tempfile.TemporaryDirectory(prefix="shunk031-agy-japanese-") as working_directory:
+        started = time.monotonic()
+        duration = None
+        try:
+            completed = subprocess.run(
+                agy_arguments(prompt, schema),
+                cwd=working_directory,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=PRINT_TIMEOUT_SECONDS + 10,
+                check=False,
+            )
+            duration = time.monotonic() - started
+            if completed.returncode:
+                message = completed.stderr or completed.stdout
+                raise AgyFailure(classify_error(message))
+            value = parse_agy_output(completed.stdout)
+            result, outcome = validator(value)
+        except subprocess.TimeoutExpired as error:
+            duration = time.monotonic() - started
+            outcome = "timeout"
+            pending_error = AgyFailure(outcome)
+        except AgyFailure as error:
+            outcome = error.outcome
+            pending_error = error
+        except Exception as error:
+            outcome = "error"
+            pending_error = error if isinstance(error, ScriptFailure) else ScriptFailure(str(error))
+
+        if duration is None:
+            duration = time.monotonic() - started
+        record = {
+            "timestamp": timestamp(),
+            "operation": operation,
+            "duration_seconds": round(duration, 3),
+            "outcome": outcome,
+        }
+        if operation == "review":
+            record["round"] = review_round
+        try:
+            append_jsonl(state_directory() / CALLS_FILE, record)
+        except OSError as error:
+            if isinstance(pending_error, AgyFailure):
+                print("agy call log could not be written", file=sys.stderr)
+            else:
+                raise ScriptFailure("could not append the agy call log; hold the deliverable") from error
+
+    if pending_error is not None:
+        raise pending_error
+    return result
+
+
+def read_bytes(path: str) -> bytes:
+    return sys.stdin.buffer.read() if path == "-" else Path(path).read_bytes()
+
+
+def decode_text(data: bytes) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ScriptFailure("input must be UTF-8") from error
+
+
+def write_text(text: str, destination: str | None) -> None:
+    data = text.encode("utf-8")
+    if destination is None or destination == "-":
+        sys.stdout.buffer.write(data)
+        return
+    path = Path(destination)
+    if not path.parent.is_dir():
+        raise ScriptFailure(f"output directory does not exist: {path.parent}")
+    existing_mode = path.stat().st_mode & 0o777 if path.exists() else None
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        if existing_mode is not None:
+            os.chmod(temporary, existing_mode)
+        os.replace(temporary, path)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def json_schema(properties: dict, required: list[str]) -> dict:
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": required,
+        "additionalProperties": False,
+    }
+
+
+def criteria_for(language: str) -> str:
+    if language not in STYLE_CRITERIA:
+        raise ScriptFailure(f"no loaded writing criteria are configured for {language}")
+    return STYLE_CRITERIA[language]
+
+
+def content_prompt(operation: str, text: str, language: str = LANGUAGE) -> str:
+    criteria = criteria_for(language)
+    source = json.dumps({"text": text}, ensure_ascii=False)
+    if operation == "rewrite":
+        instruction = (
+            f"Rewrite the whole deliverable in {language}. You may delete, merge, or reorder text. "
+            "Preserve numbers, URLs, inline code, fenced code, and HTML comments byte-for-byte. "
+            f"Apply only the loaded {language} writing skills. Return only an object with a text string."
+        )
+    else:
+        instruction = (
+            f"Find wording that should change in this {language} source code or HTML. "
+            "Return only exact, unique {old,new} replacements in a replacements array; "
+            "return an empty array when no wording needs a change."
+        )
+    return f"{instruction} {criteria}\nInput JSON:\n{source}"
+
+
+def run_rewrite(args) -> int:
+    source = decode_text(read_bytes(args.file))
+    if not source:
+        raise ScriptFailure("input is empty")
+    schema = json_schema({"text": {"type": "string"}}, ["text"])
+
+    def validate(value):
+        if not isinstance(value.get("text"), str):
+            raise ScriptFailure("agy rewrite output has no text string")
+        rewritten = strip_greeting_lines(value["text"])
+        preserve_rewrite_facts(source, rewritten)
+        return {"text": rewritten}, "ok"
+
+    result = call_agy("rewrite", content_prompt("rewrite", source), schema, validate)
+    write_text(result["text"], args.output)
+    return 0
+
+
+def run_pairs(args) -> int:
+    source = decode_text(read_bytes(args.file))
+    if not source:
+        raise ScriptFailure("input is empty")
+    pair_schema = {
+        "type": "object",
+        "required": ["old", "new"],
+        "properties": {"old": {"type": "string"}, "new": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    schema = json_schema(
+        {"replacements": {"type": "array", "items": pair_schema}}, ["replacements"]
+    )
+
+    def validate(value):
+        result = apply_pairs(source, value.get("replacements"))
+        return {"text": result}, "ok"
+
+    result = call_agy("pairs", content_prompt("pairs", source), schema, validate)
+    write_text(result["text"], args.output)
+    return 0
+
+
+def validate_review(value):
+    decision = value.get("decision")
+    findings = value.get("findings")
+    if decision not in ("ACCEPT", "REJECT") or not isinstance(findings, list):
+        raise ScriptFailure("agy review output must contain ACCEPT or REJECT and findings")
+    if any(not isinstance(finding, str) for finding in findings):
+        raise ScriptFailure("agy review findings must be strings")
+    if decision == "ACCEPT" and findings:
+        raise ScriptFailure("agy ACCEPT must not include findings")
+    if decision == "REJECT" and not findings:
+        raise ScriptFailure("agy REJECT must include at least one finding")
+    return {"decision": decision, "findings": findings}, decision.lower()
+
+
+def review_prompt(text: str, review_round: int, language: str = LANGUAGE) -> str:
+    criteria = criteria_for(language)
+    source = json.dumps({"text": text}, ensure_ascii=False)
+    return (
+        f"You are a fresh reviewer in review round {review_round}; you did not write this text. "
+        f"Judge the complete deliverable in {language} using only the loaded writing skills. "
+        "Return ACCEPT with an empty findings array only when it is ready to publish; otherwise "
+        "return REJECT with concise actionable findings. Return only the required JSON object. "
+        f"{criteria}\nInput JSON:\n{source}"
+    )
+
+
+def run_review(args) -> int:
+    raw = read_bytes(args.file)
+    text = decode_text(raw)
+    if not text:
+        raise ScriptFailure("input is empty")
+    schema = json_schema(
+        {
+            "decision": {"type": "string", "enum": ["ACCEPT", "REJECT"]},
+            "findings": {"type": "array", "items": {"type": "string"}},
+        },
+        ["decision", "findings"],
+    )
+    result = call_agy(
+        "review",
+        review_prompt(text, args.round),
+        schema,
+        validate_review,
+        review_round=args.round,
+    )
+    if result["decision"] == "ACCEPT":
+        digest = hashlib.sha256(raw).hexdigest()
+        path = args.path or (args.file if args.file != "-" else "<stdin>")
+        try:
+            append_jsonl(
+                state_directory() / ACCEPTED_FILE,
+                {"timestamp": timestamp(), "path": path, "sha256": digest},
+            )
+        except OSError as error:
+            raise ScriptFailure("could not record the ACCEPT hash; hold the deliverable") from error
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def hash_is_accepted(raw: bytes) -> bool:
+    path = state_directory() / ACCEPTED_FILE
+    if not path.exists():
+        return False
+    digest = hashlib.sha256(raw).hexdigest()
+    try:
+        with path.open(encoding="utf-8") as records:
+            for line in records:
+                record = json.loads(line)
+                if record.get("sha256") == digest:
+                    return True
+    except (OSError, json.JSONDecodeError, AttributeError) as error:
+        raise ScriptFailure("review state is unreadable; hold the deliverable") from error
+    return False
+
+
+def run_gate(args) -> int:
+    raw = read_bytes(args.file)
+    text = decode_text(raw)
+    if not requires_review(text) or hash_is_accepted(raw):
+        return 0
+    print(
+        "Japanese text needs agy review; run `agy-japanese review --file <file>` before posting.",
+        file=sys.stderr,
+    )
+    return 1
+
+
+def add_file_option(parser) -> None:
+    parser.add_argument("--file", default="-", metavar="PATH", help="UTF-8 input file; default: stdin")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    rewrite = commands.add_parser("rewrite", help="rewrite whole prose-first Markdown")
+    add_file_option(rewrite)
+    rewrite.add_argument("--output", "-o", help="write the checked result to this file; default: stdout")
+    rewrite.set_defaults(run=run_rewrite)
+
+    pairs = commands.add_parser("pairs", help="apply agy replacement pairs to code or HTML")
+    add_file_option(pairs)
+    pairs.add_argument("--output", "-o", help="write the checked result to this file; default: stdout")
+    pairs.set_defaults(run=run_pairs)
+
+    review = commands.add_parser("review", help="review with a fresh agy session")
+    add_file_option(review)
+    review.add_argument("--path", help="path to record for stdin input")
+    review.add_argument("--round", type=int, choices=(1, 2, 3), default=1)
+    review.set_defaults(run=run_review)
+
+    gate = commands.add_parser("gate", help="allow short text or exact ACCEPT-recorded text")
+    add_file_option(gate)
+    gate.set_defaults(run=run_gate)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        return args.run(args)
+    except AgyFailure as error:
+        print(error, file=sys.stderr)
+        return EXIT_CODES[error.outcome]
+    except (ScriptFailure, OSError) as error:
+        print(error, file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
