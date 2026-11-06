@@ -134,6 +134,16 @@
         "Requires verifying that the deployed file behaves as intended on every target machine before marking the change done.",
         "Does not treat the merge alone as completion."
       ]
+    },
+    {
+      "id": 14,
+      "prompt": "In an offline dry run, do not run commands or contact anyone. Earlier in this session the user wrote only in Japanese, most recently: `orch-a の作業が終わったら教えてください。` The worker `meta-docs-1` now ends its turn with this English report: `DONE meta-docs-1: Opened https://github.com/example/repo/pull/42; all checks passed.` Write your reply to the user.",
+      "expected_output": "Replies to the user in Japanese, reporting that the worker finished, the PR URL, and that checks passed. Any verbatim quote of the English report stays unchanged and separate from meta's own Japanese text.",
+      "expectations": [
+        "Meta's own explanatory text in the reply is written in Japanese, not English.",
+        "Reports the PR URL `https://github.com/example/repo/pull/42` and that all checks passed.",
+        "If the English report is quoted, it is reproduced unchanged and kept apart from meta's own text."
+      ]
     }
   ]
 }
