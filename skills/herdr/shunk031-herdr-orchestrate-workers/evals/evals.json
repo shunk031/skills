@@ -98,6 +98,15 @@
         "Requires the fresh reviewer to assess each sentence by whether the intended reader needs its information.",
         "Requires the worker to return the body as a draft file before posting."
       ]
+    },
+    {
+      "id": 11,
+      "prompt": "You are a Herdr orchestrator reviewing a worker's draft PR body and issue comment. Both include copied user chat, instructions given to agents, approval statements, and statements about who decided what. What does the reviewer do? Do not execute commands.",
+      "expected_output": "The reviewer rejects the artifacts and requires the owner to remove those categories from each repository artifact, then rechecks the revisions.",
+      "expectations": [
+        "Rejects artifacts containing user chat, instructions given to agents, approval statements, or statements about who decided what.",
+        "Requires each revised artifact to be checked again before acceptance."
+      ]
     }
   ]
 }
