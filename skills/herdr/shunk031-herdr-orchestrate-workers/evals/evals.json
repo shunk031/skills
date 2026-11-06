@@ -98,6 +98,14 @@
         "Requires the fresh reviewer to assess each sentence by whether the intended reader needs its information.",
         "Requires the worker to return the body as a draft file before posting."
       ]
+    },
+    {
+      "id": 11,
+      "prompt": "You are an independent reviewer checking a worker's draft PR body and issue comment. Both include copied user chat, instructions given to agents, approval statements, and statements about who decided what. What do you do? Do not execute commands.",
+      "expected_output": "Reject artifacts containing any of those categories.",
+      "expectations": [
+        "Rejects artifacts containing user chat, instructions given to agents, approval statements, or statements about who decided what."
+      ]
     }
   ]
 }
