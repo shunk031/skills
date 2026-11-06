@@ -68,6 +68,18 @@ class AgyJapaneseTest(unittest.TestCase):
             with self.subTest(candidate=candidate), self.assertRaises(agy_japanese.ScriptFailure):
                 agy_japanese.preserve_rewrite_facts(source, candidate)
 
+    def test_rewrite_preserves_kanji_numbers_without_blocking_common_words(self):
+        source = "対象は三件です。追加分は二つです。第三章を参照します。"
+        agy_japanese.preserve_rewrite_facts(source, source)
+        agy_japanese.preserve_rewrite_facts("一緒に説明します。", "ともに説明します。")
+        for candidate in (
+            source.replace("三件", "四件"),
+            source.replace("二つ", "三つ"),
+            source.replace("第三章", "第二章"),
+        ):
+            with self.subTest(candidate=candidate), self.assertRaises(agy_japanese.ScriptFailure):
+                agy_japanese.preserve_rewrite_facts(source, candidate)
+
     def test_rewrite_prompt_explicitly_protects_facts_and_code(self):
         prompt = agy_japanese.content_prompt("rewrite", "本文")
         for protected in ("numbers", "URLs", "inline code", "fenced code", "HTML comments"):

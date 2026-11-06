@@ -22,6 +22,12 @@ MODEL = "gemini-4-argon-high"
 PRINT_TIMEOUT = "120s"
 PRINT_TIMEOUT_SECONDS = 120
 LANGUAGE = "Japanese"
+KANJI_NUMERALS = "〇零一二三四五六七八九十百千万億兆京数"
+KANJI_NUMBER = (
+    rf"第[{KANJI_NUMERALS}]+"
+    rf"|[{KANJI_NUMERALS}]+(?=(?:つ|個|件|人|回|年|月|日|時|分|秒|円|番|章|階|台|本|枚|冊|歳|才|点|位|号|度|倍|週|週間|ヶ月|か月|日間|時間|年間|年目|番目|頁|ページ|節|項|行|%|％))"
+    rf"|(?<![\u4e00-\u9fff])[{KANJI_NUMERALS}]+(?![\u4e00-\u9fff])"
+)
 STYLE_CRITERIA = {
     "Japanese": (
         "Activate shunk031-writing-router and follow the writing skill it selects "
@@ -31,7 +37,7 @@ STYLE_CRITERIA = {
 }
 DENIED_TOOLS = ["write_file(*)", "command(*)", "mcp(*)", "execute_url(*)"]
 FACTS = {
-    "numbers": re.compile(r"\d+(?:[.,]\d+)*"),
+    "numbers": re.compile(rf"\d+(?:[.,]\d+)*|{KANJI_NUMBER}"),
     "urls": re.compile(
         r"(?:[a-z][a-z0-9+.-]*://|mailto:|www\.)[^\s<>\"')\]]+", re.IGNORECASE
     ),
