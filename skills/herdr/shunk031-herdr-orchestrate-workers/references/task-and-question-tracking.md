@@ -1,6 +1,6 @@
-# Task and question tracking with the inbox mod
+# Task and question tracking
 
-Use these procedures when the inbox mod is available.
+Apply the reporting rule below in every user-facing reply. Use the inbox-specific procedures when the inbox mod is available.
 
 ## In-progress tasks
 
@@ -8,11 +8,13 @@ Use these procedures when the inbox mod is available.
 - Close a finding only when its task is verified done or dropped, using `mcp__inbox__close` with the finding's `id` and a short reason.
 - Reserve inbox `task` entries for actions only the user can take; do not use them for worker-owned in-progress tasks.
 
-## User blockers
+## User decisions and actions
 
-- Include each blocking user decision or action in the user-facing report so the mod's post-turn update adds it to the `Needs you` list. Do not repeat open inbox items in later reports. If an unanswered inbox question expires, keep it marked expired in the ledger's `User waiting` column and include it once as a one-line reminder in the next user-facing report; leave it in the ledger until the user answers, and do not recreate or repeat it in later reports. After sending the reminder, mark its entry `reminder sent` in the same column; keep it there until answered and do not resend while that marker remains.
+- End every user-facing reply with a short "Waiting on you" list of every open user decision and action, one line each stating what the user should decide or do and the recommended option, if any. Include expired items that still block work; repeat open items until answered or completed. Omit the list only when nothing is waiting.
+- Include each blocking user decision or action in the report so the mod's post-turn update adds it to the `Needs you` list.
 - Use questions for choices that block continued work, and tasks only for actions the user can take that block continuing or finishing.
-- Make each item stand alone: state what the user should decide or do, why it is needed or what it blocks, your recommendation, and what you will do if there is no answer. Include the exact command or link when relevant.
+- For first reports or inbox entries, make each item stand alone: say what to decide or do, why it matters or blocks work, your recommendation, and what happens without an answer.
+- Include an exact command or link when relevant.
 - Use `mcp__inbox__record_finding` for out-of-scope issues or opportunities, not user decisions or actions that block progress.
 
 ## Close user items
