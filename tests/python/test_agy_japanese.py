@@ -5,8 +5,10 @@ import importlib.machinery
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -69,16 +71,52 @@ class AgyJapaneseTest(unittest.TestCase):
                 agy_japanese.preserve_rewrite_facts(source, candidate)
 
     def test_rewrite_preserves_kanji_numbers_without_blocking_common_words(self):
-        source = "対象は三件です。追加分は二つです。第三章を参照します。"
+        source = "対象は三件、三名です。追加分は二つです。第三章を参照します。"
         agy_japanese.preserve_rewrite_facts(source, source)
         agy_japanese.preserve_rewrite_facts("一緒に説明します。", "ともに説明します。")
         for candidate in (
             source.replace("三件", "四件"),
+            source.replace("三名", "二名"),
             source.replace("二つ", "三つ"),
             source.replace("第三章", "第二章"),
         ):
             with self.subTest(candidate=candidate), self.assertRaises(agy_japanese.ScriptFailure):
                 agy_japanese.preserve_rewrite_facts(source, candidate)
+
+    def test_gate_cli_handles_file_stdin_and_recorded_sha(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / "state"
+            env = os.environ.copy()
+            env["XDG_STATE_HOME"] = str(state)
+            short_file = root / "short.md"
+            short_file.write_text("短い文章", encoding="utf-8")
+            short = subprocess.run(
+                [sys.executable, str(SCRIPT), "gate", "--file", str(short_file)],
+                env=env, capture_output=True, check=False,
+            )
+            self.assertEqual(short.returncode, 0, short.stderr.decode())
+
+            raw = ("あ" * 20).encode()
+            unreviewed = subprocess.run(
+                [sys.executable, str(SCRIPT), "gate"],
+                input=raw, env=env, capture_output=True, check=False,
+            )
+            self.assertEqual(unreviewed.returncode, 1)
+            self.assertIn(b"agy-japanese review", unreviewed.stderr)
+
+            state_dir = state / "shunk031-agy-japanese"
+            state_dir.mkdir(parents=True)
+            accepted = state_dir / agy_japanese.ACCEPTED_FILE
+            accepted.write_text(
+                json.dumps({"sha256": hashlib.sha256(raw).hexdigest()}) + "\n",
+                encoding="utf-8",
+            )
+            reviewed = subprocess.run(
+                [sys.executable, str(SCRIPT), "gate"],
+                input=raw, env=env, capture_output=True, check=False,
+            )
+            self.assertEqual(reviewed.returncode, 0, reviewed.stderr.decode())
 
     def test_rewrite_prompt_explicitly_protects_facts_and_code(self):
         prompt = agy_japanese.content_prompt("rewrite", "本文")
