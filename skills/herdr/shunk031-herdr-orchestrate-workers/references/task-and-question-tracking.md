@@ -13,8 +13,7 @@ Apply the reporting rule below in every user-facing reply. Use the inbox-specifi
 - End every user-facing reply with a short "Waiting on you" list of every open user decision and action, one line each stating what the user should decide or do and the recommended option, if any. Include expired items that still block work; repeat open items until answered or completed. Omit the list only when nothing is waiting.
 - Include each blocking user decision or action in the report so the mod's post-turn update adds it to the `Needs you` list.
 - Use questions for choices that block continued work, and tasks only for actions the user can take that block continuing or finishing.
-- When first raising an item in a report or creating its inbox entry, make the request stand alone.
-- State what the user should decide or do, why it is needed or what it blocks, your recommendation, and what will happen if there is no answer.
+- For first reports or inbox entries, make each item stand alone: say what to decide or do, why it matters or blocks work, your recommendation, and what happens without an answer.
 - Include an exact command or link when relevant.
 - Use `mcp__inbox__record_finding` for out-of-scope issues or opportunities, not user decisions or actions that block progress.
 
