@@ -75,6 +75,17 @@ class AgyJapaneseTest(unittest.TestCase):
         source = "対象は三件、三名です。追加分は二つです。第三章を参照します。"
         agy_japanese.preserve_rewrite_facts(source, source)
         agy_japanese.preserve_rewrite_facts("一緒に説明します。", "ともに説明します。")
+        agy_japanese.preserve_rewrite_facts(
+            "十分な情報を一度確認し、一番の候補の数を記録する。",
+            "必要な情報を確認し、最有力候補を記録する。",
+        )
+        for counter_source, candidate in (
+            ("三分待つ。", "五分待つ。"),
+            ("三番に並ぶ。", "五番に並ぶ。"),
+            ("三度繰り返す。", "五度繰り返す。"),
+        ):
+            with self.subTest(source=counter_source, candidate=candidate), self.assertRaises(agy_japanese.ScriptFailure):
+                agy_japanese.preserve_rewrite_facts(counter_source, candidate)
         for candidate in (
             source.replace("三件", "四件"),
             source.replace("三名", "二名"),
@@ -104,6 +115,19 @@ class AgyJapaneseTest(unittest.TestCase):
                 "See example.com/other for details.",
             )
 
+    def test_rewrite_does_not_treat_japanese_url_suffix_or_version_as_a_url(self):
+        agy_japanese.preserve_rewrite_facts(
+            "詳細はhttps://example.test/reportを参照。example.comを確認。",
+            "https://example.test/reportをご覧ください。example.comを参照。",
+        )
+        self.assertFalse(agy_japanese.fact_tokens("urls", "v1.2"))
+        self.assertTrue(agy_japanese.fact_tokens("numbers", "v1.2"))
+        with self.assertRaises(agy_japanese.ScriptFailure):
+            agy_japanese.preserve_rewrite_facts(
+                "https://example.test/report(old)",
+                "https://example.test/report(new)",
+            )
+
     def test_gate_cli_handles_file_stdin_and_recorded_sha(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -129,21 +153,60 @@ class AgyJapaneseTest(unittest.TestCase):
             state_dir = state / "shunk031-agy-japanese"
             state_dir.mkdir(parents=True)
             accepted = state_dir / agy_japanese.ACCEPTED_FILE
+            valid_record = {
+                "timestamp": agy_japanese.timestamp(),
+                "path": "<stdin>",
+                "sha256": hashlib.sha256(raw).hexdigest(),
+            }
             accepted.write_text(
-                json.dumps({"sha256": hashlib.sha256(raw).hexdigest()}) + "\n",
+                json.dumps(valid_record) + "\nnot JSON\n",
                 encoding="utf-8",
             )
+            corrupt = subprocess.run(
+                [sys.executable, str(SCRIPT), "gate"],
+                input=raw, env=env, capture_output=True, check=False,
+            )
+            self.assertEqual(corrupt.returncode, agy_japanese.EXIT_CODES["error"])
+            self.assertIn(b"hold the deliverable and tell the user", corrupt.stderr)
+
+            accepted.write_text("{}\n", encoding="utf-8")
+            empty_record = subprocess.run(
+                [sys.executable, str(SCRIPT), "gate"],
+                input=raw, env=env, capture_output=True, check=False,
+            )
+            self.assertEqual(empty_record.returncode, agy_japanese.EXIT_CODES["error"])
+
+            accepted.unlink()
+            accepted.mkdir()
+            unavailable = subprocess.run(
+                [sys.executable, str(SCRIPT), "gate"],
+                input=raw, env=env, capture_output=True, check=False,
+            )
+            self.assertEqual(unavailable.returncode, agy_japanese.EXIT_CODES["error"])
+            self.assertIn(b"hold the deliverable and tell the user", unavailable.stderr)
+            accepted.rmdir()
+
+            accepted.write_text(json.dumps(valid_record) + "\n", encoding="utf-8")
             reviewed = subprocess.run(
                 [sys.executable, str(SCRIPT), "gate"],
                 input=raw, env=env, capture_output=True, check=False,
             )
             self.assertEqual(reviewed.returncode, 0, reviewed.stderr.decode())
 
-    def test_rewrite_prompt_explicitly_protects_facts_and_code(self):
+    def test_rewrite_prompt_uses_plain_text_and_protects_facts_and_code(self):
         prompt = agy_japanese.content_prompt("rewrite", "本文")
         for protected in ("numbers", "URLs", "inline code", "fenced code", "HTML comments"):
             with self.subTest(protected=protected):
                 self.assertIn(protected, prompt)
+        self.assertIn("Input is plain text, not JSON:\n本文", prompt)
+        self.assertNotIn('{"text": "本文"}', prompt)
+        self.assertNotIn("LANGUAGE", prompt)
+
+    def test_review_prompt_treats_html_comments_as_render_time_placeholders(self):
+        prompt = agy_japanese.review_prompt("本文\n<!-- table:cases -->", 1)
+        self.assertIn("intentional render-time placeholders", prompt)
+        self.assertIn("Do not ask to expand placeholders", prompt)
+        self.assertIn("content absent from the supplied source", prompt)
 
     def test_pairs_replace_one_exact_unique_match_and_preserve_other_code(self):
         source = '<button>古い文言</button><script>const count = 7;</script>'
@@ -183,7 +246,11 @@ class AgyJapaneseTest(unittest.TestCase):
             path.write_bytes(raw)
             agy_japanese.append_jsonl(
                 state / agy_japanese.ACCEPTED_FILE,
-                {"sha256": hashlib.sha256(raw).hexdigest()},
+                {
+                    "timestamp": agy_japanese.timestamp(),
+                    "path": str(path),
+                    "sha256": hashlib.sha256(raw).hexdigest(),
+                },
             )
             args = SimpleNamespace(file=str(path))
             with mock.patch.object(agy_japanese, "state_directory", return_value=state):
@@ -262,7 +329,7 @@ class AgyJapaneseTest(unittest.TestCase):
                 self.assertEqual(command[command.index("--model") + 1], "gemini-4-argon-high")
                 self.assertEqual(command[command.index("--mode") + 1], "plan")
                 self.assertIn("--sandbox", command)
-                self.assertEqual(command[command.index("--print-timeout") + 1], "120s")
+                self.assertEqual(command[command.index("--print-timeout") + 1], "600s")
                 settings = json.loads(command[command.index("--settings") + 1])
                 self.assertIn("write_file(*)", settings["permissions"]["deny"])
                 self.assertEqual(command[command.index("--output-format") + 1], "json")
@@ -331,6 +398,45 @@ class AgyJapaneseTest(unittest.TestCase):
             )
             self.assertEqual(record["operation"], "rewrite")
             self.assertEqual(record["outcome"], "error")
+
+    def test_rewrite_cli_writes_plain_body_and_rejects_json_wrappers(self):
+        body = "この日本語の本文は20件を確認します。"
+        wrapped = json.dumps({"text": body}, ensure_ascii=False)
+        cases = (
+            ("plain body", body, 0),
+            ("bare JSON object", wrapped, 1),
+            ("fenced JSON object", f"```json\n{wrapped}\n```", 1),
+        )
+        for label, agy_text, exit_code in cases:
+            with tempfile.TemporaryDirectory() as directory, self.subTest(response=label):
+                root = Path(directory)
+                bindir = root / "bin"
+                bindir.mkdir()
+                source = root / "source.md"
+                output = root / "candidate.md"
+                source.write_text(body, encoding="utf-8")
+                envelope = {"status": "SUCCESS", "structured_output": {"text": agy_text}}
+                fake_agy = bindir / "agy"
+                fake_agy.write_text(
+                    f"#!{sys.executable}\nprint({json.dumps(json.dumps(envelope, ensure_ascii=False))})\n",
+                    encoding="utf-8",
+                )
+                fake_agy.chmod(0o755)
+                env = os.environ.copy()
+                env["PATH"] = str(bindir) + os.pathsep + os.defpath
+                env["XDG_STATE_HOME"] = str(root / "state")
+
+                result = subprocess.run(
+                    [sys.executable, str(SCRIPT), "rewrite", "--file", str(source), "--output", str(output)],
+                    env=env, capture_output=True, check=False,
+                )
+
+                self.assertEqual(result.returncode, exit_code, result.stderr.decode())
+                if exit_code == 0:
+                    self.assertEqual(output.read_text(encoding="utf-8"), body)
+                else:
+                    self.assertIn(b"serialized JSON object", result.stderr)
+                    self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

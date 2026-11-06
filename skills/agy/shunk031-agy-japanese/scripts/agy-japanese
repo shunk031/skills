@@ -19,35 +19,30 @@ import time
 
 
 MODEL = "gemini-4-argon-high"
-PRINT_TIMEOUT = "120s"
-PRINT_TIMEOUT_SECONDS = 120
-LANGUAGE = "Japanese"
-KANJI_NUMERALS = "〇零一二三四五六七八九十百千万億兆京数"
+PRINT_TIMEOUT = "600s"
+PRINT_TIMEOUT_SECONDS = 600
+KANJI_NUMERALS = "〇零一二三四五六七八九十百千万億兆京"
 NUMBER_UNITS = (
     "週間|日間|時間|年間|年目|番目|ヶ月|か月|ページ|歳|才|匹|羽|頭|冊|枚|頁|"
     "個|件|人|名|回|年|月|日|時|分|秒|円|番|章|節|項|階|台|本|点|位|号|度|倍|週|行|%|％|つ"
 )
 NUMBER = rf"(?:\d+(?:[.,]\d+)*|[{KANJI_NUMERALS}]+)"
+AMBIGUOUS_KANJI_COUNTS = r"(?:一(?:度|番)(?!目)|十分)"
 KANJI_NUMBER = (
-    rf"第{NUMBER}(?:{NUMBER_UNITS})?"
-    rf"|[{KANJI_NUMERALS}]+(?:{NUMBER_UNITS})"
+    rf"第(?!{AMBIGUOUS_KANJI_COUNTS}){NUMBER}(?:{NUMBER_UNITS})?"
+    rf"|(?!{AMBIGUOUS_KANJI_COUNTS})[{KANJI_NUMERALS}]+(?:{NUMBER_UNITS})"
     rf"|(?<![\u4e00-\u9fff])[{KANJI_NUMERALS}]+(?![\u4e00-\u9fff])"
 )
-STYLE_CRITERIA = {
-    "Japanese": (
-        "Activate shunk031-writing-router and follow the writing skill it selects "
-        "from natural-japanese, shunk031-writing-kosshi, shunk031-writing-telegraph, "
-        "tanteki, and yomiyasu. Do not add style rules of your own."
-    )
-}
 DENIED_TOOLS = ["write_file(*)", "command(*)", "mcp(*)", "execute_url(*)"]
 FACTS = {
     "numbers": re.compile(rf"\d+(?:[.,]\d+)*(?:{NUMBER_UNITS})?|{KANJI_NUMBER}"),
     "placeholders": re.compile(r"<!--[\s\S]*?-->"),
 }
+# shortcut: URL detection covers ASCII URIs and common Markdown/HTML links; use a parser if broader syntax is needed.
+URL_CHARS = r"A-Za-z0-9._~:/?#\[\]@!$&'(*+,;=%-"
 URL_PATTERNS = (
-    re.compile(r"((?:[a-z][a-z0-9+.-]*://|mailto:|www\.)[^\s<>\"')\]]+)", re.IGNORECASE),
-    re.compile(r"(\b(?:[\w-]+\.)+[\w-]+(?::\d+)?(?:[/?#][^\s<>\"')\]]*)?)"),
+    re.compile(rf"((?:[a-z][a-z0-9+.-]*://|mailto:|www\.)[{URL_CHARS}]+)", re.IGNORECASE),
+    re.compile(rf"(?<![A-Za-z0-9-])((?:[A-Za-z0-9-]+\.)+[A-Za-z]{{2,}}(?::\d+)?(?:[/?#][{URL_CHARS}]*)?)"),
     re.compile(r"\]\(\s*(?:<([^>]+)>|((?:\\.|[^)\s])+))"),
     re.compile(r"(?m)^\s{0,3}\[[^\]]+\]:\s*(?:<([^>]+)>|(\S+))"),
     re.compile(r"(?i)\b(?:href|src)\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s>]+))"),
@@ -73,6 +68,11 @@ class AgyFailure(Exception):
             f"agy {outcome} failure; hold the deliverable and tell the user "
             f"(exit code {EXIT_CODES[outcome]})."
         )
+
+
+class HoldFailure(Exception):
+    def __init__(self, reason: str):
+        super().__init__(f"{reason}; hold the deliverable and tell the user (exit code {EXIT_CODES['error']}).")
 
 
 def state_directory() -> Path:
@@ -102,14 +102,9 @@ def append_jsonl(path: Path, value: dict) -> None:
         os.close(descriptor)
 
 
-def is_kana(character: str) -> bool:
-    """Return whether a character is in the hiragana or katakana Unicode blocks."""
-    return "\u3040" <= character <= "\u309f" or "\u30a0" <= character <= "\u30ff"
-
-
 def requires_review(text: str) -> bool:
-    """Keep the language-specific prose threshold in one replaceable function."""
-    return sum(is_kana(character) for character in text) >= 20
+    """Return whether Japanese text is long enough to require review."""
+    return sum("\u3040" <= character <= "\u309f" or "\u30a0" <= character <= "\u30ff" for character in text) >= 20
 
 
 def strip_greeting_lines(text: str) -> str:
@@ -185,6 +180,25 @@ def preserve_rewrite_facts(before: str, after: str) -> None:
     changed = changed_facts(before, after, PROTECTED_FACTS)
     if changed:
         raise ScriptFailure("fact-preservation failed: " + ", ".join(changed) + " changed")
+
+
+def reject_serialized_json_object(text: str) -> None:
+    candidate = text.strip()
+    blocks = fenced_code_blocks(text)
+    if len(blocks) == 1 and blocks[0].strip() == candidate:
+        lines = candidate.splitlines()
+        opening = re.match(r"^ {0,3}(`{3,}|~{3,})", lines[0]) if lines else None
+        if opening and len(lines) >= 3 and re.fullmatch(
+            rf" {{0,3}}{re.escape(opening.group(1)[0])}{{{len(opening.group(1))},}}[ \t]*",
+            lines[-1],
+        ):
+            candidate = "\n".join(lines[1:-1]).strip()
+    try:
+        value = json.loads(candidate)
+    except json.JSONDecodeError:
+        return
+    if isinstance(value, dict):
+        raise ScriptFailure("agy rewrite output is a serialized JSON object, not the plain deliverable body")
 
 
 def apply_pairs(source: str, pairs: object) -> str:
@@ -410,28 +424,22 @@ def json_schema(properties: dict, required: list[str]) -> dict:
     }
 
 
-def criteria_for(language: str) -> str:
-    if language not in STYLE_CRITERIA:
-        raise ScriptFailure(f"no loaded writing criteria are configured for {language}")
-    return STYLE_CRITERIA[language]
-
-
-def content_prompt(operation: str, text: str, language: str = LANGUAGE) -> str:
-    criteria = criteria_for(language)
-    source = json.dumps({"text": text}, ensure_ascii=False)
+def content_prompt(operation: str, text: str) -> str:
     if operation == "rewrite":
-        instruction = (
-            f"Rewrite the whole deliverable in {language}. You may delete, merge, or reorder text. "
+        return (
+            "Rewrite the complete Japanese deliverable. You may delete, merge, or reorder text. "
+            "Follow shunk031-writing-router and the loaded writing skill it selects; add no style rules of your own. "
             "Preserve numbers, URLs, inline code, fenced code, and HTML comments byte-for-byte. "
-            f"Apply only the loaded {language} writing skills. Return only an object with a text string."
+            "Return only the plain Markdown body in the required text field; do not serialize it as JSON or wrap it in a code fence. "
+            f"Input is plain text, not JSON:\n{text}"
         )
-    else:
-        instruction = (
-            f"Find wording that should change in this {language} source code or HTML. "
-            "Return only exact, unique {old,new} replacements in a replacements array; "
-            "return an empty array when no wording needs a change."
-        )
-    return f"{instruction} {criteria}\nInput JSON:\n{source}"
+    source = json.dumps({"text": text}, ensure_ascii=False)
+    return (
+        "Find Japanese wording that should change in this source code or HTML. "
+        "Follow shunk031-writing-router and the loaded writing skill it selects; add no style rules of your own. "
+        "Return only exact, unique {old,new} replacements in a replacements array, "
+        f"or an empty array when no wording needs a change.\nInput JSON:\n{source}"
+    )
 
 
 def run_rewrite(args) -> int:
@@ -444,6 +452,7 @@ def run_rewrite(args) -> int:
         if not isinstance(value.get("text"), str):
             raise ScriptFailure("agy rewrite output has no text string")
         rewritten = strip_greeting_lines(value["text"])
+        reject_serialized_json_object(rewritten)
         preserve_rewrite_facts(source, rewritten)
         return {"text": rewritten}, "ok"
 
@@ -489,15 +498,16 @@ def validate_review(value):
     return {"decision": decision, "findings": findings}, decision.lower()
 
 
-def review_prompt(text: str, review_round: int, language: str = LANGUAGE) -> str:
-    criteria = criteria_for(language)
+def review_prompt(text: str, review_round: int) -> str:
     source = json.dumps({"text": text}, ensure_ascii=False)
     return (
         f"You are a fresh reviewer in review round {review_round}; you did not write this text. "
-        f"Judge the complete deliverable in {language} using only the loaded writing skills. "
+        "Judge the complete Japanese deliverable using shunk031-writing-router and the loaded writing skill it selects; add no style rules of your own. "
+        "HTML comments such as <!-- table:cases --> are intentional render-time placeholders, not missing content. "
+        "Do not ask to expand placeholders or request facts or content absent from the supplied source. "
         "Return ACCEPT with an empty findings array only when it is ready to publish; otherwise "
         "return REJECT with concise actionable findings. Return only the required JSON object. "
-        f"{criteria}\nInput JSON:\n{source}"
+        f"Input JSON:\n{source}"
     )
 
 
@@ -536,18 +546,29 @@ def run_review(args) -> int:
 
 def hash_is_accepted(raw: bytes) -> bool:
     path = state_directory() / ACCEPTED_FILE
-    if not path.exists():
-        return False
     digest = hashlib.sha256(raw).hexdigest()
+    accepted = False
+    records_seen = False
     try:
         with path.open(encoding="utf-8") as records:
             for line in records:
                 record = json.loads(line)
-                if record.get("sha256") == digest:
-                    return True
-    except (OSError, json.JSONDecodeError, AttributeError) as error:
-        raise ScriptFailure("review state is unreadable; hold the deliverable") from error
-    return False
+                if not isinstance(record, dict):
+                    raise ValueError("invalid ACCEPT record")
+                if not all(
+                    isinstance(record.get(field), str) and record[field]
+                    for field in ("timestamp", "path", "sha256")
+                ) or not re.fullmatch(r"[0-9a-f]{64}", record["sha256"]):
+                    raise ValueError("invalid ACCEPT record")
+                records_seen = True
+                accepted = accepted or record["sha256"] == digest
+        if not records_seen:
+            raise ValueError("empty ACCEPT file")
+    except FileNotFoundError:
+        return False
+    except (OSError, UnicodeError, ValueError) as error:
+        raise HoldFailure("review state is unreadable") from error
+    return accepted
 
 
 def run_gate(args) -> int:
@@ -599,6 +620,9 @@ def main(argv: list[str] | None = None) -> int:
     except AgyFailure as error:
         print(error, file=sys.stderr)
         return EXIT_CODES[error.outcome]
+    except HoldFailure as error:
+        print(error, file=sys.stderr)
+        return EXIT_CODES["error"]
     except (ScriptFailure, OSError) as error:
         print(error, file=sys.stderr)
         return 1
