@@ -65,6 +65,7 @@ class AgyJapaneseTest(unittest.TestCase):
             source.replace("`run(20)`", "`run(21)`"),
             source.replace("let n = 20", "let n = 21"),
             source.replace("<!-- table:cases -->", "<!-- table:results -->"),
+            source.replace("https://example.test/v2", "[guide](docs/other.md)"),
         ]
         for candidate in changed:
             with self.subTest(candidate=candidate), self.assertRaises(agy_japanese.ScriptFailure):
@@ -77,11 +78,31 @@ class AgyJapaneseTest(unittest.TestCase):
         for candidate in (
             source.replace("三件", "四件"),
             source.replace("三名", "二名"),
+            source.replace("三名", "三件"),
             source.replace("二つ", "三つ"),
             source.replace("第三章", "第二章"),
+            source.replace("第三章", "第三項"),
+            source.replace("三件", "3人"),
+            source.replace("三件", "三名"),
         ):
             with self.subTest(candidate=candidate), self.assertRaises(agy_japanese.ScriptFailure):
                 agy_japanese.preserve_rewrite_facts(source, candidate)
+
+    def test_rewrite_preserves_relative_markdown_and_html_urls(self):
+        source = '[guide](docs/guide.md) <a href="/guide">guide</a>'
+        for candidate in (
+            source.replace("docs/guide.md", "docs/other.md"),
+            source.replace('href="/guide"', 'href="/other"'),
+        ):
+            with self.subTest(candidate=candidate), self.assertRaises(agy_japanese.ScriptFailure):
+                agy_japanese.preserve_rewrite_facts(source, candidate)
+
+    def test_rewrite_preserves_bare_domain_urls(self):
+        with self.assertRaises(agy_japanese.ScriptFailure):
+            agy_japanese.preserve_rewrite_facts(
+                "See example.com/report for details.",
+                "See example.com/other for details.",
+            )
 
     def test_gate_cli_handles_file_stdin_and_recorded_sha(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -287,6 +308,29 @@ class AgyJapaneseTest(unittest.TestCase):
             self.assertEqual(raised.exception.outcome, "timeout")
             record = json.loads((state / agy_japanese.CALLS_FILE).read_text())
             self.assertEqual(record["outcome"], "timeout")
+
+    def test_missing_agy_has_distinct_code_hold_message_and_log(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / "state"
+            env = os.environ.copy()
+            env["PATH"] = str(root)
+            env["XDG_STATE_HOME"] = str(state)
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "rewrite"],
+                input="これは20文字以上の日本語本文です。".encode(),
+                env=env,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, agy_japanese.EXIT_CODES["error"])
+            self.assertIn(b"hold the deliverable and tell the user", result.stderr)
+            record = json.loads(
+                (state / "shunk031-agy-japanese" / agy_japanese.CALLS_FILE).read_text()
+            )
+            self.assertEqual(record["operation"], "rewrite")
+            self.assertEqual(record["outcome"], "error")
 
 
 if __name__ == "__main__":

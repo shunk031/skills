@@ -23,9 +23,14 @@ PRINT_TIMEOUT = "120s"
 PRINT_TIMEOUT_SECONDS = 120
 LANGUAGE = "Japanese"
 KANJI_NUMERALS = "〇零一二三四五六七八九十百千万億兆京数"
+NUMBER_UNITS = (
+    "週間|日間|時間|年間|年目|番目|ヶ月|か月|ページ|歳|才|匹|羽|頭|冊|枚|頁|"
+    "個|件|人|名|回|年|月|日|時|分|秒|円|番|章|節|項|階|台|本|点|位|号|度|倍|週|行|%|％|つ"
+)
+NUMBER = rf"(?:\d+(?:[.,]\d+)*|[{KANJI_NUMERALS}]+)"
 KANJI_NUMBER = (
-    rf"第[{KANJI_NUMERALS}]+"
-    rf"|[{KANJI_NUMERALS}]+(?=(?:つ|個|件|人|名|匹|羽|頭|回|年|月|日|時|分|秒|円|番|章|階|台|本|枚|冊|歳|才|点|位|号|度|倍|週|週間|ヶ月|か月|日間|時間|年間|年目|番目|頁|ページ|節|項|行|%|％))"
+    rf"第{NUMBER}(?:{NUMBER_UNITS})?"
+    rf"|[{KANJI_NUMERALS}]+(?:{NUMBER_UNITS})"
     rf"|(?<![\u4e00-\u9fff])[{KANJI_NUMERALS}]+(?![\u4e00-\u9fff])"
 )
 STYLE_CRITERIA = {
@@ -37,12 +42,16 @@ STYLE_CRITERIA = {
 }
 DENIED_TOOLS = ["write_file(*)", "command(*)", "mcp(*)", "execute_url(*)"]
 FACTS = {
-    "numbers": re.compile(rf"\d+(?:[.,]\d+)*|{KANJI_NUMBER}"),
-    "urls": re.compile(
-        r"(?:[a-z][a-z0-9+.-]*://|mailto:|www\.)[^\s<>\"')\]]+", re.IGNORECASE
-    ),
+    "numbers": re.compile(rf"\d+(?:[.,]\d+)*(?:{NUMBER_UNITS})?|{KANJI_NUMBER}"),
     "placeholders": re.compile(r"<!--[\s\S]*?-->"),
 }
+URL_PATTERNS = (
+    re.compile(r"((?:[a-z][a-z0-9+.-]*://|mailto:|www\.)[^\s<>\"')\]]+)", re.IGNORECASE),
+    re.compile(r"(\b(?:[\w-]+\.)+[\w-]+(?::\d+)?(?:[/?#][^\s<>\"')\]]*)?)"),
+    re.compile(r"\]\(\s*(?:<([^>]+)>|((?:\\.|[^)\s])+))"),
+    re.compile(r"(?m)^\s{0,3}\[[^\]]+\]:\s*(?:<([^>]+)>|(\S+))"),
+    re.compile(r"(?i)\b(?:href|src)\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s>]+))"),
+)
 PROTECTED_FACTS = ("numbers", "urls", "inline code", "fenced code", "placeholders")
 INLINE_CODE = re.compile(r"(?<!`)(?P<ticks>`+).*?(?P=ticks)(?!`)", re.DOTALL)
 GREETING = re.compile(
@@ -121,6 +130,14 @@ def strip_json_greetings(value):
 
 
 def fact_tokens(name: str, text: str) -> Counter:
+    if name == "urls":
+        return Counter(
+            value
+            for pattern in URL_PATTERNS
+            for match in pattern.finditer(text)
+            for value in match.groups()
+            if value is not None
+        )
     if name == "inline code":
         text = without_fenced_code(text)
         return Counter(match.group(0) for match in INLINE_CODE.finditer(text))
@@ -317,6 +334,9 @@ def call_agy(
         except AgyFailure as error:
             outcome = error.outcome
             pending_error = error
+        except FileNotFoundError:
+            outcome = "error"
+            pending_error = AgyFailure(outcome)
         except Exception as error:
             outcome = "error"
             pending_error = error if isinstance(error, ScriptFailure) else ScriptFailure(str(error))
