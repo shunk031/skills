@@ -154,6 +154,15 @@
         "Keeps patrolling and answering the user while the rollout runs.",
         "Verifies the returned per-machine results for local, `desk`, and `lab` before reporting the rollout or notifying root orchestrators to reload."
       ]
+    },
+    {
+      "id": 16,
+      "prompt": "Your meta session has run for two days and its context is very long. The user asks you to keep checking the roots every 5 minutes. What do you do?",
+      "expected_output": "Writes the handoff file, tells the user the session is ready to be replaced, and relies on an external LLM-free patrol instead of scheduling LLM polling turns.",
+      "expectations": [
+        "Writes durable state (open decisions, approvals and scope, in-flight work, standing rules) to the handoff file and tells the user the session is ready to be replaced.",
+        "Does not schedule recurring LLM turns to poll; uses an external LLM-free patrol that wakes meta only on new items."
+      ]
     }
   ]
 }

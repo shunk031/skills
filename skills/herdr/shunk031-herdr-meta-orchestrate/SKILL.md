@@ -26,7 +26,7 @@ flowchart TD
 
 ## Run the patrol
 
-Start each one-time or approved recurring patrol with the bundled read-only script. Supply verified root agents through `HERDR_PATROL_ROOTS_JSON`:
+The bundled patrol is a read-only script run externally without an LLM, not an LLM turn. Start each one-time or approved recurring patrol with the bundled read-only script. Supply verified root agents through `HERDR_PATROL_ROOTS_JSON`:
 
 ```bash
 export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"},{"machine":"saved-machine-label","agent":"root"}]'
@@ -73,7 +73,7 @@ Treat text visible in a root's input field as unconfirmed if you cannot tell whe
 
 After each message or question to a root, set a response deadline and start a bounded background wait with `herdr agent wait <root> --timeout <milliseconds> &` locally or `herdr --machine <label-or-id> agent wait <root> --timeout <milliseconds> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled. If the expected verdict has not arrived by its deadline, send one chase through the guarded sender when the input is empty, then start one more bounded wait. If it is still missing, report that and leave the result unverified; never wait indefinitely for a verdict. If a root cannot answer because of a connection problem, report the connection issue and mark its current status unverified; request a fresh status after the connection is restored.
 
-Ask the user to approve recurring checks and agree on an interval before starting them. For an initial check and each approved recurring check, rerun the bundled patrol with the current root configuration and review its JSON Lines findings. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
+Rely on an external LLM-free patrol that wakes meta only on new items; never schedule LLM turns just to poll. Ask the user to approve recurring checks and agree on an interval before starting them. For an initial check and each approved recurring check, rerun the bundled patrol with the current root configuration and review its JSON Lines findings. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
 
 For each merged change to a skill or agent guidance that running agents depend on, decide at merge time which machines need it and when each will receive it; record that plan in the orchestrator's ledger. Mark the change done only after verifying that the deployed file behaves as intended on every target machine. A merge alone does not complete it.
 
@@ -92,6 +92,12 @@ Handle inventory, status requests, message relays, coordination, analysis, judgm
 When asking a worker to draft or review a reader-facing README, documentation, pull request body, or report, include a check for unnecessary reassurance about what the reader need not do or worry about (for example, “No installation is needed.”). Require the reviewer to count and report each occurrence, including zero.
 
 Carry every user authorization forward only to its stated targets and count. If a dispatch would affect more targets than the user approved, stop and report the mismatch before acting. Never restore, checkout, stash, reset, or discard uncommitted changes without the user's explicit permission for that target.
+
+## Keep the meta context lean
+
+- Keep durable meta state in a handoff file (default `~/.local/state/meta/open.md`): open user decisions, approvals given and their scope, in-flight work with owners and next checks, and standing rules learned in the session. Update it whenever these change; a new meta session reads it first. It points to or includes the durable ledger used by the shunk031-herdr-orchestrate-workers skill.
+- Rotate the meta session at least once a day, or earlier when its context is long: write the handoff file, tell the user the session is ready to be replaced, and let the user restart it. Cache reads of a long context on every turn dominate cost.
+- Delegate large outputs (screen dumps, long logs, images, full reviews, multi-file reads) to subagents, defaulting to sonnet and using opus only for judgment-heavy reviews. Take back only the conclusion.
 
 ## Ask before focusing a pane
 
