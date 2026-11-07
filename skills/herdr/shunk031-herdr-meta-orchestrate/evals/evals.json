@@ -144,6 +144,16 @@
         "Reports the PR URL `https://github.com/example/repo/pull/42` and that all checks passed.",
         "If the English report is quoted, it is reproduced unchanged and kept apart from meta's own text."
       ]
+    },
+    {
+      "id": 15,
+      "prompt": "In an offline dry run, do not run commands. A skill update has merged and must reach the local machine and enabled saved machines `desk` and `lab`: update the skill, run a targeted chezmoi apply, and compare the deployed file's hash on each machine. The user is still asking you questions while this happens. Describe how you run the rollout and when you tell the root orchestrators to reload.",
+      "expected_output": "Runs the rollout in a background subagent or worker rather than in the meta session's foreground, so it keeps patrolling and answering the user. Verifies the returned per-machine table before reporting the result and notifying roots to reload.",
+      "expectations": [
+        "Delegates the skill updates, targeted applies, and hash checks to a background subagent or worker instead of running them in the meta session's foreground.",
+        "Keeps patrolling and answering the user while the rollout runs.",
+        "Verifies the returned per-machine results for local, `desk`, and `lab` before reporting the rollout or notifying root orchestrators to reload."
+      ]
     }
   ]
 }

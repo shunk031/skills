@@ -77,6 +77,8 @@ Ask the user to approve recurring checks and agree on an interval before startin
 
 For each merged change to a skill or agent guidance that running agents depend on, decide at merge time which machines need it and when each will receive it; record that plan in the orchestrator's ledger. Mark the change done only after verifying that the deployed file behaves as intended on every target machine. A merge alone does not complete it.
 
+Run multi-machine rollouts, such as skill updates, targeted chezmoi applies, and per-machine hash checks, in a background subagent or worker, not in the meta session's foreground. The meta session keeps patrolling and answering the user meanwhile. Verify the returned per-machine table before reporting the rollout and notifying root orchestrators to reload.
+
 ## Restarts and tool checks
 
 Before restarting a Herdr server or root session, record each affected root's startup command, arguments, and environment configuration in an appropriate private operational note, without copying secret values. After restart, verify each root uses the recorded settings; resuming a session alone does not establish that.
