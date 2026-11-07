@@ -12,7 +12,7 @@ An orchestrator delegates independent tasks to worker agents, one git worktree t
 
 ## Send only into an empty input
 
-Before every prompt send in this skill, run the guarded sender at ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh with the target and a quoted message variable instead of calling herdr agent prompt directly. The helper resolves the target pane with herdr agent get, reads herdr pane read <pane-id> --source visible --format ansi, and uses herdr agent prompt as the transport only when the current ❯ or › input line has no non-dim text. Treat placeholder or suggestion text styled with ANSI \e[2m after the prompt glyph as empty. It checks immediately, then waits 30 seconds and rechecks up to five times; if the input remains occupied or cannot be read, it leaves the message unsent and prints the full message as undelivered.
+Before every prompt send in this skill, run the guarded sender at ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh with the target and a quoted message variable instead of calling herdr agent prompt directly. The helper resolves the target pane with herdr agent get, reads herdr pane read <pane-id> --source visible --format ansi, and uses herdr agent prompt as the transport only when the current ❯, ›, or Antigravity CLI > input line has no non-dim text. Treat placeholder or suggestion text styled with ANSI \e[2m or a gray foreground (\e[90m or \e[38;5;8m) after the prompt glyph as empty. It checks immediately, then waits 30 seconds and rechecks up to five times; if the input remains occupied or cannot be read, it leaves the message unsent and prints the full message as undelivered.
 
 ## Set up the orchestrator
 
