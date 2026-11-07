@@ -13,28 +13,38 @@ description: PR や issue の本文・コメント、コミットメッセージ
 ## 執筆
 
 1. 成果物のワークスペースで、元資料と出力先ファイルパスをそろえる。必要な事実、数値、リンク、コード、骨子、下書きを執筆担当に渡し、不足している情報を創作させない。
-2. そのワークスペースの Herdr ペインで、一意なエージェント名と必須モデルを指定して agy を起動する。
+2. そのワークスペースに左右 2 ペイン構成の専用 agy タブを作成して返されたタブ ID を保持し、タブのルートペインで一意なエージェント名と必須モデルを指定して agy を起動する。
 
    ```bash
-   herdr pane split --current --direction right --cwd "$PWD" --no-focus
-   herdr agent start <writer-name> --kind agy --pane <writer-pane-id> -- --model gemini-4-argon-high
+   herdr tab create --workspace <workspace-id> --label "✍️ agy" --no-focus
+   herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --model gemini-4-argon-high
    ```
 
 3. agy に元資料と出力先パスを渡し、そのファイルに日本語成果物を書かせる。必要な情報が不足している場合、執筆担当は質問してよい。呼び出し元の Claude、Codex、Gemini は、日本語の下書きや書き換えを自分で行ってはならない。コードや HTML 内の日本語は、日本語文字列だけを編集させる。
 
 ## レビュー
 
-1. 同じワークスペースの別 Herdr ペインで、新しい agy セッションを起動する。執筆担当のセッションをレビューに使い回してはならない。レビュー担当に元資料と出力先ファイルパスを渡す。
+1. 同じ専用タブ内で執筆担当のルートペインを右に分割し、単一の右ペインで新しい agy セッションを起動する。執筆担当のセッションをレビューに使い回してはならず、別のペインをさらに分割してもならない。レビュー担当に元資料と出力先ファイルパスを渡す。
 
    ```bash
-   herdr pane split --current --direction down --cwd "$PWD" --no-focus
-   herdr agent start <reviewer-name> --kind agy --pane <reviewer-pane-id> -- --model gemini-4-argon-high
+   herdr pane split <writer-pane-id> --direction right --cwd "$PWD" --no-focus
+   herdr agent start <reviewer-name> --kind agy --pane <new-reviewer-pane-id> -- --model gemini-4-argon-high
    ```
 
 2. `~/.gemini/config/skills.json` 経由で `~/.agents/skills` から読み込まれる既存の執筆スキルに照らして、成果物を判定するようレビュー担当に依頼する。レビュー担当は、事実、数値、リンク、コード、`<!-- -->` プレースホルダーが元資料と一致しているかを確認し、コードや HTML では日本語文字列だけが変更されているかも確認する。元資料にない内容を要求したり、ファイルを編集したりしてはならない。判定結果は指摘事項を添えた `ACCEPT` または `REJECT` で返させる。
-3. `REJECT` の場合は、指摘事項と利用可能な元資料を執筆担当に送って修正させ、別の新規レビューセッションで再レビューする。差し戻しと修正の往復は最大 2 回までとする。2 回目のレビューでも却下された場合は作業を止め、残った指摘事項を利用者に示す。
+3. `REJECT` の場合は、指摘事項と利用可能な元資料を執筆担当に送って修正させる。再レビューのたびに同じ右ペインで前回のレビュー担当セッションを終了し、右ペインのシェルが準備完了になったことを確認してから、その右ペインで別の新規 agy セッションを起動して再レビューする。執筆担当のセッションを使い回したり、別のペインを分割したりしてはならない。差し戻しと修正の往復は最大 2 回までとする。2 回目のレビューでも却下された場合は作業を止め、残った指摘事項を利用者に示す。
+
+   ```bash
+   herdr agent send-keys <previous-reviewer-name> ctrl+c
+   herdr agent start <new-reviewer-name> --kind agy --pane <reviewer-pane-id> -- --model gemini-4-argon-high
+   ```
+
 4. agy が未インストール、未認証、レート制限、またはオフラインで利用できない場合は、成果物を保留して利用者に伝える。`ACCEPT` なしで公開してはならない。
-5. 承認記録の追記または成果物の保留を終えたら、却下されたレビュー回で使ったペインも含め、自分が開いたすべての執筆・レビュー用ペインを `herdr pane close <pane-id>` で閉じる。自分が開いていないペインは決して閉じない。
+5. 承認記録の追記または成果物の保留を終えたら、この手順で開いたタブを `herdr tab close <tab-id>` で閉じる。この手順で開いていないタブは決して閉じない。
+
+   ```bash
+   herdr tab close <tab-id>
+   ```
 
 ## 承認の記録
 
