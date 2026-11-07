@@ -30,6 +30,7 @@ description: 日本語の執筆・推敲で、構成から整理するか、原�
 
 ## 読み込みと実行
 
+- チャット返信と英語を除くすべての日本語成果物を執筆・編集・公開する場合は、文体別の担当スキルを選ぶ前に `shunk031-writing-gemini-japanese` skill を読み、Herdr ペインでの `agy` 執筆担当と必須の新規 `agy` レビュー担当による執筆・レビュー手順に従う。
 - 担当スキルはセッションのスキル一覧から名前で探し、実際の `SKILL.md` を読む。関連ファイルとスクリプトはその配置先を基準に解決する。
 - 担当が未導入なら、利用できないスキル名と利用可能な導入元を伝える。`tanteki` skill は [`iwasa-kosui/tanteki`](https://github.com/iwasa-kosui/tanteki) から導入でき、Codex では `gh skill install iwasa-kosui/tanteki tanteki --agent codex --scope user` を使う（[GitHub CLI のインストール手順](https://cli.github.com/manual/gh_skill_install)）。指定されたスキルを使ったと装ったり、利用者の依頼なくインストールしたりしない。すぐ使える代替が必要なら、違いを説明して利用者に選んでもらう。
 - 選択後は担当スキルの必要な参照、校正、検査を実行する。一般的な推敲は既定の通常モードから始め、選択しただけで作業を終えない。
