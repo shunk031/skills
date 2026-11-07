@@ -43,8 +43,8 @@ description: PR や issue の本文・コメント、コミットメッセージ
    herdr agent start <reviewer-name> --kind agy --pane <new-reviewer-pane-id> -- --model gemini-4-argon-high
    ```
 
-2. 既定の文体規則に照らして、成果物を判定するようレビュー担当に依頼する。レビュー担当は、事実、数値、リンク、コード、`<!-- -->` プレースホルダーが元資料と一致しているかを確認し、コードや HTML では日本語文字列だけが変更されているかも確認する。元資料にない内容を要求したり、ファイルを編集したりしてはならない。判定結果は指摘事項を添えた `ACCEPT` または `REJECT` で返させる。
-   - レビュー担当は `shunk031-writing-kosshi` の階層と `shunk031-writing-telegraph` の短縮を明示的に検査する
+2. `~/.gemini/config/skills.json` 経由で `~/.agents/skills` から読み込まれる既存の執筆スキルに照らして、成果物を判定するようレビュー担当に依頼する。レビュー担当は、事実、数値、リンク、コード、`<!-- -->` プレースホルダーが元資料と一致しているかを確認し、コードや HTML では日本語文字列だけが変更されているかも確認する。元資料にない内容を要求したり、ファイルを編集したりしてはならない。判定結果は指摘事項を添えた `ACCEPT` または `REJECT` で返させる。
+   - 既定文体のレビューでは `shunk031-writing-kosshi` の階層と `shunk031-writing-telegraph` の短縮を明示的に検査する
      - 平板なセクションは `REJECT`: 主張と根拠が同じ階層
      - 複数項目の混在は `REJECT`: 1 行に複数項目
      - 長文の残存は `REJECT`: 短縮されていない長い文
