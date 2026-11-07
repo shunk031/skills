@@ -17,14 +17,15 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
    ```bash
    herdr tab create --workspace <workspace-id> --label "✍️ agy" --no-focus
-   herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --model gemini-4-argon-high
+   herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --model gemini-3.8-flash-high
    ```
 
 3. agy に元資料と出力先パスを渡し、そのファイルに日本語成果物を書かせる。必要な情報が不足している場合、執筆担当は質問してよい。呼び出し元の Claude、Codex、Gemini は、日本語の下書きや書き換えを自分で行ってはならない。コードや HTML 内の日本語は、日本語文字列だけを編集させる。
-   - 日本語成果物の既定文体は骨子箇条書き → テレグラフ短縮に固定する
+   - 日本語成果物の既定文体は骨子箇条書き → テレグラフ短縮 → natural-japanese による推敲に固定する
      - 対象: レポート / PR・issue の本文とコメント / メモ / README などの Markdown 文書 / コミットメッセージ
-     - 事前読込: 執筆担当は執筆前に `~/.agents/skills/shunk031-writing-kosshi/SKILL.md` と `~/.agents/skills/shunk031-writing-telegraph/SKILL.md` を読んで適用
-     - 手順: `shunk031-writing-kosshi` で骨子箇条書きを作成 → `shunk031-writing-telegraph` で短縮
+     - 事前読込: 執筆担当は執筆前に `~/.agents/skills/shunk031-writing-kosshi/SKILL.md`、`~/.agents/skills/shunk031-writing-telegraph/SKILL.md`、`~/.agents/skills/natural-japanese/SKILL.md` をこの順序で読み、その順序で適用
+     - 手順: `shunk031-writing-kosshi` で骨子箇条書きを作成 → `shunk031-writing-telegraph` で短縮 → `natural-japanese` で AI らしい表現や翻訳調を推敲
+     - 形式維持: `natural-japanese` による推敲時も骨子階層とテレグラフの 1 行 1 項目を維持
      - セクション構造: 先頭に主張 1 行 → 根拠を 1 段下に配置
      - 行の粒度: 1 行 1 項目
      - 語句の圧縮: 文脈から自明な語を省略
@@ -40,21 +41,24 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
    ```bash
    herdr pane split <writer-pane-id> --direction right --cwd "$PWD" --no-focus
-   herdr agent start <reviewer-name> --kind agy --pane <new-reviewer-pane-id> -- --model gemini-4-argon-high
+   herdr agent start <reviewer-name> --kind agy --pane <new-reviewer-pane-id> -- --model gemini-3.8-flash-high
    ```
 
 2. `~/.gemini/config/skills.json` 経由で `~/.agents/skills` から読み込まれる既存の執筆スキルに照らして、成果物を判定するようレビュー担当に依頼する。レビュー担当は、事実、数値、リンク、コード、`<!-- -->` プレースホルダーが元資料と一致しているかを確認し、コードや HTML では日本語文字列だけが変更されているかも確認する。元資料にない内容を要求したり、ファイルを編集したりしてはならない。判定結果は指摘事項を添えた `ACCEPT` または `REJECT` で返させる。
-   - 既定文体のレビューでは `shunk031-writing-kosshi` の階層と `shunk031-writing-telegraph` の短縮を明示的に検査する
-     - 平板なセクションは `REJECT`: 主張と根拠が同じ階層
+   - 既定文体のレビューでは `shunk031-writing-kosshi` の階層、`shunk031-writing-telegraph` の行形式と短縮、`natural-japanese` を明示的に検査する
+     - 平板な主張・根拠階層は `REJECT`: 主張と根拠が同じ階層
      - 複数項目の混在は `REJECT`: 1 行に複数項目
      - 長文の残存は `REJECT`: 短縮されていない長い文
+     - 不自然・翻訳調の残存は `REJECT`: AI らしい表現や翻訳調の言い回し
      - 段落文章の例外指定時: 指定された文体スキルの基準で判定
 3. `REJECT` の場合は、指摘事項と利用可能な元資料を執筆担当に送って修正させる。再レビューのたびに同じ右ペインで前回のレビュー担当セッションを終了し、右ペインのシェルが準備完了になったことを確認してから、その右ペインで別の新規 agy セッションを起動して再レビューする。執筆担当のセッションを使い回したり、別のペインを分割したりしてはならない。差し戻しと修正の往復は最大 2 回までとする。2 回目のレビューでも却下された場合は作業を止め、残った指摘事項を利用者に示す。
 
    ```bash
    herdr agent send-keys <previous-reviewer-name> ctrl+c
-   herdr agent start <new-reviewer-name> --kind agy --pane <reviewer-pane-id> -- --model gemini-4-argon-high
+   herdr agent start <new-reviewer-name> --kind agy --pane <reviewer-pane-id> -- --model gemini-3.8-flash-high
    ```
+
+   - エスカレーション: 呼び出し元が出力の誤りや質の低さを判断した場合、または Flash のレビュー担当が明らかな問題を見落とした場合は、必要に応じて執筆担当やレビュー担当に `gemini-4-argon-high` を使い、該当工程をやり直す
 
 4. agy が未インストール、未認証、レート制限、またはオフラインで利用できない場合は、成果物を保留して利用者に伝える。`ACCEPT` なしで公開してはならない。
 5. 承認記録の追記または成果物の保留を終えたら、この手順で開いたタブを `herdr tab close <tab-id>` で閉じる。この手順で開いていないタブは決して閉じない。
