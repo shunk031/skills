@@ -1,6 +1,7 @@
 function apply_sgr(params, count, codes, i, code, mode) {
     if (params == "") {
         dim = 0
+        gray = 0
         return
     }
 
@@ -8,10 +9,17 @@ function apply_sgr(params, count, codes, i, code, mode) {
     for (i = 1; i <= count; i++) {
         code = codes[i]
         if (code ~ /^(38|48|58):/) continue
-        if (code == "" || code == "0" || code == "22") dim = 0
+        if (code == "" || code == "0") {
+            dim = 0
+            gray = 0
+        }
+        else if (code == "22") dim = 0
         else if (code == "2") dim = 1
+        else if (code == "90") gray = 1
+        else if (code ~ /^(3[0-79]|9[1-7])$/) gray = 0
         else if (code == "38" || code == "48" || code == "58") {
             mode = codes[i + 1]
+            if (code == "38") gray = (mode == "5" && codes[i + 2] == "8")
             if (mode == "2") i += 4
             else if (mode == "5") i += 2
         }
@@ -25,6 +33,7 @@ function apply_sgr(params, count, codes, i, code, mode) {
     plain = ""
     dim_mask = ""
     dim = 0
+    gray = 0
     for (i = 1; i <= length(line);) {
         if (substr(line, i, 1) == "\033" && substr(line, i + 1, 1) == "[") {
             j = i + 2
@@ -40,11 +49,11 @@ function apply_sgr(params, count, codes, i, code, mode) {
 
         char = substr(line, i, 1)
         plain = plain char
-        dim_mask = dim_mask (dim ? "1" : "0")
+        dim_mask = dim_mask (dim || gray ? "1" : "0")
         i++
     }
 
-    if (match(plain, /^[[:space:]]*(❯|›)/)) {
+    if (match(plain, /^[[:space:]]*(❯|›)/) || match(plain, /^ ? ?>( |$)/)) {
         found = 1
         occupied = 0
         for (i = RSTART + RLENGTH; i <= length(plain); i++) {
