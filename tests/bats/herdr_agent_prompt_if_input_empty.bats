@@ -138,6 +138,35 @@ EOF
     [ ! -f "$STUB_STATE/prompt_target" ]
 }
 
+@test "[common] Antigravity gray composer placeholder counts as empty" {
+    printf '\033[0m\033[38;5;12m>\033[0m \033[0m\033[38;5;8mAccept-edits mode: file edits auto-approved (shift+tab to cycle)\033[0m\r\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" agy "report"
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$STUB_STATE/prompt_target")" = agy ]
+    [ "$(cat "$STUB_STATE/prompt_message")" = report ]
+}
+
+@test "[common] Antigravity composer with typed text stays occupied" {
+    printf '\033[0m\033[38;5;12m>\033[0m typed text\r\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" agy "report"
+
+    [ "$status" -eq 75 ]
+    [ ! -f "$STUB_STATE/prompt_target" ]
+    [[ "$output" == *"input was occupied"* ]]
+}
+
+@test "[common] a transcript blockquote above an empty prompt counts as empty" {
+    printf '> quoted typed text\n❯ \033[2mDraft suggestion\033[0m\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" claude "relay"
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$STUB_STATE/prompt_message")" = relay ]
+}
+
 @test "[common] reports the full message without sending after the retry budget" {
     printf '❯ user text\n' > "$STUB_STATE/snapshot"
 
