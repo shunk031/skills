@@ -73,10 +73,34 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Run `shfmt`
-        uses: reviewdog/action-shfmt@v1
+      - uses: jdx/mise-action@v3
         with:
-          shfmt_flags: -i 4 -sr -d
+          cache: true
 
+      - name: Run `shfmt`
+        run: make format
+
+      # Same file set `ludeeus/action-shellcheck` checked with default inputs:
+      # shell-named files, plus extensionless executables with a shell shebang,
+      # each linted on its own.
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+        shell: bash
+        run: |
+          {
+            find . ! -path '*./.git/*' ! -path '*.go' ! -path '*/mvnw' -type f \
+              '(' -name '*.sh' -o -name '*.bash' -o -name '.bashrc' -o -name 'bashrc' \
+              -o -name '.bash_aliases' -o -name '.bash_completion' -o -name '.bash_login' \
+              -o -name '.bash_logout' -o -name '.bash_profile' -o -name 'bash_profile' \
+              -o -name '*.ksh' -o -name 'suid_profile' -o -name '*.zsh' -o -name '.zlogin' \
+              -o -name 'zlogin' -o -name '.zlogout' -o -name 'zlogout' -o -name '.zprofile' \
+              -o -name 'zprofile' -o -name '.zsenv' -o -name 'zsenv' -o -name '.zshrc' \
+              -o -name 'zshrc' -o -path '*/.profile' -o -path '*/profile' -o -name '*.shlib' \
+              ')' -print0
+            find . ! -path '*./.git/*' ! -path '*.go' ! -path '*/mvnw' \
+              -type f ! -name '*.*' -perm /111 -print0 |
+              while IFS= read -r -d '' f; do
+                if head -n1 "$f" | grep -Eqs '^#! */[^ ]*/(env *)?[abk]*sh'; then
+                  printf '%s\0' "$f"
+                fi
+              done
+          } | xargs -0 -r -t -n1 shellcheck --format=gcc
