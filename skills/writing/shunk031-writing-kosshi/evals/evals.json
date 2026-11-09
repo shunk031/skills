@@ -45,7 +45,7 @@
       "prompt": "以下の比較メモから、比較レポート向けの骨子箇条書きを作成してください。\\n\\n- 画像分類モデル ResNet-50 を元データと拡張データの 2 つのデータセットで学習して比較\\n- 2 つのモデルの違いは学習データのみ\\n- ResNet-50: top-1 精度 76.1%、推論時間 8 ms\\n- ResNet-50 (augmented): top-1 精度 78.4%、推論時間 8 ms",
       "expected_output": "The response turns the comparison notes into an outline in which the two variants of the same model are labelled in parallel form. Each label states the training data that distinguishes the variant, instead of leaving one variant as the bare model name next to one with a qualifier.",
       "expectations": [
-        "Every label, heading, list item, or table header that names one of the two ResNet-50 variants states its training data (original or augmented) in the same form; no variant appears as the bare name ResNet-50 next to a qualified variant."
+        "Every label, heading, list item, or table header that tells the two ResNet-50 variants apart states its training data (original or augmented) in the same form; no variant appears as the bare name ResNet-50 next to a qualified variant."
       ]
     }
   ]
