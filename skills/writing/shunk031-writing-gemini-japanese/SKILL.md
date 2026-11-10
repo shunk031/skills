@@ -6,6 +6,8 @@ description: PR や issue の本文・コメント、コミットメッセージ
 > [!NOTE]
 > この `SKILL.md` を読んだら、`✍️ 私は shunk031-writing-gemini-japanese を読みました。` と言う。
 
+このスキルを読んだ agy セッションは、日本語成果物の執筆またはレビューのみを行い、コードを書かず、シェルコマンドも実行しない。
+
 # Gemini による日本語成果物の作成
 
 すべての日本語成果物でこの手順に必ず従う。PR と issue の本文・コメント、コミットメッセージ、Markdown 文書、レポート本文、投稿文、コードや HTML 内の日本語文字列が対象になる。チャット返信と英語の成果物は対象外とする。
@@ -17,7 +19,7 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
    ```bash
    herdr tab create --workspace <workspace-id> --label "✍️ agy" --no-focus
-   herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --model gemini-3.8-flash-high
+   herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-high
    ```
 
 3. agy に元資料と出力先パスを渡し、そのファイルに日本語成果物を書かせる。必要な情報が不足している場合、執筆担当は質問してよい。呼び出し元の Claude、Codex、Gemini は、日本語の下書きや書き換えを自分で行ってはならない。コードや HTML 内の日本語は、日本語文字列だけを編集させる。
@@ -45,7 +47,7 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
    ```bash
    herdr pane split <writer-pane-id> --direction right --cwd "$PWD" --no-focus
-   herdr agent start <reviewer-name> --kind agy --pane <new-reviewer-pane-id> -- --model gemini-3.8-flash-high
+   herdr agent start <reviewer-name> --kind agy --pane <new-reviewer-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-high
    ```
 
 2. `~/.gemini/config/skills.json` 経由で `~/.agents/skills` から読み込まれる既存の執筆スキルに照らして、成果物を判定するようレビュー担当に依頼する。レビュー担当は、事実、数値、リンク、コード、`<!-- -->` プレースホルダーが元資料と一致しているかを確認し、コードや HTML では日本語文字列だけが変更されているかも確認する。元資料にない内容を要求したり、ファイルを編集したりしてはならない。判定結果は指摘事項を添えた `ACCEPT` または `REJECT` で返させる。
@@ -74,7 +76,7 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
    ```bash
    herdr agent send-keys <previous-reviewer-name> ctrl+c
-   herdr agent start <new-reviewer-name> --kind agy --pane <reviewer-pane-id> -- --model gemini-3.8-flash-high
+   herdr agent start <new-reviewer-name> --kind agy --pane <reviewer-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-high
    ```
 
    - エスカレーション: 呼び出し元が出力の誤りや質の低さを判断した場合、または Flash のレビュー担当が明らかな問題を見落とした場合は、必要に応じて執筆担当やレビュー担当に `gemini-4-argon-high` を使い、該当工程をやり直す
@@ -88,7 +90,7 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
 ## 承認の記録
 
-新規レビュー担当が `ACCEPT` を返した後に限り、そのレビュー担当に次の単一シェルコマンドで記録を 1 行追記させる。ファイルパスは承認されたファイルの絶対パスに置き換える。
+新規レビュー担当が `ACCEPT` を返した後に限り、呼び出し元がその返答を確認し、自分で次の単一シェルコマンドを実行して記録を 1 行追記する。ファイルパスは承認されたファイルの絶対パスに置き換える。
 
 ```bash
 (
