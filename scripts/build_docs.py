@@ -41,6 +41,7 @@ NAME_PREFIX = "shunk031-"
 FALLBACK_ICON = "lucide/file-text"
 ICONS = {
     "shunk031-codex-worker-prompting": "lucide/message-square-code",
+    "shunk031-colab-uv-training": "lucide/cpu",
     "shunk031-github-cgd-identity": "lucide/id-card",
     "shunk031-github-comment-attach-files": "lucide/paperclip",
     "shunk031-herdr-orchestrate-workers": "lucide/network",
@@ -83,6 +84,7 @@ def reference_title(stem: str) -> str:
 # not build tag index pages yet, so these are labels rather than navigation.
 TAGS = {
     "shunk031-codex-worker-prompting": ["Codex", "Agents", "Herdr"],
+    "shunk031-colab-uv-training": ["Colab", "uv", "GPU", "Training", "Hugging Face"],
     "shunk031-github-cgd-identity": ["GitHub", "Git"],
     "shunk031-github-comment-attach-files": ["GitHub"],
     "shunk031-herdr-orchestrate-workers": ["Herdr", "Codex", "Agents", "Git"],
@@ -141,12 +143,12 @@ def read_skill(skill_dir: Path) -> dict[str, Any] | None:
 
     return {
         "name": skill_dir.name,
+        "category": skill_dir.parent.name,
         "short_name": skill_dir.name.removeprefix(NAME_PREFIX),
         "title": fields.get("name", skill_dir.name),
         "description": fields.get("description", ""),
         "body": body.strip(),
         "has_evals": (skill_dir / "evals" / "evals.json").is_file(),
-        "has_triggers": (skill_dir / "evals" / "triggers.json").is_file(),
         "references": references,
         "results": results,
     }
@@ -333,20 +335,35 @@ def render_nav(skills: list[dict[str, Any]]) -> str:
         "nav:",
         "  - Overview: index.md",
     ]
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for skill in skills:
-        # The first child is a bare path, which makes it the section's index
-        # page under `navigation.indexes`. That is what lets the section carry
-        # the skill's icon: an icon comes from a page's frontmatter, and a nav
-        # label is not rendered as Markdown, so a shortcode written here would
-        # appear literally.
-        lines.append(f"  - {skill['short_name']}:")
-        lines.append(f"      - {skill['name']}/index.md")
-        for reference in skill["references"]:
-            title = reference_title(reference.stem)
-            lines.append(
-                f"      - {title}: {skill['name']}/references/{reference.name}"
-            )
+        grouped.setdefault(skill["category"], []).append(skill)
+
+    for category, category_skills in sorted(grouped.items()):
+        lines.append(f"  - {category.capitalize()}:")
+        for skill in category_skills:
+            # The first child is a bare path, which makes it the section's index
+            # page under `navigation.indexes`. That is what lets the skill
+            # section carry the skill's icon: an icon comes from a page's
+            # frontmatter, and a nav label is not rendered as Markdown, so a
+            # shortcode written here would appear literally.
+            lines.append(f"      - {skill['short_name']}:")
+            lines.append(f"          - {skill['name']}/index.md")
+            for reference in skill["references"]:
+                title = reference_title(reference.stem)
+                lines.append(
+                    f"          - {title}: {skill['name']}/references/{reference.name}"
+                )
     return "\n".join(lines) + "\n"
+
+
+def discover_skill_dirs() -> list[Path]:
+    """Return skill directories in the repository's category layout."""
+    return sorted(
+        skill_file.parent
+        for skill_file in SKILLS_ROOT.glob("*/*/SKILL.md")
+        if not skill_file.parent.name.endswith("-workspace")
+    )
 
 
 def main() -> int:
@@ -365,11 +382,7 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
 
     skills = []
-    for skill_dir in sorted(SKILLS_ROOT.iterdir()):
-        # Shuhari writes `<skill>-workspace/` beside the skill it evaluated.
-        # Those are gitignored run artifacts, not skills.
-        if not skill_dir.is_dir() or skill_dir.name.endswith("-workspace"):
-            continue
+    for skill_dir in discover_skill_dirs():
         skill = read_skill(skill_dir)
         if skill:
             skills.append(skill)

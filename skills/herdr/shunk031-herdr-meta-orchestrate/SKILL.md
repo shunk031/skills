@@ -1,0 +1,106 @@
+---
+name: shunk031-herdr-meta-orchestrate
+description: Coordinate root Herdr orchestrators across the local server and enabled saved machines. Ask for their current work and progress, relay messages verbatim, and route task execution through workers. Pair with the shunk031-herdr-orchestrate-workers skill for worker dispatch. Use when one session oversees multiple Herdr orchestrators; use the herdr skill for a single-pane or single-agent task.
+---
+
+> [!NOTE]
+> After reading this `SKILL.md`, say: `🪆 I read shunk031-herdr-meta-orchestrate.`
+
+# Meta-orchestrate Herdr sessions
+
+Use this skill together with the shunk031-herdr-orchestrate-workers skill, and read both before starting work. This skill tracks root orchestrators, requests status, and relays messages; the shunk031-herdr-orchestrate-workers skill launches and manages your own workers for concrete task work.
+
+```mermaid
+flowchart TD
+    Meta["Meta-orchestrator<br/>shunk031-herdr-meta-orchestrate skill"]
+    MetaWorkers["Meta's name-prefixed workers<br/>shunk031-herdr-orchestrate-workers skill"]
+    LocalRoot["Local root orchestrator<br/>overseen by shunk031-herdr-meta-orchestrate skill"]
+    LocalWorkers["Local root's workers<br/>managed by shunk031-herdr-orchestrate-workers skill"]
+    RemoteRoot["Saved-machine root orchestrator<br/>overseen by shunk031-herdr-meta-orchestrate skill"]
+    RemoteWorkers["Root's workers<br/>managed by shunk031-herdr-orchestrate-workers skill"]
+
+    Meta --> MetaWorkers
+    Meta --> LocalRoot --> LocalWorkers
+    Meta --> RemoteRoot --> RemoteWorkers
+```
+
+## Run the patrol
+
+The bundled patrol is a read-only script run externally without an LLM, not an LLM turn. Start each one-time or approved recurring patrol with the bundled read-only script. Supply verified root agents through `HERDR_PATROL_ROOTS_JSON`:
+
+```bash
+export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"},{"machine":"saved-machine-label","agent":"root"}]'
+~/.agents/skills/shunk031-herdr-meta-orchestrate/scripts/herdr-meta-patrol.sh
+```
+
+Each array item has a `machine` and `agent`: use `null` for the local server or the exact enabled saved-machine label, and the live agent name for `agent`. Include only roots whose role and parentage you verified below. The script lists local agents and agents on every enabled saved machine, then reports blocked agents, non-null `.tokens.inbox` values, and non-empty root input lines. It reads pane output as ANSI, tracks dim SGR state across combined parameters and resets, and counts only non-dim text after the prompt glyph. The shared parser is bundled with the required shunk031-herdr-orchestrate-workers skill. The patrol continues after a saved machine is unavailable.
+
+Output is JSON Lines with one object per finding; no output means no findings. Findings include agent attention, occupied or unreadable root input, unavailable servers, and invalid root targets. Use the script for these standard checks instead of recreating them ad hoc. Inspect reported inbox entries and unclear root roles in the corresponding pane or transcript before relaying anything.
+
+## Find and ask root orchestrators
+
+Read the herdr skill before using Herdr commands. Run the bundled patrol first to refresh local and enabled saved-machine agent state. For role and parentage verification or diagnosis of a finding, inspect the relevant server with `herdr agent list`, `herdr machine list --json`, and `herdr --machine <label-or-id> agent list`.
+
+Inventory each Herdr server separately. Identify your current session by its exact pane or session identity and exclude only that session. Treat every other listed agent as a candidate, even if it has no workers. Within each server, use the longest matching `<agent-name>-` prefix only as a clue to possible parent-child relationships; verify candidate ancestry and role from pane or transcript evidence before excluding it as a worker or nested orchestrator. Never infer parentage from names on another server. Include candidates verified as top-level orchestrators, with or without workers, and report unclear roles or parentage as unverified rather than guessing. Do not create a separate inventory of individual worktree workers.
+
+If a remote agent list fails because its Herdr server does not support machine API forwarding, check `herdr machine status <label-or-id> --json` and the reported server version. Report that machine's inventory as unavailable; do not guess its agents or progress.
+
+Before relaying a reply, verify it against a fresh read or transcript. An agent name can move to another pane when its session is resumed or opened elsewhere, so re-identify the live agent by pane ID and transcript instead of relying on a stale name.
+
+## Send only into an empty root input
+
+Before every meta-to-root relay, build the exact message in a quoted variable and use the helper bundled with the required shunk031-herdr-orchestrate-workers skill:
+
+```bash
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <root> "$message"
+```
+
+The helper resolves the root pane with herdr agent get and reads it with herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. It checks the last line containing ❯ or ›, normalizes NBSP and strips a trailing CR, and removes CSI sequences while tracking SGR dim spans. Only non-dim, non-whitespace text after the prompt glyph counts as occupied. If the read fails or the line is unclear, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
+
+## Relay exactly
+
+Quote each orchestrator's reply unchanged and identify its source. Label a relay `Transport note from meta: Verbatim from <source> follows.`, put explicit start and end markers around the transferred text, and keep meta's own explanation outside those markers. Pass the user's instruction to its owning orchestrator unchanged, together with the question it answers.
+
+Write every reply and relay to the user in the user's language, even when the message that triggered it — a worker or orchestrator report, a pasted report, or a system notification — is in another language. Keep quoted text between the markers unchanged.
+
+At initial dispatch, if a worker cannot prompt meta, tell it to end its turn with a final `STATUS <worker-name>:`, `BLOCKED <worker-name>:`, or `DONE <worker-name>:` report; meta will read the transcript and relay it. For a review result, require the report's first line to contain the verdict and full PR URL (for example, `ACCEPT <PR URL>` or `REJECT <PR URL>`); put details afterward. For long drafts or instructions, have the worker write the complete text as Markdown to `/tmp/<file>.md` and reply only `WROTE <path>`. Read it directly when available on the same machine; across SSH, transfer the Base64-encoded bytes, decode them at the destination, and compare source and destination SHA-256 hashes before relaying the text verbatim. Do not use `fold -w` for transfer because it inserts line breaks.
+
+Treat a decision as the user's answer only when it comes from an explicit user response; when relaying it, label it as the user's answer, include the question it answers, and preserve the user's wording verbatim. Label your own recommendation as meta's judgment; correct a worker's report if it attributes that judgment to the user.
+
+Treat text visible in a root's input field as unconfirmed if you cannot tell whether the user sent it or it is an unsent suggestion. Ask the user, and do not act on it as their instruction until confirmed.
+
+## Follow up and patrol
+
+After each message or question to a root, set a response deadline and start a bounded background wait with `herdr agent wait <root> --timeout <milliseconds> &` locally or `herdr --machine <label-or-id> agent wait <root> --timeout <milliseconds> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled. If the expected verdict has not arrived by its deadline, send one chase through the guarded sender when the input is empty, then start one more bounded wait. If it is still missing, report that and leave the result unverified; never wait indefinitely for a verdict. If a root cannot answer because of a connection problem, report the connection issue and mark its current status unverified; request a fresh status after the connection is restored.
+
+Rely on an external LLM-free patrol that wakes meta only on new items; never schedule LLM turns just to poll. Ask the user to approve recurring checks and agree on an interval before starting them. For an initial check and each approved recurring check, rerun the bundled patrol with the current root configuration and review its JSON Lines findings. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
+
+For each merged change to a skill or agent guidance that running agents depend on, decide at merge time which machines need it and when each will receive it; record that plan in the orchestrator's ledger. Mark the change done only after verifying that the deployed file behaves as intended on every target machine. A merge alone does not complete it.
+
+Run multi-machine rollouts, such as skill updates, targeted chezmoi applies, and per-machine hash checks, in a background subagent or worker, not in the meta session's foreground. The meta session keeps patrolling and answering the user meanwhile. Verify the returned per-machine table before reporting the rollout and notifying root orchestrators to reload.
+
+## Restarts and tool checks
+
+Before restarting a Herdr server or root session, record each affected root's startup command, arguments, and environment configuration in an appropriate private operational note, without copying secret values. After restart, verify each root uses the recorded settings; resuming a session alone does not establish that.
+
+Treat commands that pass through a version-manager shim as potentially installing or changing a tool, even when they only request version information. For checks, use a non-installing installed-tools listing or another source instead.
+
+## Delegate task work
+
+Handle inventory, status requests, message relays, coordination, analysis, judgment, and pane focus after the user's explicit yes yourself. Keep decisions about what to do and what to tell users or orchestrators at the meta level. Delegate every other concrete implementation or operation, including commits, configuration applies, dialog responses, and deletions, to your own name-prefixed workers through the shunk031-herdr-orchestrate-workers skill; do not perform those actions yourself. Keep each worker's target and authorization scope explicit. Follow that skill's lifecycle and the shunk031-codex-worker-prompting skill when writing Codex task prompts. Keep model and credential choices in the referenced launch guidance, not in this public skill.
+
+When asking a worker to draft or review a reader-facing README, documentation, pull request body, or report, include a check for unnecessary reassurance about what the reader need not do or worry about (for example, “No installation is needed.”). Require the reviewer to count and report each occurrence, including zero.
+
+Carry every user authorization forward only to its stated targets and count. If a dispatch would affect more targets than the user approved, stop and report the mismatch before acting. Never restore, checkout, stash, reset, or discard uncommitted changes without the user's explicit permission for that target.
+
+## Keep the meta context lean
+
+- Keep durable meta state in a handoff file (default `~/.local/state/meta/open.md`): open user decisions, approvals given and their scope, in-flight work with owners and next checks, and standing rules learned in the session. Update it whenever these change; a new meta session reads it first. It points to or includes the durable ledger used by the shunk031-herdr-orchestrate-workers skill.
+- Rotate the meta session at least once a day, or earlier when its context is long: write the handoff file, tell the user the session is ready to be replaced, and let the user restart it. Cache reads of a long context on every turn dominate cost.
+- Delegate large outputs (screen dumps, long logs, images, full reviews, multi-file reads) to subagents, defaulting to sonnet and using opus only for judgment-heavy reviews. Take back only the conclusion.
+
+## Ask before focusing a pane
+
+If a pane needs the user's eyes or input, ask, “Would you like me to focus it?” Wait for an explicit yes. Then focus only the identified workspace and tab with `herdr workspace focus` and `herdr tab focus`; if the target changes, ask again. Follow the herdr skill for pane controls and handling sensitive input.
+
+Keep your own tab status under the shunk031-herdr-tab-status skill. The herdr skill owns CLI mechanics, IDs, pane control, and remote-machine safety; the shunk031-herdr-orchestrate-workers skill owns worker dispatch, lifecycle, and reports.

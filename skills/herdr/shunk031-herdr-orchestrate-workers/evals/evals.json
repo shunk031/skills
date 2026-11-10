@@ -1,0 +1,130 @@
+{
+  "skill_name": "shunk031-herdr-orchestrate-workers",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch; do not execute commands.",
+      "expected_output": "The report states the intended workflow shape, removals, retained elements and reasons, and user-owned choices before the worker dispatch.",
+      "expectations": [
+        "The four-part design record precedes the worker dispatch."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "You are a Herdr orchestrator. The user asks you to add a Linux variant like an existing macOS CI job. The workflow has an OS matrix and a separate macOS-only job. In an offline dry run, describe the report and dispatch, and decide the existing job's fate before dispatching. Do not execute commands.",
+      "expected_output": "The orchestrator gives the existing macOS-only job a disposition: remove it, retain it with a reason, or offer the choice to the user.",
+      "expectations": [
+        "The response gives the existing macOS-only job a disposition."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "You are continuing a Herdr orchestration conversation. The inbox already contains one unanswered user decision with this exact text: ‘Codex の Stop hook: 但し書きを足すかどうか決めてください。毎回 reviewer への指示で打ち消す運用でよければ、hook は変えません。’ The current Stop hook says that when the user gives a correction or a failure is verified, you must add it to the unfinished work, fix and verify it, then report the cause and a minimal prevention measure. The proposed caveat would clarify how independent reviewer feedback should interact with that rule; without it, the reviewer must override the hook in each review. The user has twice replied with questions rather than a choice: ‘これなんでしたっけ’ and ‘なんですかこれ’. Write the next short user-facing report in Japanese. Do not run commands.",
+      "expected_output": "The next report clarifies the existing policy choice and asks the user to select an option. It ends with a waiting list that repeats the open choice without creating a duplicate inbox entry or closing it.",
+      "expectations": [
+        "Explains in plain Japanese what the Stop hook requires and what adding the reviewer-feedback caveat would change.",
+        "Asks the user to choose explicitly between adding the standing caveat and leaving the hook unchanged while handling overrides in reviewer instructions.",
+        "Explains why the choice is needed or what it blocks, and gives a recommendation.",
+        "States what the orchestrator will do if the user does not answer.",
+        "Ends with a one-line waiting-list entry that repeats the existing open choice and recommendation.",
+        "Does not create a duplicate inbox entry, treat either explanation request as the user's choice, or close the item."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "You are a Herdr orchestrator. In an offline dry run, do not run commands. You need to dispatch a task to worker worker-1; its ANSI input line contains only the prompt glyph followed by text styled with the ANSI SGR dim code 2 and then reset. Another read shows ordinary text after the prompt glyph on every check. What guarded command do you use, and what happens in each case?",
+      "expected_output": "Uses the bundled input guard, which treats the dim placeholder or suggestion as empty and sends through herdr agent prompt only after confirming the field is empty. With ordinary text present, it waits 30 seconds and retries five times; if the text remains, it leaves the message unsent and reports the complete message as undelivered.",
+      "expectations": [
+        "Names the bundled helper as the prompt path and keeps herdr agent prompt as its transport.",
+        "Treats ANSI dim text after the prompt glyph as a placeholder or suggestion rather than typed input.",
+        "Waits 30 seconds between up to five rechecks when ordinary input is present.",
+        "Does not send the dispatch if the input remains occupied or unclear after the retry budget, and reports the complete message as undelivered."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "You are a Herdr orchestrator preparing a Codex worker that needs the environment assignment KEY=VALUE. You already have the returned deliverable workspace ID and worktree path. In an offline dry run, show the minimal commands to launch the worker with that variable available. Do not execute commands.",
+      "expected_output": "The answer creates the worker tab in the deliverable workspace with herdr tab create --env KEY=VALUE, then starts Codex in the root pane returned by that command. It explains that prefixing herdr agent start with KEY=VALUE does not propagate the variable to the worker.",
+      "expectations": [
+        "Creates the tab with --workspace, --cwd, and --env KEY=VALUE, then uses the returned root-pane ID with herdr agent start.",
+        "Does not use a KEY=VALUE prefix on herdr agent start to set the worker's environment."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "You are an orchestrator starting a Codex worker. A project-trust dialog is visible for the worktree's canonical repository root, which the user has not approved for this task. What do you do before dispatching the first task?",
+      "expected_output": "The orchestrator leaves the dialog unanswered, does not press Esc or dispatch the task, and asks the user or sends BLOCKED to its parent orchestrator. It explains that Esc quits Codex and reads the visible pane until the composer prompt appears with no dialog before dispatching.",
+      "expectations": [
+        "Does not press Esc or dispatch while the dialog is visible.",
+        "Leaves the unapproved root dialog unanswered and asks the user or sends BLOCKED to its parent.",
+        "Reads the visible pane until the composer appears with no dialog before dispatching."
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "You are an orchestrator. A worker reported that its smoke test passed and started a full experiment that will take about three hours, and it will report only when the full run finishes. What do you set up before going quiet, and what do you tell the user while it runs?",
+      "expected_output": "The orchestrator starts its own background progress watch on the run's output files that alerts on completion, on no growth for a set interval while the process is alive, and on process exit, instead of relying on the worker's final report. It reports to the user at each stage end and at least hourly with counts done and expected, elapsed time, and an ETA from observed throughput.",
+      "expectations": [
+        "Starts an orchestrator-owned watch on the run's output artifacts covering completion, stalled growth, and process exit.",
+        "Does not rely only on the worker's milestone or final report.",
+        "Sends the user periodic updates with counts, elapsed time, and an ETA."
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "You are a Herdr worker whose DONE report was rejected with agent_blocked, or whose guarded sender exited 75 and printed the unsent report because the orchestrator's input stayed busy. The orchestrator was waiting for an answer to a user question. In an offline dry run, describe the worker's recovery and what the orchestrator must do immediately after the user answers. Do not execute commands.",
+      "expected_output": "The worker keeps the exact report, treats both agent_blocked and exit 75 as undelivered, and waits for a lifecycle change with herdr agent wait before one guarded resend; it repeats only after another such failure and stays within a two-hour deadline. If delivery still fails, it leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn. After the interactive wait ends, the orchestrator immediately reconciles every dispatched worker with herdr agent get and herdr agent read before other work.",
+      "expectations": [
+        "Treats exit 75 as an undelivered report that was printed by the helper, as well as treating agent_blocked as undelivered.",
+        "Waits for a lifecycle change with herdr agent wait before a single guarded resend, repeats only after another undelivered result, and keeps the total recovery window to two hours instead of polling at a fixed interval.",
+        "If the deadline expires, leaves the full report in the worker transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn.",
+        "Requires immediate reconciliation of every dispatched worker with herdr agent get and herdr agent read after the user question, before other work."
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "You are a Herdr worker whose report send failed with agent_blocked. During recovery, herdr agent get or herdr agent wait returns agent_not_found because the orchestrator's name has vanished. In an offline dry run, what do you do next? Do not execute commands.",
+      "expected_output": "The worker immediately, without waiting for the deadline and without a resend, leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends the turn.",
+      "expectations": [
+        "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, uses the blocked status, and ends the turn."
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "You are a Herdr orchestrator. A worker reports DONE and says it is about to run `gh pr create` with its body. What do you do next?",
+      "expected_output": "Hold `gh pr create`; have the worker return the body as a draft file, then ask a fresh reviewer with no prior involvement to check each sentence for information the reader needs. Let the worker post only after the reviewer returns ACCEPT.",
+      "expectations": [
+        "Does not let `gh pr create` proceed until a fresh reviewer accepts the body.",
+        "Requires the fresh reviewer to assess each sentence by whether the intended reader needs its information.",
+        "Requires the worker to return the body as a draft file before posting."
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "You are an independent reviewer checking a worker's draft PR body and issue comment. Both include copied user chat, instructions given to agents, approval statements, and statements about who decided what. What do you do? Do not execute commands.",
+      "expected_output": "Reject artifacts containing any of those categories.",
+      "expectations": [
+        "Rejects artifacts containing user chat, instructions given to agents, approval statements, or statements about who decided what."
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "You are Herdr worker orch-retry in worktree ~/src/app=feat-retry; your orchestrator is agent orch. Your task is to add retry support to the HTTP client and open a pull request. Your design needs about 650 changed lines of core code, excluding tests and documentation. What do you do before implementing? Do not execute commands.",
+      "expected_output": "The worker does not implement or push the over-budget design; it reports BLOCKED orch-retry: to the orchestrator with a split plan or a simpler design.",
+      "expectations": [
+        "Does not implement or push the 650-line design.",
+        "Sends a report beginning with `BLOCKED orch-retry:` to the orchestrator.",
+        "The report proposes a split plan or a simpler design."
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "You are a Herdr orchestrator. Worker orch-memo committed a research memo on its branch and opened no pull request. You have read the memo and the worker's transcript, verified the result, and will send it nothing more. What do you do with its pane, worktree, and branch before ending this turn? Do not execute commands.",
+      "expected_output": "Close the worker's pane now with herdr pane close instead of leaving it idle, and keep its worktree and branch because no merged pull request permits removing them.",
+      "expectations": [
+        "Closes the worker's pane with `herdr pane close` before ending the turn.",
+        "Does not remove the worktree or delete the branch."
+      ]
+    }
+  ]
+}

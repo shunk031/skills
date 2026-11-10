@@ -1,0 +1,15 @@
+{
+  "skill_name": "shunk031-codex-worker-prompting",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "You are dispatching a Codex worker to add retry support to an HTTP client and open a pull request. Your planned design changes about 900 lines of core code, excluding tests and documentation. Write the dispatch. Do not execute commands.",
+      "expected_output": "The orchestrator splits or simplifies the over-budget design before dispatching, and each dispatch states the 400-line core-code budget and that the worker stops without pushing and reports BLOCKED when it would be exceeded.",
+      "expectations": [
+        "Splits the work into smaller tasks or simplifies the design before dispatching.",
+        "Each dispatch states the 400-line core-code budget.",
+        "Each dispatch states that the worker stops without pushing and reports BLOCKED when the budget would be exceeded."
+      ]
+    }
+  ]
+}

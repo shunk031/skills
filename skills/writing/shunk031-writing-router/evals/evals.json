@@ -1,0 +1,63 @@
+{
+  "skill_name": "shunk031-writing-router",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "PRD を新規作成してください。製品の対象利用者、解決する課題、要求、受け入れ条件を具体的に書き、重要な背景は省略しないでください。簡潔さや情報を絞る指定はありません。どの執筆スキルで進めるかも最初に示してください。",
+      "expected_output": "The response selects natural-japanese because the document type alone does not request concise editing. It structures a complete PRD and preserves the requested background, requirements, and acceptance conditions.",
+      "expectations": [
+        "Names natural-japanese as the selected skill.",
+        "Does not select tanteki solely because the request is for a PRD.",
+        "Preserves the requested background, requirements, and acceptance conditions rather than shortening them by default."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "必要な情報、根拠、制約、例外を残しながら、開発チーム向けの PRD を端的に作成してください。セッションに tanteki skill はありません。どのスキルを選ぶかと、利用できない場合の次の手順を示してください。",
+      "expected_output": "The response selects tanteki because the user explicitly requests concise, information-preserving business writing. Since it is unavailable, the response gives its installable source and Codex install command without claiming to have used or installed it.",
+      "expectations": [
+        "Names tanteki as the selected skill because concise intent is explicit.",
+        "Provides https://github.com/iwasa-kosui/tanteki as the source and the command gh skill install iwasa-kosui/tanteki tanteki --agent codex --scope user.",
+        "Does not claim to use tanteki or install it without the user's request."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "次のメモから社内向けレポートを新規作成してください。結果は売上が前月比8%増、問い合わせは12件、原因分析は未実施です。短い骨子箇条書きでまとめてください。どの執筆スキルを選んだかも示してください。",
+      "expected_output": "The response selects shunk031-writing-telegraph for a new report request and presents the report as a concise hierarchical bullet outline. It keeps the supplied result and the fact that cause analysis has not been done.",
+      "expectations": [
+        "Names shunk031-writing-telegraph as the selected skill.",
+        "Uses a concise hierarchical bullet outline for the new report.",
+        "Does not invent a cause for the 8% increase or the 12 inquiries."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "既存の調査レポートを読みやすく推敲してください。段落構成とです・ます調を維持し、数値や結論は変えないでください。レポート形式を箇条書きに変換しないでください。どの執筆スキルを選んだかも示してください。",
+      "expected_output": "The response selects natural-japanese for the requested readability edit and preserves the existing report's paragraphs, polite style, numbers, and conclusions. It does not convert the report into a telegraphic outline merely because it is a report.",
+      "expectations": [
+        "Names natural-japanese as the selected skill.",
+        "Preserves paragraphs and です・ます調.",
+        "Does not convert the existing report to telegraphic bullets or alter its numbers and conclusions."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "この文章を自然な日本語にして、AI っぽい表現を直してください。構成や修正範囲の指定はありません。どの執筆スキルを選んだかも示してください。",
+      "expected_output": "The response selects natural-japanese for a general AI-style or readability edit without a narrow preservation constraint. It applies the skill's ordinary editing approach instead of assuming that any supplied text requires local-only edits.",
+      "expectations": [
+        "Names natural-japanese as the selected skill.",
+        "Does not select yomiyasu solely because source text is present."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "AI っぽい表現だけを最小限に直してください。原文の意味、論旨、比重、言い切りの強さ、口調、構成は維持し、全文を書き換えないでください。どの執筆スキルを選んだかも示してください。",
+      "expected_output": "The response selects yomiyasu because the user asks for local, minimal edits while preserving meaning, emphasis, certainty, voice, and structure. It applies the request as constraints and does not perform a broad rewrite.",
+      "expectations": [
+        "Names yomiyasu as the selected skill.",
+        "Limits changes to local AI-style phrasing and preserves the specified meaning, emphasis, certainty, voice, and structure."
+      ]
+    }
+  ]
+}
