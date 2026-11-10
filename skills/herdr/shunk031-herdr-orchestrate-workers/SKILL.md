@@ -41,6 +41,14 @@ Before every prompt send in this skill, run the guarded sender at ~/.agents/skil
    herdr pane move <returned-root-pane-id> --new-tab --workspace <returned-deliverable-workspace-id> --label "🚧 <short task>" --no-focus
    ```
 
+   A worker for a task without a git worktree, such as editing a document through an MCP connector, still gets its own new tab. Create it in the deliverable workspace when one exists, otherwise in your own `"$HERDR_WORKSPACE_ID"`, and start the agent in the returned root pane:
+
+   ```bash
+   herdr tab create --workspace <workspace-id> --cwd <task-dir> --label "🚧 <short task>" --no-focus
+   ```
+
+   Never start a worker in a `herdr pane split` of your own pane. The herdr skill's sibling-pane default covers only a single helper agent the user asks for, not orchestrated workers.
+
 4. Start Codex in the destination pane, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
 
    ```bash
