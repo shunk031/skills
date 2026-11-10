@@ -10,7 +10,7 @@ description: Use this skill to update and apply public and private dotfiles thro
 
 Use the `herdr` skill for the environment check and CLI syntax. Select `Local` plus all profiles from `herdr machine list --json`, or only the user's specified targets. Use each profile's SSH `target` for direct SSH commands; use the local shell for `Local`. Do not select targets by pane activity. Skip disabled or unreachable profiles and avoid duplicate application to the same destination.
 
-Run one command per tool call. Read its output and exit status before choosing the next command. When forwarding a tool result, retain its exit status alongside its output; for example, keep both `exit_code` and `output` from `exec_command`. If the command is still running, wait for its completion and inspect the final result. Missing exit status is an unverified outcome, not success. Process targets sequentially; do not combine the workflow into a shell chain, loop, or script. Editing this skill does not authorize executing it.
+Process multiple targets in parallel: the orchestrator starts one Herdr worker in its own tab per target, following the `shunk031-herdr-orchestrate-workers` skill. Each worker handles only its assigned target and follows these steps independently. Run one command per tool call. Read its output and exit status before choosing the next command. When forwarding a tool result, retain its exit status alongside its output; for example, keep both `exit_code` and `output` from `exec_command`. If a command is still running, wait for its completion and inspect the final result. Missing exit status is an unverified outcome, not success. Do not combine a target's workflow into a shell chain, loop, or script. The orchestrator collects per-target reports into one summary table. Editing this skill does not authorize executing it.
 
 ## Git first
 
@@ -23,6 +23,8 @@ Locate both existing source repositories with each chezmoi invocation's `source-
 ```sh
 ssh <target> 'git -C <repository> pull --ff-only --no-rebase --no-autostash'
 ```
+
+On non-interactive SSH, a private pull may return `Repository not found` when Git lacks credentials. Before retrying, check the helper's active `gh` account with `gh api user` without printing tokens. If it is not the private repository owner, stop and report; using another account requires the user's direction. Retry once with GitHub CLI's command-scoped credential helper and the same pull flags. Use `git -c credential.helper= -c 'credential.helper=!gh auth git-credential' -C <repository> pull --ff-only --no-rebase --no-autostash`. Never print tokens.
 
 Both pulls must succeed. Inspect each resulting Git status before moving to apply. Stop that target if unexpected edits appear, a preserved untracked file would enter the applied source state, or updating requires changing local commit history.
 
