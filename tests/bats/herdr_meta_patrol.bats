@@ -41,6 +41,7 @@ case "$command_name" in
             :meta) printf '%s\n' '{"result":{"agent":{"pane_id":"local:p1"}}}' ;;
             :after-reset) printf '%s\n' '{"result":{"agent":{"pane_id":"local:p2"}}}' ;;
             :compound-suggestion) printf '%s\n' '{"result":{"agent":{"pane_id":"local:p3"}}}' ;;
+            :malformed) printf '%s\n' '{"result":{"agent":{"pane_id":"local:p4"}}}' ;;
             remote-ok:root) printf '%s\n' '{"result":{"agent":{"pane_id":"remote:p1"}}}' ;;
             remote-ok:unreadable) printf '%s\n' '{"result":{"agent":{"pane_id":"unreadable:p1"}}}' ;;
             *) exit 2 ;;
@@ -52,6 +53,7 @@ case "$command_name" in
             :local:p1) printf '❯ earlier text\n\033[36m❯\033[0m\302\240\033[2mSuggested completion without reset\r\n' ;;
             :local:p2) printf '❯ \033[2mSuggested completion\033[22m\033[48;2;30;30;30mtyped text\033[0m\r\n' ;;
             :local:p3) printf '❯ \033[1;2;48;2;30;30;30mSuggested completion\033[0m\r\n' ;;
+            :local:p4) printf '❯ \033[0m\033[00m\033[7mP\033[27m\033[2mSuggested completion\033[0m\r\n' ;;
             remote-ok:remote:p1) printf '\033[35m›\033[0m typed text \033[2mSuggestion\033[0m\n' ;;
             remote-ok:unreadable:p1) printf 'terminal output without a prompt\n' ;;
             *) exit 2 ;;
@@ -82,6 +84,15 @@ EOF
     [ "$status" -eq 0 ]
     ! jq -se 'any(.[]; .kind == "root_input_occupied" and .agent == "compound-suggestion")' <<< "$output" > /dev/null
     ! jq -se 'any(.[]; .kind == "root_input_unreadable" and .agent == "compound-suggestion")' <<< "$output" > /dev/null
+}
+
+@test "[common] patrol reports malformed SGR as occupied input" {
+    export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"malformed"}]'
+
+    run "$PATROL_SCRIPT_PATH"
+
+    [ "$status" -eq 0 ]
+    jq -se 'any(.[]; .kind == "root_input_occupied" and .agent == "malformed")' <<< "$output" > /dev/null
 }
 
 @test "[common] patrol reports findings, ignores dim suggestions, and continues after a remote failure" {

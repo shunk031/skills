@@ -86,6 +86,16 @@ EOF
     [[ "$output" == *"report"* ]]
 }
 
+@test "[common] malformed SGR after a reset keeps the input occupied" {
+    printf '❯ \033[7mP\033[27m\033[0m\033[38;5;08m\033[2mDraft suggestion\033[0m\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" claude "relay"
+
+    [ "$status" -eq 75 ]
+    [ ! -f "$STUB_STATE/prompt_target" ]
+    [[ "$output" == *"input was occupied"* ]]
+}
+
 @test "[common] the last matching prompt glyph line determines occupancy" {
     printf '❯ typed earlier\n› \033[2mDraft suggestion\033[0m\n' > "$STUB_STATE/snapshot"
 
