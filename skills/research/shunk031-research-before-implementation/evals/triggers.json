@@ -1,0 +1,38 @@
+[
+  {
+    "query": "Our agent guidance repeats a warning that a session-start hook already prints. Decide whether the guidance can be removed; that depends on whether the hook's printed message is actually shown to the model in the other agent CLI we support.",
+    "should_trigger": true
+  },
+  {
+    "query": "A reviewer says the session hook's status output never reaches the model in one of the two agent CLIs we support. Rewrite the paragraph that describes what an agent in that session can and cannot observe when the hook warns or stops.",
+    "should_trigger": true
+  },
+  {
+    "query": "Check that every weight shard listed in the model's local index file, plus the config and tokenizer files, is present in the downloaded snapshot directory, and list any that are missing.",
+    "should_trigger": false
+  },
+  {
+    "query": "The issue body gave the wrong total because of an addition mistake; the manifest already holds the correct count. Use the manifest count in the summary.",
+    "should_trigger": false
+  },
+  {
+    "query": "Replace the hashed adapter IDs with sequential IDs assigned in sorted name order, record the mapping in the manifest, and keep the uniqueness assertion.",
+    "should_trigger": false
+  },
+  {
+    "query": "The smoke output already has the expected format. Before the full run, raise the generation token limit to the same higher value for every model and report how many replies are still cut off.",
+    "should_trigger": false
+  },
+  {
+    "query": "Rename the second metric column so it says which evaluator produced it, and report results only at the listed checkpoints.",
+    "should_trigger": false
+  },
+  {
+    "query": "Add two columns to each results table: cumulative training hours and optimizer steps at that epoch, both taken from the existing training logs.",
+    "should_trigger": false
+  },
+  {
+    "query": "The re-measured numbers are final. Update the figures and the sentences that depend on them in the report, without changing scripts or tests.",
+    "should_trigger": false
+  }
+]
