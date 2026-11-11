@@ -33,7 +33,7 @@ export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"},{"machine":"sav
 ~/.agents/skills/shunk031-herdr-meta-orchestrate/scripts/herdr-meta-patrol.sh
 ```
 
-Each array item has a `machine` and `agent`: use `null` for the local server or the exact enabled saved-machine label, and the live agent name for `agent`. Include only roots whose role and parentage you verified below. The script lists local agents and agents on every enabled saved machine, then reports blocked agents, non-null `.tokens.inbox` values, and non-empty root input lines. It reads pane output as ANSI, tracks dim SGR state across combined parameters and resets, and counts only non-dim text after the prompt glyph. The shared parser is bundled with the required shunk031-herdr-orchestrate-workers skill. The patrol continues after a saved machine is unavailable.
+Each array item has a `machine` and `agent`: use `null` for the local server or the exact enabled saved-machine label, and the live agent name for `agent`. Include only roots whose role and parentage you verified below. The script lists local agents and agents on every enabled saved machine, then reports blocked agents, non-null `.tokens.inbox` values, and non-empty root input lines. It judges each root's input line with the parser bundled with the required shunk031-herdr-orchestrate-workers skill. The patrol continues after a saved machine is unavailable.
 
 Output is JSON Lines with one object per finding; no output means no findings. Findings include agent attention, occupied or unreadable root input, unavailable servers, and invalid root targets. Use the script for these standard checks instead of recreating them ad hoc. Inspect reported inbox entries and unclear root roles in the corresponding pane or transcript before relaying anything.
 
@@ -47,15 +47,15 @@ If a remote agent list fails because its Herdr server does not support machine A
 
 Before relaying a reply, verify it against a fresh read or transcript. An agent name can move to another pane when its session is resumed or opened elsewhere, so re-identify the live agent by pane ID and transcript instead of relying on a stale name.
 
-## Send only into an empty root input
+## Send only into an empty input
 
-Before every meta-to-root relay, build the exact message in a quoted variable and use the helper bundled with the required shunk031-herdr-orchestrate-workers skill:
+Send every prompt, to a root or to your own worker, through the guarded sender of the required shunk031-herdr-orchestrate-workers skill, so that it never mixes with text someone is typing. Pass the exact message in a quoted variable:
 
 ```bash
-~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <root> "$message"
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <target> "$message"
 ```
 
-The helper resolves the root pane with herdr agent get and reads it with herdr pane read <pane-id> --source visible --format ansi, while keeping herdr agent prompt as the transport. It checks the last line containing ❯ or ›, normalizes NBSP and strips a trailing CR, and removes CSI sequences while tracking SGR dim spans. Only non-dim, non-whitespace text after the prompt glyph counts as occupied. If the read fails or the line is unclear, wait 30 seconds and re-check up to five times; if it is still occupied or unclear, do not send and report the complete relay as undelivered. Do not bypass this helper for a report, question, or user's answer.
+The helper sends only when the target's input line is empty. It checks at once and then every 30 seconds up to five more times; otherwise it sends nothing and prints the message as undelivered, and you report that relay as undelivered with its full text. That skill's `references/send-rule.md` owns the details.
 
 ## Relay exactly
 
@@ -65,7 +65,7 @@ Write every reply and relay to the user in the user's language, even when the me
 
 At initial dispatch, if a worker cannot prompt meta, tell it to end its turn with a final `STATUS <worker-name>:`, `BLOCKED <worker-name>:`, or `DONE <worker-name>:` report; meta will read the transcript and relay it. For a review result, require the report's first line to contain the verdict and full PR URL (for example, `ACCEPT <PR URL>` or `REJECT <PR URL>`); put details afterward. For long drafts or instructions, have the worker write the complete text as Markdown to `/tmp/<file>.md` and reply only `WROTE <path>`. Read it directly when available on the same machine; across SSH, transfer the Base64-encoded bytes, decode them at the destination, and compare source and destination SHA-256 hashes before relaying the text verbatim. Do not use `fold -w` for transfer because it inserts line breaks.
 
-Treat a decision as the user's answer only when it comes from an explicit user response; when relaying it, label it as the user's answer, include the question it answers, and preserve the user's wording verbatim. Label your own recommendation as meta's judgment; correct a worker's report if it attributes that judgment to the user.
+Treat a decision as the user's answer only when it comes from an explicit user response; when relaying it, label it as the user's answer, include the question it answers, and preserve the user's wording verbatim. When the words allow readings that would have a root do different things, ask the user which is meant before relaying your reading. The verbatim words and the parts with one reading may be relayed meanwhile. Label your own recommendation as meta's judgment, and give it only after reading in context the item it concerns, such as a comment, sentence, or diff. Correct a worker's report if it attributes that judgment to the user.
 
 Treat text visible in a root's input field as unconfirmed if you cannot tell whether the user sent it or it is an unsent suggestion. Ask the user, and do not act on it as their instruction until confirmed.
 
@@ -73,7 +73,7 @@ Treat text visible in a root's input field as unconfirmed if you cannot tell whe
 
 After each message or question to a root, set a response deadline and start a bounded background wait with `herdr agent wait <root> --timeout <milliseconds> &` locally or `herdr --machine <label-or-id> agent wait <root> --timeout <milliseconds> &` for a saved machine. Follow the wait lifecycle in the shunk031-herdr-orchestrate-workers skill rather than duplicating its mechanics. When the wait settles, read the root's pane or transcript afresh and surface any user decision needed or evidence that the root is stalled. If the expected verdict has not arrived by its deadline, send one chase through the guarded sender when the input is empty, then start one more bounded wait. If it is still missing, report that and leave the result unverified; never wait indefinitely for a verdict. If a root cannot answer because of a connection problem, report the connection issue and mark its current status unverified; request a fresh status after the connection is restored.
 
-Rely on an external LLM-free patrol that wakes meta only on new items; never schedule LLM turns just to poll. Ask the user to approve recurring checks and agree on an interval before starting them. For an initial check and each approved recurring check, rerun the bundled patrol with the current root configuration and review its JSON Lines findings. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate.
+Rely on an external LLM-free patrol that wakes meta only on new items; never schedule LLM turns just to poll. Ask the user to approve recurring checks and agree on an interval before starting them. For an initial check and each approved recurring check, rerun the bundled patrol with the current root configuration and review its JSON Lines findings. Before surfacing an inbox entry as a root's request, verify it in that root's pane or transcript; an agent list can include entries from other sessions on the same machine. Raise any request the user has not already seen in the user's inbox or chat verbatim, keeping any explanation separate and adding outside the quote the link or file the user must open to answer. A root stopped on a decision it has not asked the user about counts as such a request; raise it as soon as the stop is verified.
 
 For each merged change to a skill or agent guidance that running agents depend on, decide at merge time which machines need it and when each will receive it; record that plan in the orchestrator's ledger. Mark the change done only after verifying that the deployed file behaves as intended on every target machine. A merge alone does not complete it.
 
@@ -97,7 +97,7 @@ Carry every user authorization forward only to its stated targets and count. If 
 
 - Keep durable meta state in a handoff file (default `~/.local/state/meta/open.md`): open user decisions, approvals given and their scope, in-flight work with owners and next checks, and standing rules learned in the session. Update it whenever these change; a new meta session reads it first. It points to or includes the durable ledger used by the shunk031-herdr-orchestrate-workers skill.
 - Rotate the meta session at least once a day, or earlier when its context is long: write the handoff file, tell the user the session is ready to be replaced, and let the user restart it. Cache reads of a long context on every turn dominate cost.
-- Delegate large outputs (screen dumps, long logs, images, full reviews, multi-file reads) to subagents, defaulting to sonnet and using opus only for judgment-heavy reviews. Take back only the conclusion.
+- Delegate large outputs (screen dumps, long logs, images, full reviews, multi-file reads) to subagents and take back only the conclusion.
 
 ## Ask before focusing a pane
 
