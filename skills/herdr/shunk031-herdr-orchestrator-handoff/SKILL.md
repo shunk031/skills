@@ -29,16 +29,22 @@ If Codex or the Gateway is unavailable, stop the Codex root. Meta will notice th
 
 ## Codex root operation
 
-Create the root pane with the role marker in its environment, then start the root with the model and effort here:
+Create the root pane with both root-only variables, then start the root with the model and effort here. `CODEX_ROOT_ORCHESTRATOR=1` enables the dotfiles Stop audit. `PONYTAIL_DEFAULT_MODE=off` makes Ponytail hooks emit nothing for the root; the tested per-launch plugin `-c` override does not work, and the Codex default stays unchanged.
 
 ```bash
-herdr tab create --workspace <workspace> --cwd <repository> --label "🤖 Orchestrator · Codex handoff" --env CODEX_ROOT_ORCHESTRATOR=1 --no-focus
+herdr tab create --workspace <workspace> --cwd <repository> --label "🤖 Orchestrator · Codex handoff" --env CODEX_ROOT_ORCHESTRATOR=1 --env PONYTAIL_DEFAULT_MODE=off --no-focus
 herdr agent start <root-name>-handoff --kind codex --pane <returned-pane-id> -- --profile flava-dev -m gpt-6.1-sol -c model_reasoning_effort=high
 ```
 
 The `-handoff` name is temporary so the outgoing root keeps the stable name until it checks the restatement.
 
-Herdr 0.9.5 accepts pane variables through `herdr tab create --env`. Keep the marker on the root pane only. Create each worker in its own tab without `--env CODEX_ROOT_ORCHESTRATOR=1`. Before starting it, verify `printenv CODEX_ROOT_ORCHESTRATOR` is empty in that pane; if set, run `unset CODEX_ROOT_ORCHESTRATOR` there and verify again. A live scratch root pane had the marker, while a worker tab created without `--env` did not.
+Herdr 0.9.5 applies `--env` to the created pane; it does not copy a root pane's environment into a separate tab. Create every worker in its own tab without either `--env` option, then verify both variables are absent before starting it:
+
+```bash
+test -z "$(printenv CODEX_ROOT_ORCHESTRATOR)" && test -z "$(printenv PONYTAIL_DEFAULT_MODE)"
+```
+
+If either is set, run `unset CODEX_ROOT_ORCHESTRATOR PONYTAIL_DEFAULT_MODE` in the worker pane and verify again. Leave both unset on Luna workers so Ponytail remains on. This was verified live: a scratch root created with both `--env` options had both variables, and a worker tab created from that root without `--env` had neither.
 
 Do not start in-session subagents: they inherit the root model and are billed at its price. Delegate through Herdr workers using the existing worker skill and these model settings:
 
