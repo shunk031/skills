@@ -8,11 +8,11 @@ description: "Orchestrate and coordinate coding workers in Herdr by spawning par
 
 # Orchestrate Herdr Workers
 
-An orchestrator delegates independent tasks to worker agents, one git worktree tab each. Workers must report back by prompting the orchestrator for attribution and audit, but completion is collected from Herdr lifecycle state and the worker's deliverable and transcript. Read this skill file and the herdr skill first: the herdr skill owns all CLI mechanics, JSON responses, ID handling, and safety rules. This skill adds only the orchestration protocol. When one session oversees multiple root orchestrators, pair this with the shunk031-herdr-meta-orchestrate skill for root inventory, status requests, and relays. When writing a Codex worker's task prompt, follow the shunk031-codex-worker-prompting skill. Build every peer prompt in a shell variable first (for example, with a quoted heredoc) and pass it as one argument; never let the shell expand task or report text.
+An orchestrator delegates independent tasks to worker agents, one git worktree tab each. Workers must report back by prompting the orchestrator for attribution and audit, but completion is collected from Herdr lifecycle state and the worker's deliverable and transcript. Read this skill file and the herdr skill first: the herdr skill owns all CLI mechanics, JSON responses, ID handling, and safety rules. This skill adds only the orchestration protocol. When one session oversees multiple root orchestrators, pair this with the shunk031-herdr-meta-orchestrate skill for root inventory, status requests, and relays. When writing a Codex worker's task prompt, follow the shunk031-codex-worker-prompting skill.
 
 ## Send only into an empty input
 
-Before every prompt send in this skill, run the guarded sender at ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh with the target and a quoted message variable instead of calling herdr agent prompt directly. The helper resolves the target pane with herdr agent get, reads herdr pane read <pane-id> --source visible --format ansi, and uses herdr agent prompt as the transport only when the current ❯, ›, or Antigravity CLI > input line has no non-dim text. Treat placeholder or suggestion text styled with ANSI \e[2m or a gray foreground (\e[90m or \e[38;5;8m) after the prompt glyph as empty. It checks immediately, then waits 30 seconds and rechecks up to five times; if the input remains occupied or cannot be read, it leaves the message unsent and prints the full message as undelivered.
+Every prompt send in this skill follows [the send rule](references/send-rule.md); read it before your first send.
 
 ## Work as a worker
 

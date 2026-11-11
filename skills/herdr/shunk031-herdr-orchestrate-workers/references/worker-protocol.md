@@ -1,5 +1,7 @@
 # Worker protocol
 
+Before your first Herdr command, read the herdr skill and [the send rule](send-rule.md).
+
 ## Tab label
 
 Keep your own tab label according to the `shunk031-herdr-tab-status` skill; it owns live tab lookup, rename commands, and response verification. Do not duplicate its status syntax here.
