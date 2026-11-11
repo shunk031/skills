@@ -86,7 +86,10 @@ Close a worker's pane with `herdr pane close <pane-id>` as soon as you have coll
 4. Start Codex in the destination pane, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
 
    ```bash
+   # Implementation and mechanical work
    herdr agent start <your-name>-<task> --kind codex --pane <destination-pane-id> -- -m gpt-6-luna -c model_reasoning_effort=xhigh
+   # Investigation and review
+   herdr agent start <your-name>-<task> --kind codex --pane <destination-pane-id> -- -m gpt-6.1-sol -c model_reasoning_effort=medium
    ```
 
    Set worker environment variables on the pane's shell when creating the tab with `herdr tab create --env KEY=VALUE`; `herdr agent start` launches Codex in the existing shell, so prefixing that command with `KEY=VALUE` does not propagate the variable to the worker. Use this path instead of the `pane move` path:
