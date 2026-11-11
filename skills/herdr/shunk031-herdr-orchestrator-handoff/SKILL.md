@@ -24,7 +24,7 @@ The incoming root itself reads the record and the listed recent transcript lines
 
 The incoming session starts under a temporary name for transcript reading and restatement only. It stays staged and does no task work until Meta verifies suspension. The outgoing root checks the restatement; the user does if a usage limit stopped it. Do not transfer an unresolved point by guessing.
 
-After the restatement check, the outgoing root stops each background task, watcher, and scheduled wake-up it started, then lists what it stopped or `none`. If a goal is active, the root asks Meta to pause it through D7; the root never writes the slash command. The user's handoff approval authorizes the needed goal command.
+After the restatement check, the outgoing root stops each background task, watcher, and scheduled wake-up it started, then lists what it stopped or `none`. If a goal is active, the root asks Meta to pause it through the root pane's inbox token; the root never writes the slash command. The user's handoff approval authorizes the needed goal command.
 
 Meta verifies the stopped-task list, that no goal is active, and that the outgoing pane is idle with empty input. It checks the agent state and visible pane:
 
@@ -35,7 +35,13 @@ herdr pane read <outgoing-pane> --source visible
 
 If a usage limit stopped the outgoing root, the user checks its restatement and Meta checks the remaining suspension conditions. If a condition cannot be verified, Meta keeps the incoming session staged and asks the user what to do.
 
-After verification, Meta records the suspension time. Meta renames the outgoing pane with `herdr agent rename <pane> <root-name>-<engine>`. This keeps worker reports from reaching the parked session. Meta then renames the incoming pane with `herdr agent rename <pane> <root-name>` and activates it. Meta labels root tabs `🤖 Orchestrator · <engine>` and marks parked sessions in the label, following the `shunk031-herdr-tab-status` skill. Meta reports the stable name, engine, active pane/tab, and session ID. Keep the outgoing session and transcript; Meta resumes it only when the role returns. Meta resumes Claude with `claude --resume <session-id>` (or continues it if still live) from the new delta record. Meta resumes Codex with `codex resume <session-id>` if the role later returns to that session. If Codex asks whether to resume its paused goal, Meta chooses `Leave paused`; Meta resumes it later only on the user's instruction.
+After verification, Meta records the suspension time. Meta renames the outgoing pane with `herdr agent rename <pane> <root-name>-<engine>`. This keeps worker reports from reaching the parked session. Meta then renames the incoming pane with `herdr agent rename <pane> <root-name>` and activates it. Meta labels root tabs `🤖 Orchestrator · <engine>` and marks parked sessions in the label, following the `shunk031-herdr-tab-status` skill. Meta reports the stable name, engine, active pane/tab, and session ID. Keep the outgoing session and transcript; Meta resumes it only when the role returns. Meta resumes Claude with `claude --resume <session-id>` (or continues it if still live) from the new delta record. To resume Codex, Meta creates a root pane with the two environment options in the Codex root launch instructions below, then runs:
+
+```bash
+codex --profile flava-dev -m gpt-6.1-sol -c model_reasoning_effort=high resume <session-id>
+```
+
+If Codex asks whether to resume its paused goal, Meta chooses `Leave paused`; Meta resumes it later only on the user's instruction.
 
 If Codex or the Gateway is unavailable, the Codex root stops. Meta notices through the patrol and asks the user whether to return the role to Claude; Meta does not switch engines without that answer.
 
@@ -83,9 +89,9 @@ The existing patrol relays it to meta. Once the answer is recorded in the ledger
 herdr pane report-metadata <pane> --source inbox --clear-token inbox
 ```
 
-An incoming Codex root starts with the exact goal text in its handoff record and no active Codex goal. While waiting on workers, keep its turn blocked on foreground lifecycle waits such as `herdr agent wait <worker-name>`. If no useful work remains, end the turn only when no goal is active; worker report prompts and observer nudges can wake it. If an active goal must pause for waiting, ask Meta through D7 and keep the turn blocked until Meta confirms. Do not create an active goal just to wait.
+An incoming Codex root starts with the exact goal text in its handoff record and no active Codex goal. While waiting on workers, keep its turn blocked on foreground lifecycle waits such as `herdr agent wait <worker-name>`. If no useful work remains, end the turn only when no goal is active; worker report prompts and observer nudges can wake it. If an active goal must pause for waiting, ask Meta through the inbox flow above and keep the turn blocked until Meta confirms. Do not create an active goal just to wait.
 
-A root never runs a goal slash command in its own reply. If it needs a goal set, pause, resume, or clear, it asks Meta through D7. The user's instruction or approval of that handoff authorizes the needed command. Meta enters it as pane input and confirms both the response and the goal indicator:
+A root never runs a goal slash command in its own reply. If it needs a goal set, pause, resume, or clear, it asks Meta through the inbox token flow above. The user's instruction or approval of that handoff authorizes the needed command. Meta enters it as pane input and confirms both the response and the goal indicator:
 
 ```bash
 herdr pane run <pane> '/goal <objective>'
@@ -95,11 +101,11 @@ herdr pane run <pane> '/goal clear'
 herdr pane read <pane> --source visible
 ```
 
-An outgoing active goal must be paused before suspension. Keep its text and paused state in the record; Meta resumes it only when the role returns and the user instruction authorizes that command. Do not resume a blocked or completed goal. A newly active goal is set only by Meta after the root asks through D7 and the user authorizes it.
+An outgoing active goal must be paused before suspension. Keep its text and paused state in the record; Meta resumes it only when the role returns and the user instruction authorizes that command. Do not resume a blocked or completed goal. A newly active goal is set only by Meta after the root asks through the inbox token flow and the user authorizes it.
 
 ## Drill and trial
 
-- Run one round trip with `orch-radm`: Claude Code → Codex → the retained Claude session. Check each restatement and record tokens per day and the D12 measures below.
+- Run one round trip with `orch-radm`: Claude Code → Codex → the retained Claude session. Check each restatement and record tokens per day and the trial measures below.
 - The user decides whether to run the one-week `orch-radm` and `orch264` trial. After that week, the user decides whether to move the remaining roots.
 - Track user corrections (count and kind), user prompts needed only to make a root continue, handoff omissions, and stopped time. Also track finished-worker tabs left open per root, tokens per day, and whether the sampled original-objective audit fires.
 - Do not add a limit-triggered automatic notification.
