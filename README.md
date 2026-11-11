@@ -46,6 +46,7 @@ Every skill is named `shunk031-<domain>-<topic>`, and `Category` is that domain.
 
 | Skill                                                                                                                   | Category      | What it does                                                                                                                |
 | ----------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [`shunk031-codex-grilling`](skills/codex/shunk031-codex-grilling/) | `codex` | Presents grilling skill interview rounds through Codex's native question UI. |
 | [`shunk031-codex-worker-prompting`](skills/codex/shunk031-codex-worker-prompting/)                                      | `codex`       | Writes task prompts, follow-ups, and authorizations aimed at Codex-family worker models.                                    |
 | [`shunk031-colab-uv-training`](skills/colab/shunk031-colab-uv-training/)                                                | `colab`       | Runs and resumes long uv GPU jobs on Colab with durable results, recovery, and task-scoped runtime teardown.                |
 | [`shunk031-github-cgd-identity`](skills/github/shunk031-github-cgd-identity/)                                           | `github`      | Performs GitHub writes in `creative-graphic-design` repositories as the machine user rather than the personal account.      |
