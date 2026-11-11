@@ -64,16 +64,9 @@ test -z "$(printenv CODEX_ROOT_ORCHESTRATOR)" && test -z "$(printenv PONYTAIL_DE
 
 If either is set, run `unset CODEX_ROOT_ORCHESTRATOR PONYTAIL_DEFAULT_MODE` in the worker pane and verify again. Leave both unset on Luna workers so Ponytail remains on. This was verified live: a scratch root created with both `--env` options had both variables, and a worker tab created from that root without `--env` had neither.
 
-Do not start in-session subagents: they inherit the root model and are billed at its price. Delegate through Herdr workers using the existing worker skill and these model settings:
+Do not start in-session subagents: they inherit the root model and are billed at its price. Delegate through Herdr workers using the existing worker skill and the model settings in its launch step (step 4).
 
-```bash
-# Implementation and mechanical work
-herdr agent start <worker-name> --kind codex --pane <pane> -- -m gpt-6-luna -c model_reasoning_effort=xhigh
-# Investigation and review
-herdr agent start <worker-name> --kind codex --pane <pane> -- -m gpt-6.1-sol -c model_reasoning_effort=medium
-```
-
-For Codex roots, this rule overrides the worker skill's instruction to run one-shot reviews as in-session subagents; use a Herdr review worker with the investigation and review settings above.
+For Codex roots, this rule overrides the worker skill's instruction to run one-shot reviews as in-session subagents; use a Herdr review worker with its investigation and review settings.
 
 For every user-facing reply, begin with one fresh `date '+%Y-%m-%dT%H:%M:%S%z'` output line. Do not send timer-based interim progress lines.
 
