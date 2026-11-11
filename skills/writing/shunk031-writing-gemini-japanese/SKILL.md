@@ -34,7 +34,7 @@ description: PR や issue の本文・コメント、コミットメッセージ
    herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-high
    ```
 
-   起動時の project trust や hooks review ダイアログは `shunk031-herdr-orchestrate-workers` の手順 4 に従う。本タスクで利用者が承認したリポジトリルートと確認済みのフック定義のみ信頼して応答し、未承認または未確認の場合は応答せず、利用者に確認するか BLOCKED を報告する（Esc は押さない）。入力欄（composer）が利用可能になるまで待ってからプロンプトを送信する。各プロンプト送信後は `shunk031-herdr-orchestrate-workers` の手順 5 に従い、新しい `state_change_seq` および可読な送受信テキストを確認する。いずれかが欠けている場合は同じプロンプトを 1 回だけ再送する。
+   起動時の project trust や hooks review のすべての判断は例外を含め `shunk031-herdr-orchestrate-workers` の手順 4 に従う。入力欄（composer）が利用可能になるまで待ってからプロンプトを送信する。各プロンプト送信後は `shunk031-herdr-orchestrate-workers` の手順 5 に従い、新しい `state_change_seq` および可読な送受信テキストを確認する。いずれかが欠けている場合は同じプロンプトを 1 回だけ再送する。
 2. 下書き作成: 成果物はすべてワークスペース内のファイルに出力させる（コードや HTML では対象ファイル内の日本語文字列のみを編集）。元資料、出力先パス、および要ブリーフ文書では確認済みブリーフを渡して執筆させる。要ブリーフ文書では確認済みブリーフの指定に従い、必須要件を直接裏づける根拠を完成文書内に反映させる。すべての事実や数値は元資料の裏づけを要する。執筆担当は `shunk031-writing-router` skill に従って担当スキルを選定・適用する（利用者の指定がある場合は優先）。
 
 ## レビュー
