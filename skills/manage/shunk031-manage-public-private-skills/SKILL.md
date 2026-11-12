@@ -95,4 +95,4 @@ Review the draft with both agents' skill-creation skills, because they disagree 
 
 Run the owning repository's gates and report which repository owns each change. Keep credential values out of command output, quoted diffs, and summaries — this matters in the private repository, where eval prompts are committed in plaintext and must use placeholders.
 
-Creating or updating a pull request is part of ordinary work. The user's approving review in GitHub permits merging that PR. Before merging, confirm that required checks pass and that the head still matches the approved commit or differs from it only by an update from the base branch (merge or rebase) that leaves the PR's own added and removed lines unchanged; any other head change needs a new approval. Ask first before running `chezmoi apply` or changing runtime state.
+Creating or updating a pull request is part of ordinary work. The user's approving review in GitHub permits merging that PR under the merge-approval rule in Authority Boundaries of the user-level `AGENTS.md`. Ask first before running `chezmoi apply` or changing runtime state.
