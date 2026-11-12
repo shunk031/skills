@@ -144,6 +144,18 @@
         "Forwards the stage change and ETA to meta now as one short line, not batched with later reports.",
         "Uses its pane's inbox token rather than prompting meta directly, because meta is not on its server."
       ]
+    },
+    {
+      "id": 16,
+      "prompt": "In an offline dry run, do not run commands. An existing wiki section has a full ACCEPT. The user asks for two typo fixes in existing sentences, with no change to meaning or structure. A writer worker is already active. What path and reviews do you use?",
+      "expected_output": "Use the small follow-up fast path defined in the skill: reuse the active worker for one pass, run the available mechanical checks, and use one fresh first-reader check limited to the changed lines. Do not open a new writer tab or run the normal full review chain; target 15 minutes end to end.",
+      "expectations": [
+        "Selects the defined fast path for a fully accepted existing artifact with no meaning or structure change.",
+        "Reuses the active worker and does not open a new Herdr writer tab.",
+        "Runs `markdown-sentence-length` once and `markdown-neighbor-length` once when the latter is available.",
+        "Requests one fresh first-reader check limited to changed lines instead of the normal review chain.",
+        "States the 15-minute end-to-end target."
+      ]
     }
   ]
 }
