@@ -40,7 +40,7 @@ Reject and redispatch claims based on test-local reconstructions or runtime path
 
 ## Resolve REJECT and preserve review/head identity
 
-An actionable `REJECT` from an independent reviewer is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <owner> "$answer"` path; use the step-5 receipt contract, record the exact rejected head and `re-review pending`, and after the owner publishes a corrected head, or in a public repository commits it locally before pushing, have a fresh reviewer review that exact head.
+An actionable `REJECT` from an independent reviewer is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <owner> "$answer"` path; use [the step-5 receipt contract](dispatch.md#dispatch-and-receipt), record the exact rejected head and `re-review pending`, and after the owner publishes a corrected head, or in a public repository commits it locally before pushing, have a fresh reviewer review that exact head.
 
 ## Re-check before handoff or merge
 

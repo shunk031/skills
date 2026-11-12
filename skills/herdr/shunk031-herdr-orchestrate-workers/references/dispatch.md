@@ -6,11 +6,7 @@ Read the base herdr skill first for CLI mechanics, JSON, IDs, and safety.
 
 ## Plan and identity
 
-### 1.
-
-Name the orchestrator
-
-1.
+### 1. Name the orchestrator
 
 Name yourself so workers can address you, and label your tab.
 
@@ -23,11 +19,7 @@ Pick a short name that is free in `herdr agent list`; names cap at 32 characters
 
    A worker promoting itself to sub-orchestrator skips this step: it keeps the agent name and tab its parent already tracks.
 
-### 2.
-
-Split and plan tasks
-
-2.
+### 2. Split and plan tasks
 
 Split the request into independent tasks, one worker each.
 
@@ -55,11 +47,7 @@ Per task, decide whether the worker should publish a pull request: instruct it o
 
 ## Workspace and worker startup
 
-### 3.
-
-Create or reopen each deliverable workspace
-
-3.
+### 3. Create or reopen each deliverable workspace
 
 Before any task edits, establish the deliverable's repository-associated workspace with `herdr worktree create`; for an already-open deliverable worktree, use `herdr worktree open` and reuse its returned deliverable workspace and root-pane IDs instead of creating a second workspace.
 
@@ -100,11 +88,7 @@ Treat each deliverable that will become one pull request as one workspace, and o
 Rename the workspace with `herdr workspace rename <workspace-id> "WIP <topic>"`, then `herdr workspace rename <workspace-id> "Issue#<N> <topic>"`, then `herdr workspace rename <workspace-id> "PR#<N> <topic>"`; perform the Issue or PR rename in the same turn that receives its URL, and leave tab labels worker-owned under `shunk031-herdr-tab-status`.
 
 
-### 4.
-
-Start each worker
-
-4.
+### 4. Start each worker
 
 Start Codex in the destination pane, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap.
 
@@ -144,11 +128,7 @@ Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `
 
 ## Dispatch and receipt
 
-### 5.
-
-Send the task, confirm receipt, and wait for lifecycle state
-
-5.
+### 5. Send the task, confirm receipt, and wait for lifecycle state
 
 Before each dispatch, record the worker's current `state_change_seq`.
 

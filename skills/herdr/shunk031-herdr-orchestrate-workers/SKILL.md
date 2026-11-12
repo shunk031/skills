@@ -10,7 +10,17 @@ description: "Orchestrate coding workers in Herdr: dispatch parallel Codex worke
 
 ## Role and prerequisites
 
-An orchestrator delegates independent tasks to worker agents, one git worktree tab each. Workers must report back by prompting the orchestrator for attribution and audit, but completion is collected from Herdr lifecycle state and the worker's deliverable and transcript. Read this skill file and the herdr skill first: the herdr skill owns all CLI mechanics, JSON responses, ID handling, and safety rules. This skill adds only the orchestration protocol. When one session oversees multiple root orchestrators, pair this with the shunk031-herdr-meta-orchestrate skill for root inventory, status requests, and relays. When writing a Codex worker's task prompt, follow the shunk031-codex-worker-prompting skill.
+An orchestrator delegates independent tasks to worker agents, one git worktree tab each.
+
+Workers must report back by prompting the orchestrator for attribution and audit, but completion is collected from Herdr lifecycle state and the worker's deliverable and transcript.
+
+Read this skill file and the herdr skill first: the herdr skill owns all CLI mechanics, JSON responses, ID handling, and safety rules.
+
+This skill adds only the orchestration protocol.
+
+When one session oversees multiple root orchestrators, pair this with the shunk031-herdr-meta-orchestrate skill for root inventory, status requests, and relays.
+
+When writing a Codex worker's task prompt, follow the shunk031-codex-worker-prompting skill.
 
 ## Non-negotiable rules
 

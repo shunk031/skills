@@ -76,11 +76,11 @@ When explaining a constraint's provenance, check the transcript, distinguish the
 
 ### Scope observation and health monitoring
 
-For an existing anonymous live pane adopted mid-task, follow [adopting an anonymous pane](references/adopt-anonymous-pane.md).
+For an existing anonymous live pane adopted mid-task, follow [adopting an anonymous pane](adopt-anonymous-pane.md).
 
-Only when the user explicitly requests active observation, read [active observation](references/active-observation.md).
+Only when the user explicitly requests active observation, read [active observation](active-observation.md).
 
-Read [supplemental health watchers](references/health-watchers.md) when passive alerts would help with the active task, and whenever a dispatched task includes a run expected to take 30 minutes or longer.
+Read [supplemental health watchers](health-watchers.md) when passive alerts would help with the active task, and whenever a dispatched task includes a run expected to take 30 minutes or longer.
 
 ## User reporting and decisions
 
@@ -92,7 +92,7 @@ Never put internal infrastructure identifiers such as mount paths, internal host
 
 In every user-facing report, make the first mention of each PR or issue a full-URL Markdown link; a bare `#N` alone is insufficient.
 
-Always read [task and question tracking](references/task-and-question-tracking.md) for its waiting-list reporting rule.
+Always read [task and question tracking](task-and-question-tracking.md) for its waiting-list reporting rule.
 
 If inbox tools are available in the orchestrator session, follow the reference's inbox-specific procedures.
 
