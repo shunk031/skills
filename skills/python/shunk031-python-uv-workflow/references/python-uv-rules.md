@@ -25,6 +25,7 @@ Use this template for a new project or an explicit hook-configuration request. D
 ```yaml
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -33,6 +34,7 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.16
     hooks:
       - id: vulture
 
