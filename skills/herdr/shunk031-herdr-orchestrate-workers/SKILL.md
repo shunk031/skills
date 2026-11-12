@@ -1,6 +1,6 @@
 ---
 name: shunk031-herdr-orchestrate-workers
-description: "Orchestrate coding workers in Herdr: dispatch parallel Codex workers into git worktree tabs, reconcile their state, validate their reports against raw results, and route task, review, and pull-request lifecycles. Use when a request mentions Herdr and asks to orchestrate, delegate to, or coordinate workers, or to audit their reports or where a constraint came from, or when a prompt says you are a Herdr worker reporting to an orchestrator. Not for single-pane or single-agent Herdr control, pane-output questions, general CLI questions, or parallel work and git worktrees without Herdr."
+description: "Orchestrate coding workers in Herdr: dispatch parallel worker agents into git worktree tabs, reconcile their state, validate their reports against raw results, and route task, review, and pull-request lifecycles. Use when a request mentions Herdr and asks to orchestrate, delegate to, or coordinate workers, or to audit their reports or where a constraint came from, or when a prompt says you are a Herdr worker reporting to an orchestrator. Not for single-pane or single-agent Herdr control, pane-output questions, general CLI questions, or parallel work and git worktrees without Herdr."
 ---
 
 > [!NOTE]
@@ -83,7 +83,7 @@ Close a worker's pane with `herdr pane close <pane-id>` as soon as you have coll
 
    Never start a worker in a `herdr pane split` of your own pane. The herdr skill's sibling-pane default covers only a single helper agent the user asks for, not orchestrated workers.
 
-4. Start the worker in the destination pane with the agent kind, model, and launch flags the private launch guidance gives for its task, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
+4. Start the worker in the destination pane with the agent kind, model, and launch flags the launch guidance in your user-level instructions (Launching Herdr workers) gives for its task, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
 
    ```bash
    herdr agent start <your-name>-<task> --kind <kind> --pane <destination-pane-id> -- <launch-flags>
