@@ -31,8 +31,8 @@ Before starting write operations, perform the following checks in the working sh
 3. Retrieve the stored bot token by account name and pass it only to each write command that uses gh or git credentials:
 
    ```bash
-   GH_TOKEN="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" gh pr create ...
-   GH_TOKEN="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" git push
+   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh pr create ...
+   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push
    ```
 
    Do not export the token into a persistent shell and do not print it. The per-command prefix keeps account selection explicit and avoids changing GitHub CLI's global active account.
@@ -40,8 +40,8 @@ Before starting write operations, perform the following checks in the working sh
 4. Verify the GitHub identity and push permission for the organization repository. `gh api user` only confirms the logged-in account and cannot verify access to organization resources:
 
    ```bash
-   GH_TOKEN="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" gh api user --jq .login
-   GH_TOKEN="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" gh api repos/creative-graphic-design/<repo> --jq .permissions.push
+   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh api user --jq .login
+   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh api repos/creative-graphic-design/<repo> --jq .permissions.push
    ```
 
    Do not start write operations unless the first command returns `creative-graphic-design-dev` and the second returns `true`.
@@ -62,7 +62,7 @@ Before starting write operations, perform the following checks in the working sh
    git remote set-url --push origin https://github.com/creative-graphic-design/<repo>
    ```
 
-`GH_TOKEN` applies to both gh and the git credential helper in the same command environment. The credential helper returns the token with the username `x-access-token`.
+The guard stops failed or empty token retrieval from letting GitHub CLI fall back to another credential.
 
 ## Scope
 
