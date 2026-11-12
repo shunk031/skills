@@ -93,6 +93,8 @@ Handle inventory, status requests, message relays, coordination, analysis, judgm
 
 When asking a worker to draft or review a reader-facing README, documentation, pull request body, or report, include a check for unnecessary reassurance about what the reader need not do or worry about (for example, “No installation is needed.”). Require the reviewer to count and report each occurrence, including zero.
 
+Add a constraint such as a length cap, tone, or structure only when the requester stated it or the target's established conventions require it. Label any additional preference as meta's judgment and keep it non-gating.
+
 Carry every user authorization forward only to its stated targets and count. If a dispatch would affect more targets than the user approved, stop and report the mismatch before acting. Never restore, checkout, stash, reset, or discard uncommitted changes without the user's explicit permission for that target.
 
 ## Keep the meta context lean

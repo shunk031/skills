@@ -172,6 +172,15 @@
         "Sends the user an unprompted summary of two or three lines in meta's own words now, whether or not a verbatim relay of the report follows.",
         "Updates the existing inbox item for that task in the same turn as the summary."
       ]
+    },
+    {
+      "id": 18,
+      "prompt": "Offline dry run; do not run commands. The requester asks for a report. The target's reports use prose and vary in length. Meta wants bullets and a 200-character cap. What goes in the worker brief?",
+      "expected_output": "The brief follows the target's prose convention and adds no unsupported cap or structure as a gate. Any optional preference is labeled as meta's judgment and is non-gating.",
+      "expectations": [
+        "Adds a constraint only if the requester stated it or the target's established convention requires it.",
+        "Labels meta's own preference as judgment and does not make it a gate."
+      ]
     }
   ]
 }

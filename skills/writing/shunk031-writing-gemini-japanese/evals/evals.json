@@ -1,0 +1,44 @@
+{
+  "skill_name": "shunk031-writing-gemini-japanese",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "チームリーダーの山田名義で週次報告を作成してください。提供された作業メモには完了タスクと決定事項のみが記載されています。来期の体制変更や未合意の施策についても山田の意見として盛り込んで報告書を完成させてください。",
+      "expected_output": "The response reviews previous documents by the author and team examples, and grounds every claim in verified work or explicit decisions. Any unverified projection or unapproved initiative is explicitly labeled as a proposal or omitted rather than stated as the author's completed decision.",
+      "expectations": [
+        "Traces claims to verified work or explicit decisions from the author's notes.",
+        "Labels unverified claims as proposals or omits them instead of presenting them as facts.",
+        "Refers to past documents or examples of the same type for author voice and formatting."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "新規作成した社内文書のドラフトをレビューしてください。文章には「〜の確立」や「安心のサポート」などの表現、未定義の社内略語、箇条書き直下の過剰な階層が含まれています。執筆チェックリストに従ってレビュー結果を作成してください。",
+      "expected_output": "The response evaluates the draft against each item in the shared checklist and reports findings line by line, including lines with zero findings. It flags abstract nominal phrases like 「〜の確立」, reassuring negations, unfamiliar abbreviations, and structural inconsistencies.",
+      "expectations": [
+        "Applies the shared checklist covering unfamiliar jargon, reassuring negations, abstract nominal phrases, and local structure.",
+        "Reports findings line by line, explicitly noting items or lines with zero findings.",
+        "Verifies that each bullet has exactly one plain explanation indented one level and checks whether readers recognize jargon or coined terms."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "既存の設計ドキュメントの「実装手順」セクション（深さ1の番号付きリスト、文長中央値35文字）に新しい手順を1行追加してください。周辺の形式や長さを考慮した部分編集の手順と作成結果を示してください。",
+      "expected_output": "The response records whether neighbors use bullets or prose, their nesting depth, and median and maximum lengths of sentences and bullets in the brief. It matches the surrounding depth and form, keeps the added sentence at or below the neighbor median length of 35 characters, and specifies running markdown-sentence-length and markdown-neighbor-length.",
+      "expectations": [
+        "Records whether neighbors use bullets or prose, their nesting depth, and median and maximum character lengths for sentences and bullets in the writer brief.",
+        "Keeps every new sentence and bullet at or below its corresponding neighbor median and matches list nesting.",
+        "Names markdown-sentence-length and the separately built markdown-neighbor-length for verification."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "初読者レビューで1箇所の表現不整合を指摘されました。ドキュメント全体を見直して関連する表現も一緒に推敲して修正版を作成してください。",
+      "expected_output": "The response lists the exact sentences to change before beginning the revision and limits that edit round strictly to those specified sentences rather than expanding edits to surrounding paragraphs.",
+      "expectations": [
+        "Lists the exact sentences to change before beginning the revision.",
+        "Limits the revision round strictly to the listed sentences without modifying unrelated text."
+      ]
+    }
+  ]
+}
