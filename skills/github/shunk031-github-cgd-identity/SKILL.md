@@ -69,7 +69,7 @@ The guard stops failed or empty token retrieval from letting GitHub CLI fall bac
 - This skill applies only to creative-graphic-design organization repositories on github.com. Do not use the stored bot credential or the bot commit identity for other hosts, organizations, or personal repositories; use normal authentication and the normal git identity there.
 - Attribute every coding-agent write to a creative-graphic-design organization repository to the bot. This includes commits, pushes, PR creation and updates, PR replies, issue comments, labels, milestones, and user-requested merges.
 - If any Setup verification fails, abandon the bot identity entirely: do not apply it partially, such as setting the bot commit author while the credential check failed or pushing through another account. Stop and report instead.
-- The human (`shunk031`) approves PRs in GitHub's UI. Approval at the current head is the merge decision for that PR, once required checks pass. A changed head needs a new approval. Do not approve PRs as the bot.
+- The human (`shunk031`) approves PRs in GitHub's UI. Approval is the merge decision for that PR, once required checks pass. A changed head needs a new approval unless it changed only by an update from the base branch (merge or rebase) that leaves the PR's own added and removed lines unchanged. Do not approve PRs as the bot.
 
 ## Troubleshooting
 

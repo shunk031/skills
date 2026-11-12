@@ -125,6 +125,16 @@
         "Closes the worker's pane with `herdr pane close` before ending the turn.",
         "Does not remove the worktree or delete the branch."
       ]
+    },
+    {
+      "id": 14,
+      "prompt": "You are a Herdr orchestrator. A fresh reviewer returned ACCEPT for worker orch-docs's pull request at head A, and the user approved merging it. The owning worker then merged the base branch into the PR branch without conflicts, so the live head is B, and all required checks pass at B. What do you check before the merge, and what follows from each result? Do not execute commands.",
+      "expected_output": "Compare the pull request's own diff against the base at heads A and B. If it is unchanged, the ACCEPT and the user's approval stay valid and the merge proceeds without a new review or approval request; if it changed, head B needs a fresh review and a new approval.",
+      "expectations": [
+        "States that it compares the pull request's own diff at heads A and B.",
+        "States that an unchanged diff keeps the ACCEPT and the user's approval, with no new review or approval request.",
+        "States that a changed diff needs a fresh review of head B and a new approval."
+      ]
     }
   ]
 }
