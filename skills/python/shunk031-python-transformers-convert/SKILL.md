@@ -319,7 +319,7 @@ Quick reference:
 - **State dict keys**: Keep layer names matching original
 - **Test tolerance**: Use 0.5% tolerance (5e-3) for numerical differences
 - **Device handling**: Use `self.device` from PreTrainedModel
-- **Image size order**: `post_process_semantic_segmentation()` expects `(width, height)`
+- **Image size order**: `post_process_semantic_segmentation()` expects `(height, width)`
 
 ## Debugging Strategy
 
