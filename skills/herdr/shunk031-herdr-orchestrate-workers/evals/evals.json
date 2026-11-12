@@ -152,17 +152,25 @@
       "expectations": [
         "Selects the defined fast path for a fully accepted existing artifact with no meaning or structure change.",
         "Reuses the active worker and does not open a new Herdr writer tab.",
-        "Runs `markdown-sentence-length` once and `markdown-neighbor-length` once when the latter is available.",
+        "States that the orchestrator will run each available mechanical check once.",
         "Requests one fresh first-reader ACCEPT limited to changed lines instead of the normal review chain.",
         "States the 15-minute end-to-end target."
       ]
     },
     {
       "id": 17,
-      "prompt": "In an offline dry run, do not run commands. An existing section has a full ACCEPT, but the requested edit changes its structure and adds six new sentences. What path do you use?",
-      "expected_output": "Do not use the fast path because the edit changes structure and exceeds the five-unit cutoff. Use the standard full review flow, including the required writer and chained reviews.",
+      "prompt": "In an offline dry run, do not run commands. An existing section has a full ACCEPT. The user asks for a structural rewrite that changes the section's form, using only three new sentences. What path do you use?",
+      "expected_output": "Do not use the fast path because the edit changes structure. Use the standard full review flow, including the required writer and chained reviews.",
       "expectations": [
         "Rejects the fast path when structure changes.",
+        "Uses the standard full review flow for the edit."
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "In an offline dry run, do not run commands. An existing section has a full ACCEPT. The user asks for six new sentences with no change to meaning or structure. What path do you use?",
+      "expected_output": "Do not use the fast path because the edit exceeds the five-sentence cutoff. Use the standard full review flow, including the required writer and chained reviews.",
+      "expectations": [
         "Rejects the fast path when the edit exceeds five changed sentences or list items.",
         "Uses the standard full review flow for the edit."
       ]
