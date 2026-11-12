@@ -23,11 +23,11 @@
     },
     {
       "id": 3,
-      "prompt": "既存の設計ドキュメントの「実装手順」セクション（深さ1の番号付きリスト、文長中央値35文字）に新しい手順を1行追加してください。周辺の形式や長さを考慮した部分編集の手順と作成結果を示してください。",
-      "expected_output": "The response records whether neighbors use bullets or prose, their nesting depth, and median and maximum lengths of sentences and bullets in the brief. It matches the surrounding depth and form, keeps the added sentence at or below the neighbor median length of 35 characters, and specifies running markdown-sentence-length and markdown-neighbor-length.",
+      "prompt": "既存の設計ドキュメントの「実装手順」セクションに手順を1件追加してください。隣接箇所は、深さ1の番号付きリスト各項に、平易な深さ2の説明が1つ付く形式です。追加項も同じ形式にしてください。隣接文の中央値は35字、最大は49字、リスト項目の中央値は28字、最大は40字です。部分編集ブリーフに形式・深さと4つの文字数を記録し、各追加文は35字以下、各追加リスト項目は28字以下にして、markdown-sentence-length と markdown-neighbor-length の実行を示してください。",
+      "expected_output": "The writer brief records the neighboring form and all four supplied counts: sentence median/max 35/49 and list-item median/max 28/40 characters. The addition matches a depth-1 numbered list with exactly one plain depth-2 explanation, keeps each new sentence at or below 35 characters and each new list item at or below 28, and names markdown-sentence-length and markdown-neighbor-length.",
       "expectations": [
-        "Records whether neighbors use bullets or prose, their nesting depth, and median and maximum character lengths for sentences and bullets in the writer brief.",
-        "Keeps every new sentence and bullet at or below its corresponding neighbor median and matches list nesting.",
+        "Records the depth-1 numbered-list form, one plain depth-2 explanation per item, and sentence median/max 35/49 plus list-item median/max 28/40 characters in the writer brief.",
+        "Adds a depth-1 numbered item with exactly one plain depth-2 explanation; each new sentence is at most 35 characters and each new list item at most 28 characters.",
         "Names markdown-sentence-length and the separately built markdown-neighbor-length for verification."
       ]
     },
