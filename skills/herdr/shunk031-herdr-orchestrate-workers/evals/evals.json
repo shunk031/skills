@@ -128,12 +128,12 @@
     },
     {
       "id": 14,
-      "prompt": "You are a Herdr orchestrator. A fresh reviewer returned ACCEPT for worker orch-docs's pull request at head A, and the user approved merging it. The owning worker then merged the base branch into the PR branch without conflicts, so the live head is B, and all required checks pass at B. What do you check before the merge, and what follows from each result? Do not execute commands.",
-      "expected_output": "Compare the pull request's own diff against the base at heads A and B. If it is unchanged, the ACCEPT and the user's approval stay valid and the merge proceeds without a new review or approval request; if it changed, head B needs a fresh review and a new approval.",
+      "prompt": "You are a Herdr orchestrator. A fresh reviewer returned ACCEPT for worker orch-docs's pull request at head A, and the user approved it in GitHub. The owning worker then fixed a CI failure and merged the base branch into the PR branch, so the live head is B, and all required checks pass at B. What do you do before the merge, and what follows from each outcome? Do not execute commands.",
+      "expected_output": "Have a fresh reviewer review head B. On ACCEPT, record head B with it and route the merge to orch-docs without asking the user for a new approval, because the user already approved the pull request and required checks pass. On an actionable REJECT, route the findings to orch-docs and re-review the corrected head.",
       "expectations": [
-        "States that it compares the pull request's own diff at heads A and B.",
-        "States that an unchanged diff keeps the ACCEPT and the user's approval, with no new review or approval request.",
-        "States that a changed diff needs a fresh review of head B and a new approval."
+        "States that a fresh reviewer must review the exact live head B before the merge.",
+        "States that on ACCEPT with passing required checks, the merge is routed to orch-docs without asking the user for a new approval.",
+        "States that an actionable REJECT is routed to orch-docs and the corrected head is re-reviewed, instead of merging."
       ]
     }
   ]
