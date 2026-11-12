@@ -12,19 +12,19 @@ if [[ -n "${REMOTE_HOST:-}" ]]; then
     runner_watch_args+=(--remote-host "$REMOTE_HOST" --remote-port "${REMOTE_PORT:-22}" --remote-state-glob "$REMOTE_STATE_GLOB")
 fi
 
-if ! HERDR_ENV=1 scripts/herdr-worker-stall-watch.sh "${worker_watch_args[@]}" --once; then
+if ! HERDR_ENV=1 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-stall-watch.sh "${worker_watch_args[@]}" --once; then
     printf '%s\n' 'Check the worker watcher output and resolve any alert or startup error before backgrounding.' >&2
     exit 1
 fi
-if ! scripts/herdr-run-failure-watch.sh "${runner_watch_args[@]}" --once; then
+if ! ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-run-failure-watch.sh "${runner_watch_args[@]}" --once; then
     printf '%s\n' 'Check the runner watcher output and resolve any alert or startup error before backgrounding.' >&2
     exit 1
 fi
 
 watch_runtime="$(mktemp -d "${TMPDIR:-/tmp}/herdr-watchers.XXXXXX")"
-HERDR_ENV=1 scripts/herdr-worker-stall-watch.sh "${worker_watch_args[@]}" >"$watch_runtime/workers.log" 2>&1 &
+HERDR_ENV=1 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-stall-watch.sh "${worker_watch_args[@]}" >"$watch_runtime/workers.log" 2>&1 &
 worker_watch_pid=$!
-scripts/herdr-run-failure-watch.sh "${runner_watch_args[@]}" >"$watch_runtime/runners.log" 2>&1 &
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-run-failure-watch.sh "${runner_watch_args[@]}" >"$watch_runtime/runners.log" 2>&1 &
 runner_watch_pid=$!
 if ! kill -0 "$worker_watch_pid" || ! kill -0 "$runner_watch_pid"; then
     kill "$worker_watch_pid" "$runner_watch_pid" 2>/dev/null || true
