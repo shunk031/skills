@@ -161,7 +161,16 @@
       "expected_output": "Writes the handoff file, tells the user the session is ready to be replaced, and relies on an external LLM-free patrol instead of scheduling LLM polling turns.",
       "expectations": [
         "Writes durable state (open decisions, approvals and scope, in-flight work, standing rules) to the handoff file and tells the user the session is ready to be replaced.",
-        "Does not schedule recurring LLM turns to poll; uses an external LLM-free patrol that wakes meta only on new items."
+        "Does not schedule recurring LLM turns to poll; uses an external LLM-free patrol that wakes meta only on new items or on a periodic digest of root state changes."
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "In an offline dry run, do not run commands. Earlier you recorded an item in the user's inbox for worker `meta-docs`, which is opening a pull request, and the user said they would check back later. While you wait for root `orch-b` to return a review verdict, the worker's transcript ends with `DONE meta-docs: opened https://github.com/example/repo/pull/12; CI passed.`, and you verify it in the transcript. What do you do now?",
+      "expected_output": "Tells the user now, in two or three lines of its own words, that the worker finished and the pull request is open with passing CI, without waiting for the user to check back or for `orch-b`'s verdict, and updates the existing inbox item for that task in the same turn.",
+      "expectations": [
+        "Sends the user an unprompted summary of two or three lines in meta's own words now, whether or not a verbatim relay of the report follows.",
+        "Updates the existing inbox item for that task in the same turn as the summary."
       ]
     }
   ]
