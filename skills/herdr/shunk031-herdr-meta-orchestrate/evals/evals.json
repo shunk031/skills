@@ -161,7 +161,7 @@
       "expected_output": "Writes the handoff file, tells the user the session is ready to be replaced, and relies on an external LLM-free patrol instead of scheduling LLM polling turns.",
       "expectations": [
         "Writes durable state (open decisions, approvals and scope, in-flight work, standing rules) to the handoff file and tells the user the session is ready to be replaced.",
-        "Does not schedule recurring LLM turns to poll; uses an external LLM-free patrol that wakes meta only on new items or on a periodic digest of root state changes."
+        "Does not schedule recurring LLM turns to poll; relies on an external LLM-free patrol that queues messages for meta and a background queue wait."
       ]
     },
     {
