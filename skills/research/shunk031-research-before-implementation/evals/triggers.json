@@ -8,6 +8,18 @@
     "should_trigger": true
   },
   {
+    "query": "下期の個人目標を OKR で書いて。チームの目標は goals.md にまとめてある。",
+    "should_trigger": true
+  },
+  {
+    "query": "Design the evaluation for comparing our two retrieval models on the internal question set: pick the metrics, how many seeds to run, and how to decide whether a difference is real.",
+    "should_trigger": true
+  },
+  {
+    "query": "Write a postmortem for last night's outage from the incident timeline in notes/incident.md.",
+    "should_trigger": true
+  },
+  {
     "query": "Check that every weight shard listed in the model's local index file, plus the config and tokenizer files, is present in the downloaded snapshot directory, and list any that are missing.",
     "should_trigger": false
   },
@@ -33,6 +45,18 @@
   },
   {
     "query": "The re-measured numbers are final. Update the figures and the sentences that depend on them in the report, without changing scripts or tests.",
+    "should_trigger": false
+  },
+  {
+    "query": "Fix the misspelling 'recieve' in README.md.",
+    "should_trigger": false
+  },
+  {
+    "query": "Rename the helper load_cfg to load_config across the package without changing behavior, and update its callers.",
+    "should_trigger": false
+  },
+  {
+    "query": "Copy the objectives and key results already written in draft.md into the team's OKR template without changing their wording.",
     "should_trigger": false
   }
 ]
