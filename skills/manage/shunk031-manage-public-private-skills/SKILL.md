@@ -48,7 +48,7 @@ edit in the skill repository worktree
   → chezmoi apply on the machine, which runs skills add/update
 ```
 
-`chezmoi apply` throttles `skills update` to once a day so that a file-watch loop does not fetch on every save. Right after merging, force it:
+`chezmoi apply` throttles `skills update` to once a day so that a file-watch loop does not fetch on every save. Right after merging, ask first as the Before finishing section requires, then force it:
 
 ```bash
 DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply    # or: make skills-update
@@ -60,7 +60,7 @@ DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply    # or: make skills-update
 | `shunk031/skills-private` | Add or remove its entry in `home/dot_config/agents/skills-private.allowlist` in `shunk031/dotfiles-private`                                                                                                                                       |
 | Third-party repository    | Add or remove its selected entry in `install/common/skills.sh` in `shunk031/dotfiles`                                                                                                                                                             |
 
-After merging a public skill change, use `DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply` or `make skills-update` to bypass the daily discovery throttle. Ordinary reconciliation discovers additions within one day and removes names reported by the `skills update` upstream-deletion warning. Keep `SKILLS_RETIRED_NAMES` for renames or deletions that the warning does not expose.
+After merging a public skill change and asking first as the Before finishing section requires, use `DOTFILES_SKILLS_FORCE_UPDATE=1 chezmoi apply` or `make skills-update` to bypass the daily discovery throttle. Ordinary reconciliation discovers additions within one day and removes names reported by the `skills update` upstream-deletion warning. Keep `SKILLS_RETIRED_NAMES` for renames or deletions that the warning does not expose.
 
 **Never write a private skill's name into `shunk031/dotfiles`.** It is a public repository, and the name alone discloses the internal host, service, or process that putting the skill in the private repository was meant to hide. The reconcile script is public and stays public; only the list of private names moves.
 
