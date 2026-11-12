@@ -37,22 +37,26 @@ A published but open PR with DONE reported is still blocked while review or merg
 
 When asked to choose a label, put the literal label on the first line, then explain it.
 
-Before reporting BLOCKED, run the rename and report in one guarded sequence. The normal BLOCKED report is sent only after Herdr returns the requested tab ID and label. On failure, report that the rename was not verified:
+Before reporting BLOCKED, run the rename and report in one guarded sequence. The normal BLOCKED report is sent only after Herdr returns the requested tab ID and label. On failure, report that the rename was not verified. Send either report with the guarded sender that the `shunk031-herdr-orchestrate-workers` skill requires for every send; that skill also says what to do when a send is not delivered. The reason is read from a quoted heredoc so the shell never expands it; `$(cat <<'EOF' …)` is not used because Bash 3.2 fails on an apostrophe in its body:
 
 ```bash
 label="⛔ <next action>"
-report="BLOCKED <worker>: <reason>"
-failure_report="BLOCKED <worker>: tab lookup or rename failed, so the label was not set. <reason>"
+IFS= read -r -d '' reason <<'EOF' || true
+<reason>
+EOF
+reason="${reason%$'\n'}"
+report="BLOCKED <worker>: $reason"
+failure_report="BLOCKED <worker>: tab lookup or rename failed, so the label was not set. $reason"
 rename_result=""
 if tab_id="$(herdr pane current --current | jq -er '.result.pane.tab_id')" &&
     rename_result="$(herdr tab rename "$tab_id" "$label")" &&
     printf '%s\n' "$rename_result" |
     jq -e --arg tab_id "$tab_id" --arg label "$label" \
         '.result.tab | .tab_id == $tab_id and .label == $label' >/dev/null; then
-    herdr agent prompt <orchestrator> "$report"
+    ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <orchestrator> "$report"
 else
     printf 'tab rename not verified: %s\n' "${rename_result:-no response}" >&2
-    herdr agent prompt <orchestrator> "$failure_report"
+    ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <orchestrator> "$failure_report"
     false
 fi
 ```
