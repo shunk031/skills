@@ -35,10 +35,10 @@ herdr pane read <outgoing-pane> --source visible
 
 If a usage limit stopped the outgoing root, the user checks its restatement and Meta checks the remaining suspension conditions. If a condition cannot be verified, Meta keeps the incoming session staged and asks the user what to do.
 
-After verification, Meta records the suspension time. Meta renames the outgoing pane with `herdr agent rename <pane> <root-name>-<engine>`. This keeps worker reports from reaching the parked session. Meta then renames the incoming pane with `herdr agent rename <pane> <root-name>` and activates it. Meta labels root tabs `🤖 Orchestrator · <engine>` and marks parked sessions in the label, following the `shunk031-herdr-tab-status` skill. Meta reports the stable name, engine, active pane/tab, and session ID. Keep the outgoing session and transcript; Meta resumes it only when the role returns. Meta resumes Claude with `claude --resume <session-id>` (or continues it if still live) from the new delta record. To resume Codex, Meta creates a root pane with the two environment options in the Codex root launch instructions below, then runs:
+After verification, Meta records the suspension time. Meta renames the outgoing pane with `herdr agent rename <pane> <root-name>-<engine>`. This keeps worker reports from reaching the parked session. Meta then renames the incoming pane with `herdr agent rename <pane> <root-name>` and activates it. Meta labels root tabs `🤖 Orchestrator · <engine>` and marks parked sessions in the label, following the `shunk031-herdr-tab-status` skill. Meta reports the stable name, engine, active pane/tab, and session ID. Keep the outgoing session and transcript; Meta resumes it only when the role returns. Meta resumes Claude with `claude --resume <session-id>` (or continues it if still live) from the new delta record. To resume Codex, Meta creates a root pane with the two environment options in the Codex root launch instructions below, then runs the Codex root resume line from the launch guidance in your user-level instructions (Launching Herdr workers):
 
 ```bash
-codex --profile flava-dev -m gpt-6.1-sol -c model_reasoning_effort=high resume <session-id>
+codex <launch-flags> resume <session-id>
 ```
 
 If Codex asks whether to resume its paused goal, Meta chooses `Leave paused`; Meta resumes it later only on the user's instruction.
@@ -61,11 +61,11 @@ herdr pane report-metadata <pane> --source inbox --clear-token inbox
 
 ## Codex root operation
 
-Meta creates the root pane with both root-only variables, then starts the root with the model and effort here. `CODEX_ROOT_ORCHESTRATOR=1` enables the dotfiles Stop audit. `PONYTAIL_DEFAULT_MODE=off` makes Ponytail hooks emit nothing for the root; the tested per-launch plugin `-c` override does not work, and the Codex default stays unchanged.
+Meta creates the root pane with both root-only variables, then starts the root with the Codex root hand-off line from the launch guidance in your user-level instructions (Launching Herdr workers). `CODEX_ROOT_ORCHESTRATOR=1` enables the dotfiles Stop audit. `PONYTAIL_DEFAULT_MODE=off` makes Ponytail hooks emit nothing for the root; the tested per-launch plugin `-c` override does not work, and the Codex default stays unchanged.
 
 ```bash
 herdr tab create --workspace <workspace> --cwd <repository> --label "🤖 Orchestrator · Codex handoff" --env CODEX_ROOT_ORCHESTRATOR=1 --env PONYTAIL_DEFAULT_MODE=off --no-focus
-herdr agent start <root-name>-handoff --kind codex --pane <returned-pane-id> -- --profile flava-dev -m gpt-6.1-sol -c model_reasoning_effort=high
+herdr agent start <root-name>-handoff --kind codex --pane <returned-pane-id> -- <launch-flags>
 ```
 
 The `-handoff` name keeps the incoming session staged while the outgoing root retains the stable name. It can read and restate the record, but must not begin task work before Meta verifies suspension.
@@ -76,11 +76,11 @@ Herdr 0.9.5 applies `--env` to the created pane; it does not copy a root pane's 
 test -z "$(printenv CODEX_ROOT_ORCHESTRATOR)" && test -z "$(printenv PONYTAIL_DEFAULT_MODE)"
 ```
 
-If either is set, run `unset CODEX_ROOT_ORCHESTRATOR PONYTAIL_DEFAULT_MODE` in the worker pane and verify again. Leave both unset on Luna workers so Ponytail remains on. This was verified live: a scratch root created with both `--env` options had both variables, and a worker tab created from that root without `--env` had neither.
+If either is set, run `unset CODEX_ROOT_ORCHESTRATOR PONYTAIL_DEFAULT_MODE` in the worker pane and verify again. Leave both unset on workers so Ponytail remains on. This was verified live: a scratch root created with both `--env` options had both variables, and a worker tab created from that root without `--env` had neither.
 
-Do not start in-session subagents: they inherit the root model and are billed at its price. Delegate through Herdr workers using the existing worker skill and the model settings in its launch step (step 4).
+Do not start in-session subagents: they inherit the root model and are billed at its price. Delegate through Herdr workers using the existing worker skill and the launch guidance in your user-level instructions (Launching Herdr workers).
 
-For Codex roots, this rule overrides the worker skill's instruction to run one-shot reviews as in-session subagents; use a Herdr review worker with its investigation and review settings.
+For Codex roots, this rule overrides the worker skill's instruction to run one-shot reviews as in-session subagents; use a Herdr review worker launched as that launch guidance gives for review.
 
 For every user-facing reply, begin with one fresh `date '+%Y-%m-%dT%H:%M:%S%z'` output line. Do not send timer-based interim progress lines.
 
