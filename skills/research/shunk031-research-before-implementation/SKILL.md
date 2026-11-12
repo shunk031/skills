@@ -1,6 +1,6 @@
 ---
 name: shunk031-research-before-implementation
-description: Research current official documentation and representative implementation code before non-trivial work that depends on third-party tools, APIs, platforms, or versioned behavior.
+description: Use when a change, design or experiment depends on how a third-party tool, API, platform, paper or upstream project behaves and local files do not show it, such as matching an upstream script, setting, default or protocol, or relying on what another tool does with your output. Reads the official docs, paper or upstream code first instead of guessing or asking the user. Not for local refactors, wording fixes, or sources already verified.
 ---
 
 > [!NOTE]
