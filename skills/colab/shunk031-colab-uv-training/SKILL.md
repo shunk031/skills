@@ -12,7 +12,7 @@ Complete the requested GPU job, preserve its results outside the runtime, and re
 
 Use the repository's existing training command, checkpoint format, and approved artifact destination. The bundled wrapper supports Hugging Face Hub storage. Reuse a repository-specific job command or storage integration inside the launched job when it already provides the needed persistence and teardown.
 
-Start GPU work only with `scripts/colab-gpu-run`. Stage job data in approved durable storage before allocation and declare every downloaded input as `--hub-input NAME=URI`; the launcher checks the Bash job script and local control files, starts a detached watchdog before allocation, uploads only the script and optional restricted token, and starts the bundled wrapper. Run the launcher as a managed background process with logged output so a tool timeout cannot kill `colab exec`; monitor its log or durable Hub output. The watchdog applies to GPU sessions; CPU-only CLI flows remain direct because this guard targets idle GPU allocation.
+Start GPU work only with `scripts/colab-gpu-run`. Stage job data in approved durable storage before allocation and declare every downloaded input as `--hub-input NAME=URI`. The launcher checks the Bash job script and local control files, then starts a detached watchdog before allocation. It uploads only the bundled wrapper, job script, and optional restricted token, then starts the bundled wrapper. Run the launcher as a managed background process with logged output so a tool timeout cannot kill `colab exec`; monitor its log or durable Hub output. The watchdog applies to GPU sessions; CPU-only CLI flows remain direct because this guard targets idle GPU allocation.
 
 ## Before allocating a runtime
 

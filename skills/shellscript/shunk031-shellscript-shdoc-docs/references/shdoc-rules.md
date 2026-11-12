@@ -5,7 +5,7 @@ Use this reference when the target file needs `shdoc`-compatible comments.
 ## Canonical Sources
 
 - Use the official `shdoc` README as the source of truth for supported tags and formatting.
-- Use `install/common/mise.sh` as the local style baseline in this repository.
+- Use [`install/common/mise.sh` in shunk031/dotfiles](https://github.com/shunk031/dotfiles/blob/main/install/common/mise.sh) as the local style baseline in that repository.
 - Prefer `@file` over `@name` here because the repo example already uses `@file`.
 
 ## Minimal File Header
