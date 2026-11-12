@@ -37,6 +37,15 @@
         "The response says to check the default values of arguments that the caller is not passing, or otherwise to confirm in code what enables the capability.",
         "The response defers further measurement until those sources have been read."
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "Draft my individual OKRs for the next half. The team's goals are: cut p95 search latency in half, launch the new onboarding flow, and reduce on-call pages per week. Write them to okrs.md.",
+      "expected_output": "Read an authoritative guide to writing OKRs before drafting, then write objectives and measurable key results that follow it, naming the sources consulted.",
+      "expectations": [
+        "The final response names an OKR guide or source that was read before drafting.",
+        "okrs.md contains objectives with measurable key results that build on the team goals given in the prompt."
+      ]
     }
   ]
 }
