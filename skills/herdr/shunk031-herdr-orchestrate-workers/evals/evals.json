@@ -135,6 +135,15 @@
         "States that on ACCEPT with passing required checks, the merge is routed to orch-docs without asking the user for a new approval.",
         "States that an actionable REJECT is routed to orch-docs and the corrected head is re-reviewed, instead of merging."
       ]
+    },
+    {
+      "id": 15,
+      "prompt": "In an offline dry run, do not run commands. You are root orchestrator `orch` on a saved remote machine, and a meta-orchestrator named `meta` oversees you from another machine, so `herdr agent get meta` on your server returns `agent_not_found`. Your worker `orch-docs` sends `STATUS orch-docs: 14:20 draft finished, starting review; ETA 15:00`. The user has not asked for progress. What do you do with this report?",
+      "expected_output": "Forwards the change to meta at once as one line by publishing it on its own pane's inbox token, because meta is not on its server, without batching it or waiting for the user to ask.",
+      "expectations": [
+        "Forwards the stage change and ETA to meta now as one short line, not batched with later reports.",
+        "Uses its pane's inbox token rather than prompting meta directly, because meta is not on its server."
+      ]
     }
   ]
 }

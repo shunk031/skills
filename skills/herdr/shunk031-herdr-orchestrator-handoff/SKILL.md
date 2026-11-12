@@ -45,6 +45,20 @@ If Codex asks whether to resume its paused goal, Meta chooses `Leave paused`; Me
 
 If Codex or the Gateway is unavailable, the Codex root stops. Meta notices through the patrol and asks the user whether to return the role to Claude; Meta does not switch engines without that answer.
 
+## Reach meta through the inbox token
+
+A Codex root routes questions through meta. When a concise question is ready for the user, publish a summary on the root pane's inbox token:
+
+```bash
+herdr pane report-metadata <pane> --source inbox --token 'inbox=<summary>'
+```
+
+The existing patrol relays it to meta. Any root, Codex or Claude, that cannot prompt meta directly also publishes there the progress lines it forwards under the shunk031-herdr-orchestrate-workers skill. The token holds one value: keep every unanswered question or goal request in it and replace only its trailing status part, as in `inbox=<pending requests>; STATUS <root>: <task> <change>`. Keep the status part until a later status replaces it or a message from meta shows that meta has seen it; only then drop a status part whose task is done or dropped. Once an answer is recorded in the ledger or a status part is dropped, rewrite the token with what is still pending, and clear it when nothing remains:
+
+```bash
+herdr pane report-metadata <pane> --source inbox --clear-token inbox
+```
+
 ## Codex root operation
 
 Meta creates the root pane with both root-only variables, then starts the root with the model and effort here. `CODEX_ROOT_ORCHESTRATOR=1` enables the dotfiles Stop audit. `PONYTAIL_DEFAULT_MODE=off` makes Ponytail hooks emit nothing for the root; the tested per-launch plugin `-c` override does not work, and the Codex default stays unchanged.
@@ -69,18 +83,6 @@ Do not start in-session subagents: they inherit the root model and are billed at
 For Codex roots, this rule overrides the worker skill's instruction to run one-shot reviews as in-session subagents; use a Herdr review worker with its investigation and review settings.
 
 For every user-facing reply, begin with one fresh `date '+%Y-%m-%dT%H:%M:%S%z'` output line. Do not send timer-based interim progress lines.
-
-Route questions through meta. When a concise question is ready for the user, publish a summary on the root pane's inbox token:
-
-```bash
-herdr pane report-metadata <pane> --source inbox --token 'inbox=<summary>'
-```
-
-The existing patrol relays it to meta. Once the answer is recorded in the ledger, clear the token:
-
-```bash
-herdr pane report-metadata <pane> --source inbox --clear-token inbox
-```
 
 An incoming Codex root starts with the exact goal text in its handoff record and no active Codex goal. While waiting on workers, keep its turn blocked on foreground lifecycle waits such as `herdr agent wait <worker-name>`. If no useful work remains, end the turn only when no goal is active; worker report prompts and observer nudges can wake it. If an active goal must pause for waiting, ask Meta through the inbox flow above and keep the turn blocked until Meta confirms. Do not create an active goal just to wait.
 
