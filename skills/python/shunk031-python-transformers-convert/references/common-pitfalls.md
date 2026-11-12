@@ -119,21 +119,21 @@ new_out = new_model(preprocessed)  # Same tensor
 
 **Solution**:
 
-- `post_process_semantic_segmentation()` expects `target_sizes` as `(width, height)`
-- PIL `Image.size` returns `(width, height)` ✓
+- `post_process_semantic_segmentation()` expects `target_sizes` as `(height, width)`
+- PIL `Image.size` returns `(width, height)`; reverse it for `target_sizes`
 - PIL `Image.width` and `Image.height` properties exist separately
 
 **Correct usage**:
 
 ```python
 # Correct
-target_sizes = [(img.width, img.height) for img in images]
+target_sizes = [(img.height, img.width) for img in images]
 # or
-w, h = img.size
-target_sizes = [(w, h)]
+width, height = img.size
+target_sizes = [(height, width)]
 
 # Wrong - causes width/height swap
-target_sizes = [(img.height, img.width)]
+target_sizes = [(img.width, img.height)]
 ```
 
 ## 9. Auto\* Class Registration
