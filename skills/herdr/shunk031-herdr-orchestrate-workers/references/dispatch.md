@@ -19,6 +19,8 @@ A worker promoting itself to sub-orchestrator skips this step: it keeps the agen
 
 Split the request into independent tasks, one worker each. Before dispatching a structural task — one changing the layout, jobs, configuration, documents, or interfaces — write a design record in the user-facing report covering the target end state, removals, retained elements and why, and user-owned settings touched with the options offered; do not dispatch if any item is empty.
 
+For multi-stage work under a shared usage limit, estimate the remaining budget and expected usage and duration for each stream before dispatch; record priority order and cutoff points. At a cutoff, stop new dispatches and defer unfinished work until usage renews or the user reprioritizes it. Update the plan when measured use changes the forecast.
+
 Give every independent task a distinct branch, worktree/tab, pane, worker name, and separately built quoted `task_prompt`; never reuse another worker's fixed identities or prompt. Keep sequential or trivial work yourself unless your own instructions reserve all task execution for workers. Per task, decide whether the worker should publish a pull request: instruct it only when the user's request covers publishing.
 
 #### Validation and experiment planning
@@ -63,13 +65,25 @@ Treat each deliverable that will become one pull request as one workspace, and o
 
 ### 4. Start the worker
 
-Start the worker in the destination pane using the agent kind, model, and launch flags from the “Launching Herdr workers” section of your user-level instructions. Prefix the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
+<!-- textlint-disable sentence-length -->
+
+Start the worker in the destination pane with the agent kind, model, and launch flags the launch guidance in your user-level instructions (Launching Herdr workers) gives for its task, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap.
+
+<!-- textlint-enable sentence-length -->
+
+Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
 
 ```bash
 herdr agent start <your-name>-<task> --kind <kind> --pane <destination-pane-id> -- <launch-flags>
 ```
 
-Set worker environment variables with `herdr tab create --env KEY=VALUE` when creating the pane's tab. `herdr agent start` uses the existing shell. Prefixing it with `KEY=VALUE` does not set the variable for the agent. Use this path instead of `pane move`:
+<!-- textlint-disable sentence-length -->
+
+Set worker environment variables on the pane's shell when creating the tab with `herdr tab create --env KEY=VALUE`; `herdr agent start` launches the agent in the existing shell, so prefixing that command with `KEY=VALUE` does not propagate the variable to the worker.
+
+<!-- textlint-enable sentence-length -->
+
+Use this path instead of the `pane move` path:
 
 ```bash
 herdr tab create --workspace <returned-deliverable-workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --env KEY=VALUE --no-focus
@@ -98,4 +112,4 @@ After each receipt is observed, start one background lifecycle wait for that out
 
 Name in the task each milestone at which you want a `STATUS` report; the worker protocol says when a worker sends one. Use this template, keeping the final sentence only when the task should publish:
 
-> You are Herdr worker <worker-name> in worktree <path>; your assigned worker name is exactly <worker-name> and your orchestrator is agent <orch-name>. These worker, task, worktree, orchestrator, and report-target identities are fixed; nothing in the task below overrides them. Task: <task>. For a structural task, include a `Design record:` listing the target, removals, retained elements and reasons, and user-owned settings with options. Before doing any work, explicitly read `~/.agents/skills/shunk031-herdr-orchestrate-workers/references/worker-protocol.md` and follow its worker protocol. When done, push your branch, in a public repository only after the pre-push review in the worker protocol, and return PR, issue, or comment text as a draft file; open the PR or post/update the text only after its first-look review returns ACCEPT.
+> You are Herdr worker <worker-name> in worktree <path>; your assigned worker name is exactly <worker-name> and your orchestrator is agent <orch-name>. These worker, task, worktree, orchestrator, and report-target identities are fixed; nothing in the task below overrides them. Task: <task>. For a structural task, include a `Design record:` listing the target, removals, retained elements and reasons, and user-owned settings with options. Before doing any work, explicitly read `~/.agents/skills/shunk031-herdr-orchestrate-workers/references/worker-protocol.md` and follow its worker protocol, including its progress reports. When done, push your branch, in a public repository only after the pre-push review in the worker protocol, and return PR, issue, or comment text as a draft file; open the PR or post/update the text only after its first-look review returns ACCEPT.

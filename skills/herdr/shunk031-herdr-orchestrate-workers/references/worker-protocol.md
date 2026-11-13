@@ -2,6 +2,8 @@
 
 Before your first Herdr command, read the herdr skill and [the send rule](send-rule.md).
 
+Every prompt send in this skill follows the send rule; read it before your first send.
+
 ## Tab label
 
 The background Herdr tab-title plugin updates your tab from agent hooks and lifecycle events. Do not run tab rename commands for routine progress.
@@ -18,8 +20,18 @@ If your dispatch says your report target reads the meta patrol queue, send every
 
 Send `STATUS <worker-name>: <HH:MM> <current stage>; ETA <time>` to <orch-name> at each milestone: task receipt, plan settled, each stage started or finished, each milestone your dispatch names, and any ETA change. Report a blocker with the `BLOCKED` form above. If about 15 minutes of work pass without a milestone, send one STATUS with the current stage and ETA anyway. Keep each STATUS to one or two lines, take the time from `date +%H:%M`, and send it through the same guarded helper, or the queue command above, without waiting for a reply. Do not retry an undelivered STATUS; the next one replaces it, and the delivery deadline above does not apply to it.
 
+<!-- textlint-disable sentence-length -->
+
+When a meta-orchestrator oversees you, forward each worker STATUS or BLOCKED that changes a task's state or ETA to meta at once in one line, `STATUS <your-name>: <task> <new state or ETA>`, without batching or waiting to be asked; forward a DONE once you have verified it under Collect results. Use the agent name meta gave when it first contacted you, and record it in your ledger. If `herdr agent get <meta-name>` finds meta on your server, append the line with `herdr-meta-patrol-queue add --from <your-name> "$line"`, which meta waits on, and never type it into meta's pane. Otherwise, or if that command fails, publish it on your pane's inbox token as the shunk031-herdr-orchestrator-handoff skill describes.
+
+<!-- textlint-enable sentence-length -->
+
 Keep each pull request's core code change at or under 400 lines: additions plus deletions from `git diff --shortstat` against the base, excluding tests, documentation, lock files, and generated files. If the design you are about to implement is expected to exceed this, or the diff exceeds it before push, stop without pushing and send `BLOCKED <worker-name>:` with a split plan or a simpler design.
 
 ## Become a sub-orchestrator
 
-If your task splits into large independent parts, become a sub-orchestrator: keep your existing agent name, tab, parent orchestrator, and report target; read all of SKILL.md and follow it as an orchestrator, using its steps 2-5 to create and dispatch each child with distinct identities and a separately built prompt, verify each child with the SKILL.md step-5 receipt contract, then consolidate child reports and report only to <orch-name>. Sub-workers report to you using the sub-orchestrator's own worker name as the report target; for example, if parent `orch`'s worker is `orch-api-migration`, sub-workers report to `orch-api-migration`, never directly to `orch`.
+<!-- textlint-disable sentence-length -->
+
+If your task splits into large independent parts, become a sub-orchestrator: keep your existing agent name, tab, parent orchestrator, and report target; read all of SKILL.md and follow it as an orchestrator, using its steps 2-5 in [references/dispatch.md](dispatch.md) to create and dispatch each child with distinct identities and a separately built prompt, verify each child with [the “Dispatch and receipt” section in references/dispatch.md](dispatch.md#dispatch-and-receipt), then consolidate child reports and report only to <orch-name>. Sub-workers report to you using the sub-orchestrator's own worker name as the report target; for example, if parent `orch`'s worker is `orch-api-migration`, sub-workers report to `orch-api-migration`, never directly to `orch`.
+
+<!-- textlint-enable sentence-length -->

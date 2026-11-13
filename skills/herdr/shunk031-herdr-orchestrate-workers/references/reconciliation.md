@@ -16,9 +16,13 @@ Process queued worker reports during the same user turn; do not defer them until
 
 A confirmed-working STATUS ends reconciliation: send nothing; leave the worker's lifecycle wait running and collect its result from the settled state, deliverable, and transcript. Do not wait for a DONE or BLOCKED report, and do not poll.
 
+A progress STATUS needs no reply to the worker; like a confirmed-working STATUS under Collect results, it ends reconciliation.
+
 ## Durable context and replacing worker sessions
 
 An orchestrator session is replaceable only as a last resort: it accumulates user decisions and cross-stream judgment, so write down durable handoff context, including workspace names, research memos, PR links, and a durable ledger file as the source of truth with one row per in-progress task you own (task, owner, state, next action, User waiting). Keep unanswered user blockers in the `User waiting` column until the user answers.
+
+Before asking for a decision again, check the ledger for an explicit answer and reuse it unless the scope changed or the answer is ambiguous.
 
 Update each row and its finding whenever the task, owner, state, or next action changes; on every reconciliation or patrol, compare ledger rows with findings in both directions, create a finding for each row missing one, update mismatched findings, restore a ledger row for any finding whose owned task is still in progress, and close findings only for verified done or dropped tasks, following the task-and-question-tracking reference.
 

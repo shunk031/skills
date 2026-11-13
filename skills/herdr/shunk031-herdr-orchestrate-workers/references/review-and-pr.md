@@ -6,6 +6,8 @@ Before handing any reader-facing artifact (a report, research note, or published
 
 Use a FRESH reviewer with no prior involvement in the artifact — its empty context is what makes it a genuine first-time reader — and have it judge whether the opening of reports, research notes, published HTML, pull request bodies, and issue bodies conveys the question, method, result, and consequence in plain language, and whether every sentence in all of that text, including comments, gives its reader information they need. Route a REJECT back to the owning worker like any review finding. The user must never be the first reviewer to see the artifact.
 
+For a document written in someone's name, the first-look reviewer checks every line: would the requester understand it at a glance, and recognize it as their own work? Check each item in `shunk031-writing-gemini-japanese`'s checklist and report findings by line; similarity to examples alone is insufficient. Before handoff, the orchestrator reads every line against the same two questions, regardless of reviewer ACCEPT.
+
 This first-look review uses the same independent-review mechanism as DONE verification below.
 
 ### Run one-shot reviews
