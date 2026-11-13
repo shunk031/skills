@@ -63,20 +63,17 @@ Treat each deliverable that will become one pull request as one workspace, and o
 
 ### 4. Start the worker
 
-Start Codex in the destination pane, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
+Start the worker in the destination pane using the agent kind, model, and launch flags from the “Launching Herdr workers” section of your user-level instructions. Prefix the worker name with your own name so names stay unique across nesting while respecting the 32-character cap. Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
 
 ```bash
-# Implementation and mechanical work
-herdr agent start <your-name>-<task> --kind codex --pane <destination-pane-id> -- -m gpt-6-luna -c model_reasoning_effort=xhigh
-# Investigation and review
-herdr agent start <your-name>-<task> --kind codex --pane <destination-pane-id> -- -m gpt-6.1-sol -c model_reasoning_effort=medium
+herdr agent start <your-name>-<task> --kind <kind> --pane <destination-pane-id> -- <launch-flags>
 ```
 
-Set worker environment variables on the pane's shell when creating the tab with `herdr tab create --env KEY=VALUE`; `herdr agent start` launches Codex in the existing shell, so prefixing that command with `KEY=VALUE` does not propagate the variable to the worker. Use this path instead of the `pane move` path:
+Set worker environment variables with `herdr tab create --env KEY=VALUE` when creating the pane's tab. `herdr agent start` uses the existing shell. Prefixing it with `KEY=VALUE` does not set the variable for the agent. Use this path instead of `pane move`:
 
 ```bash
 herdr tab create --workspace <returned-deliverable-workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --env KEY=VALUE --no-focus
-herdr agent start <your-name>-<task> --kind codex --pane <returned-root-pane-id> -- -m gpt-6-luna -c model_reasoning_effort=xhigh
+herdr agent start <your-name>-<task> --kind <kind> --pane <returned-root-pane-id> -- <launch-flags>
 ```
 
 #### Verify startup and trust prompts
