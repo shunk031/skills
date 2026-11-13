@@ -29,11 +29,11 @@ Read each step's linked reference before performing it.
 
 - **Plan and identify tasks:** [dispatch](references/dispatch.md#plan-and-identity) — establish the orchestrator identity, design record, and independent owners.
 - **Create workspaces and launch:** [dispatch](references/dispatch.md#workspace-and-worker-startup) — create or reopen a deliverable workspace, start a named worker, and handle startup trust dialogs.
-- **Dispatch and confirm receipt:** [dispatch](references/dispatch.md#dispatch-and-receipt) — guarded send, newer `state_change_seq`, readable receipt, and lifecycle wait.
+- **Dispatch and confirm receipt:** [dispatch](references/dispatch.md#dispatch-and-receipt) — guarded send, readable receipt, recorded direct dispatch, and lifecycle wait.
 - **Collect and reconcile:** [reconciliation](references/reconciliation.md#collect-and-reconcile) — lifecycle state, transcripts, deliverables, missing reports, and worker recovery.
 - **Verify and route:** [review and PR lifecycle](references/review-and-pr.md) — independent DONE and first-look review, REJECT handling, PR head SHA, and worker-owned merge.
 - **Report:** [reconciliation](references/reconciliation.md#user-reporting-and-decisions) and [task/question tracking](references/task-and-question-tracking.md).
-- **Clean up:** [cleanup](references/cleanup.md) — close collected panes and safely remove merged-PR worktrees/branches.
+- **Clean up:** [cleanup](references/cleanup.md) — close collected panes, preview and close eligible tabs with the helper, and safely remove merged-PR worktrees/branches.
 
 ## Special cases
 
