@@ -48,7 +48,7 @@ for command in herdr jq awk; do
 done
 
 if [[ "$mode" == --limit-hold ]]; then
-    for command in perl sed grep head tr; do
+    for command in perl sed grep head tail tr; do
         command -v "$command" > /dev/null || {
             printf 'patrol: required command is missing: %s\n' "$command" >&2
             exit 2
@@ -148,7 +148,7 @@ function reset_time_from_signal() {
     local signal match reset reset_pattern
     signal="$1"
     reset_pattern='resets?[[:space:]]+(at[[:space:]]+)?((mon|tue|wed|thu|fri|sat|sun)[a-z]*[[:space:],]+)?([[:alpha:]]{3,9}[[:space:]]+[0-9]{1,2}([[:space:]]+at[[:space:]]+[0-9]{1,2}(:[0-9]{2})?[[:space:]]*([ap]m)?)?|[0-9]{1,2}(:[0-9]{2})?[[:space:]]*([ap]m)?)'
-    match="$(LC_ALL=C grep -Eio "$reset_pattern" <<< "$signal" | head -n 1)" || match=""
+    match="$(LC_ALL=C grep -Eio "$reset_pattern" <<< "$signal" | tail -n 1)" || match=""
     reset="$(sed -E 's/^[Rr]esets?[[:space:]]+([Aa]t[[:space:]]+)?//' <<< "$match" | sed -E 's/[[:space:]]+$//' | tr -d '\r')"
     [[ -n "$reset" ]] || reset='the displayed reset time'
     printf '%s\n' "$reset"
@@ -302,16 +302,13 @@ function run_meta_limit_hold() {
     suppressed_resets="$(jq -cn --argjson previous "$suppressed_resets" --argjson observed "$observed_resets" \
         '[$previous[] as $reset | select(($observed | index($reset)) != null) | $reset] | unique')"
 
-    if [[ "$candidate_resets" != "[]" ]]; then
+    if [[ -n "$banner_reset" || -n "$inbox_reset" ]]; then
         limit_active=1
-        reset="$(jq -rn --argjson candidates "$candidate_resets" --argjson suppressed "$suppressed_resets" \
-            --arg active "$episode_active" --arg previous "$episode_reset" '
-            if $active == "true" then
-                ([ $candidates[] | select(. != $previous) ] | first) // (if ($candidates | index($previous)) != null then $previous else ($candidates[0] // "") end)
-            else
-                ([ $candidates[] as $candidate | select(($suppressed | index($candidate)) == null) | $candidate ] | first) // ($candidates[0] // "")
-            end
-        ')"
+        if [[ -n "$banner_reset" ]]; then
+            reset="$banner_reset"
+        else
+            reset="$inbox_reset"
+        fi
     fi
 
     if ((limit_active == 0)); then
@@ -360,7 +357,7 @@ function run_meta_limit_hold() {
             printf 'patrol: guarded prompt sender is unavailable for %s\n' "$worker" >&2
             continue
         fi
-        message="Meta is usage-limited until ${reset}. Please hold periodic STATUS updates while waiting. For this exact ready-for-review HEAD, use the authorized one-shot Codex route in the worker protocol: review it independently, in a fresh read-only context, without further delegation, using the DONE verification checklist. Immediately queue the verdict, exact HEAD, and source as Codex review during meta's limit. Meta will re-check the exact HEAD when it reads its backlog after recovery, before any merge that needs user approval."
+        message="Meta is usage-limited until ${reset}. Please hold periodic STATUS updates while waiting. For this exact ready-for-review HEAD, use the authorized one-shot Codex route in the worker protocol: review it independently, in a fresh read-only context, without further delegation, using the DONE verification checklist. Immediately queue the verdict, exact HEAD, and source as Codex review during meta usage limit. Meta will re-check the exact HEAD when it reads its backlog after recovery, before any merge that needs user approval."
         run_with_timeout "$call_timeout" env HERDR_ENV=1 "$prompt_guard" "$worker" "$message" &
         prompt_pids[$prompt_count]="$!"
         prompt_workers[$prompt_count]="$worker"

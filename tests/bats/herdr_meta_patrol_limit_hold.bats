@@ -74,7 +74,7 @@ function line_count() {
     grep -Fq 'until 9pm' "${NOTIFICATION_LOG}"
     grep -Fq 'hold periodic STATUS' "${PROMPT_LOG}"
     grep -Fq 'exact HEAD' "${PROMPT_LOG}"
-    grep -Fq 'Codex review during meta' "${PROMPT_LOG}"
+    grep -Fq 'Codex review during meta usage limit' "${PROMPT_LOG}"
 
     run bash "${PATROL_SCRIPT_PATH}" --limit-hold
     [ "${status}" -eq 0 ]
@@ -131,6 +131,45 @@ function line_count() {
     [ "${status}" -eq 0 ]
     [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
     [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
+    grep -Fq 'until 10pm' "${NOTIFICATION_LOG}"
+}
+
+@test "the latest banner reset wins over a different inbox reset for the whole episode" {
+    write_agents idle '"! Limit: resets 10pm"' done
+    write_ready_review_status
+    printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
+
+    for _ in 1 2 3 4; do
+        run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+        [ "${status}" -eq 0 ]
+    done
+
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
+    grep -Fq 'until 9pm' "${NOTIFICATION_LOG}"
+    grep -Fq 'Codex review during meta usage limit' "${PROMPT_LOG}"
+}
+
+@test "the last matching banner line supplies the reset for a changed episode" {
+    write_agents idle null done
+    write_ready_review_status
+    printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
+
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+
+    [ "${status}" -eq 0 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
+
+    {
+        printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm"
+        printf '%s\n' "⎿ You've hit your weekly limit · resets 10pm"
+    } > "${FAKE_PANE}"
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+
+    [ "${status}" -eq 0 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 2 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 2 ]
     grep -Fq 'until 10pm' "${NOTIFICATION_LOG}"
 }
 
