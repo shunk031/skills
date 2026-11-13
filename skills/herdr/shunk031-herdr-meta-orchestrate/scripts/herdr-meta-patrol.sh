@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 
 # @file skills/herdr/shunk031-herdr-meta-orchestrate/scripts/herdr-meta-patrol.sh
-# @brief Report agent attention and occupied root input lines across enabled Herdr servers.
+# @brief Patrol Herdr agents and handle meta's usage-limit hold.
 # @description
-#   Read-only patrol for the local server and each enabled saved machine.
+#   The default invocation is a read-only patrol for the local server and each
+#   enabled saved machine. `--limit-hold` is the external LLM-free patrol's
+#   stateful handler for meta usage limits: it sends one user notification per
+#   limit episode and guarded instructions to workers waiting on meta's review.
 #   HERDR_PATROL_ROOTS_JSON supplies verified root agents as objects with
 #   machine: null for local or a saved machine label, and an agent name.
-# @stdout One compact JSON object per finding. No output means no findings.
+# @stdout One compact JSON object per finding during the default scan; the limit handler is silent.
 # @exitcode 2 when prerequisites or the root configuration are invalid.
 # @example
 #   HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"}]' herdr-meta-patrol.sh
+#   herdr-meta-patrol.sh --limit-hold
+# @option HERDR_META_PATROL_META Meta agent name (default `meta`).
+# @option HERDR_META_PATROL_STATE_DIR Shared patrol and queue state directory.
+# @option HERDR_META_PATROL_PROMPT_GUARD Guarded Herdr prompt sender path.
 
 set -Eeuo pipefail
 
@@ -18,10 +25,17 @@ if [[ "${HERDR_ENV:-}" != 1 ]]; then
     exit 2
 fi
 
-if (($# != 0)); then
-    printf '%s\n' 'usage: herdr-meta-patrol.sh (configure roots with HERDR_PATROL_ROOTS_JSON)' >&2
+mode="${1:-scan}"
+if [[ "$mode" == scan && $# -ne 0 ]] || [[ "$mode" == --limit-hold && $# -ne 1 ]] ||
+    [[ "$mode" != scan && "$mode" != --limit-hold ]]; then
+    printf '%s\n' 'usage: herdr-meta-patrol.sh [--limit-hold] (configure scan roots with HERDR_PATROL_ROOTS_JSON)' >&2
     exit 2
 fi
+
+meta_name="${HERDR_META_PATROL_META:-meta}"
+state_dir="${HERDR_META_PATROL_STATE_DIR:-${HOME:-}/.local/state/herdr-meta-patrol}"
+prompt_guard="${HERDR_META_PATROL_PROMPT_GUARD:-${HOME:-}/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh}"
+episode_file="${state_dir}/meta-limit-episode.json"
 
 for command in herdr jq awk; do
     command -v "$command" > /dev/null || {
@@ -30,8 +44,17 @@ for command in herdr jq awk; do
     }
 done
 
+if [[ "$mode" == --limit-hold ]]; then
+    for command in perl sed grep head tr; do
+        command -v "$command" > /dev/null || {
+            printf 'patrol: required command is missing: %s\n' "$command" >&2
+            exit 2
+        }
+    done
+fi
+
 roots_json="${HERDR_PATROL_ROOTS_JSON:-[]}"
-if ! jq -e '
+if [[ "$mode" == scan ]] && ! jq -e '
     type == "array" and all(.[];
         (.agent | type == "string" and test("^[a-z][a-z0-9_-]{0,31}$")) and
         (.machine | type == "null" or
@@ -68,6 +91,167 @@ function emit_root_finding() {
     [[ -n "$label" ]] || label=local
     jq -cn --arg kind "$kind" --arg machine "$label" --arg agent "$agent" \
         '{kind:$kind,machine:$machine,agent:$agent}'
+}
+
+# @description Extract the reset clock token from a limit signal.
+# @arg $1 string Limit signal text.
+function reset_time_from_signal() {
+    local signal match reset
+    signal="$1"
+    match="$(LC_ALL=C grep -Eio 'resets?[[:space:]]+(at[[:space:]]+)?((mon|tue|wed|thu|fri|sat|sun)(day)?[[:space:]]+)?[0-9]{1,2}(:[0-9]{2})?[[:space:]]*([ap]m)?' <<< "$signal" | head -n 1)" || match=""
+    reset="$(sed -E 's/^[Rr]esets?[[:space:]]+([Aa]t[[:space:]]+)?//' <<< "$match" | sed -E 's/[[:space:]]+$//' | tr -d '\r')"
+    [[ -n "$reset" ]] || reset='the displayed reset time'
+    printf '%s\n' "$reset"
+}
+
+# @description Return the latest STATUS senders whose text says they await meta review.
+# @stdout One meta-prefixed worker name per line.
+function waiting_review_workers() {
+    local queue_file="${state_dir}/queue.jsonl"
+    [[ -r "$queue_file" ]] || return 0
+    jq -Rrs --arg prefix "${meta_name}-" '
+        split("\n")
+        | map(try fromjson catch null)
+        | map(select(type == "object"))
+        | sort_by(.seq // 0)
+        | reduce .[] as $record ({};
+            if (($record.from // "") | startswith($prefix)) and
+                (($record.text // "") | startswith("STATUS "))
+            then .[$record.from] = $record.text
+            else .
+            end
+        )
+        | to_entries[]
+        | select(.value | ascii_downcase | test("(waiting|awaiting).{0,80}meta.{0,24}review|(waiting|awaiting).{0,80}review.{0,24}meta|review.{0,64}meta.{0,32}(pending|waiting)"))
+        | .key
+    ' "$queue_file"
+}
+
+# @description Save the active limit episode atomically.
+# @arg $1 string Reset time displayed by the limit signal.
+# @arg $2 boolean Whether the user notification has been sent.
+# @arg $3 JSON Array of workers already notified in this episode.
+function write_limit_episode() {
+    local reset="$1" notification_sent="$2" workers="$3" temporary
+    temporary="${episode_file}.$$"
+    jq -cn --arg reset "$reset" --argjson notification_sent "$notification_sent" --argjson workers "$workers" \
+        '{reset:$reset,notification_sent:$notification_sent,workers_notified:$workers}' > "$temporary" &&
+        mv "$temporary" "$episode_file"
+}
+
+# @description Detect and handle a local meta usage-limit episode.
+function run_meta_limit_hold() {
+    local agents_json meta_agent meta_status pane_id inbox_text pane_text pane_read_ok
+    local limit_active reset inbox_match banner_text waiters worker worker_agent worker_status
+    local notification_sent workers_notified message
+
+    if [[ "${HERDR_META_PATROL_LIMIT_LOCKED:-}" != 1 ]]; then
+        mkdir -p "$state_dir"
+        HERDR_META_PATROL_LIMIT_LOCKED=1 perl -MFcntl=:flock -e '
+            my $path = shift;
+            open my $lock, ">>", $path or die "limit lock: $!\n";
+            flock($lock, LOCK_EX) or die "limit lock: $!\n";
+            system @ARGV;
+            my $status = $?;
+            die "limit handler start: $!\n" if $status == -1;
+            exit($status & 127 ? 128 + ($status & 127) : $status >> 8);
+        ' "${state_dir}/limit-hold.lock" "$0" --limit-hold
+        return $?
+    fi
+
+    agents_json="$(herdr agent list 2> /dev/null)" || {
+        printf '%s\n' 'patrol: unable to read local agents; limit episode state was kept' >&2
+        return 0
+    }
+    if ! jq -e '.result.agents | type == "array"' <<< "$agents_json" > /dev/null 2>&1; then
+        printf '%s\n' 'patrol: local agent list was unreadable; limit episode state was kept' >&2
+        return 0
+    fi
+
+    meta_agent="$(jq -c --arg name "$meta_name" '[.result.agents[] | select(.name == $name)] | first // empty' <<< "$agents_json")"
+    [[ -n "$meta_agent" ]] || return 0
+
+    meta_status="$(jq -r '.agent_status // empty' <<< "$meta_agent")"
+    pane_id="$(jq -r '.pane_id // empty' <<< "$meta_agent")"
+    inbox_text="$(jq -r '
+        .tokens.inbox as $inbox
+        | if $inbox == null then ""
+          elif ($inbox | type) == "string" then $inbox
+          elif ($inbox | type) == "object" then ($inbox.text // $inbox.message // "")
+          elif ($inbox | type) == "array" then
+              [$inbox[]? | if type == "string" then . elif type == "object" then (.text // .message // empty) else empty end] | join("\n")
+          else ""
+          end
+    ' <<< "$meta_agent")"
+
+    pane_text=""
+    pane_read_ok=0
+    if [[ -n "$pane_id" ]] && pane_text="$(herdr pane read "$pane_id" --source visible --format text 2> /dev/null)"; then
+        pane_read_ok=1
+    fi
+
+    limit_active=0
+    reset=""
+    inbox_match="$(LC_ALL=C grep -Eio '^![[:space:]]*Limit:[[:space:]]*resets?[[:space:]]+.*' <<< "$inbox_text" | head -n 1)" || inbox_match=""
+    if [[ -n "$inbox_match" ]]; then
+        limit_active=1
+        reset="$(reset_time_from_signal "$inbox_match")"
+    elif ((pane_read_ok)); then
+        banner_text="$(tr '\r\n' '  ' <<< "$pane_text")"
+        if LC_ALL=C grep -Eiq "You've hit your (weekly|session|Opus|Sonnet|usage) limit" <<< "$banner_text"; then
+            limit_active=1
+            reset="$(reset_time_from_signal "$banner_text")"
+        fi
+    fi
+
+    if ((limit_active == 0)); then
+        if [[ "$meta_status" == working && "$pane_read_ok" == 1 && -f "$episode_file" ]]; then
+            rm -f "$episode_file"
+        fi
+        return 0
+    fi
+
+    mkdir -p "$state_dir"
+    if [[ -f "$episode_file" ]] && jq -e '
+        type == "object" and (.notification_sent | type == "boolean") and (.workers_notified | type == "array")
+    ' "$episode_file" > /dev/null 2>&1; then
+        notification_sent="$(jq -r '.notification_sent' "$episode_file")"
+        workers_notified="$(jq -c '.workers_notified' "$episode_file")"
+    else
+        notification_sent=false
+        workers_notified='[]'
+    fi
+    write_limit_episode "$reset" "$notification_sent" "$workers_notified"
+
+    if [[ "$notification_sent" != true ]]; then
+        if herdr notification show 'meta usage limit' --body "Meta is usage-limited until ${reset}. Workers waiting for meta review should hold periodic STATUS and use the approved Codex review route."; then
+            notification_sent=true
+            write_limit_episode "$reset" true "$workers_notified"
+        else
+            printf '%s\n' 'patrol: limit notification failed; it will be retried next cycle' >&2
+        fi
+    fi
+
+    waiters="$(waiting_review_workers)" || waiters=""
+    while IFS= read -r worker; do
+        [[ -n "$worker" ]] || continue
+        jq -e --arg worker "$worker" '.workers_notified | index($worker) != null' "$episode_file" > /dev/null && continue
+        worker_agent="$(jq -c --arg name "$worker" '[.result.agents[] | select(.name == $name)] | first // empty' <<< "$agents_json")"
+        [[ -n "$worker_agent" ]] || continue
+        worker_status="$(jq -r '.agent_status // empty' <<< "$worker_agent")"
+        [[ "$worker_status" == working || "$worker_status" == idle ]] || continue
+        if [[ ! -x "$prompt_guard" ]]; then
+            printf 'patrol: guarded prompt sender is unavailable for %s\n' "$worker" >&2
+            continue
+        fi
+        message="Meta is usage-limited until ${reset}. Please hold periodic STATUS updates while waiting. For a pending fresh review from meta, use the authorized one-shot Codex route in the worker protocol: review this exact HEAD independently, in a fresh read-only context, without further delegation, using the normal meta review checklist. Record that the verdict came from Codex during meta's limit. Meta will re-check the exact head after the reset before any merge that needs user approval."
+        if HERDR_ENV=1 "$prompt_guard" "$worker" "$message"; then
+            workers_notified="$(jq -c --arg worker "$worker" '.workers_notified = ((.workers_notified + [$worker]) | unique) | .workers_notified' "$episode_file")"
+            write_limit_episode "$reset" "$notification_sent" "$workers_notified"
+        else
+            printf 'patrol: limit hold message was not delivered to %s; it will be retried next cycle\n' "$worker" >&2
+        fi
+    done <<< "$waiters"
 }
 
 function visible_input_state() {
@@ -139,6 +323,11 @@ function patrol_machine() {
 
     check_root_inputs "$machine"
 }
+
+if [[ "$mode" == --limit-hold ]]; then
+    run_meta_limit_hold
+    exit $?
+fi
 
 machines_json=''
 machine_inventory_available=0

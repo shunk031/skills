@@ -26,7 +26,7 @@ flowchart TD
 
 ## Run the patrol
 
-The bundled patrol is a read-only script run externally without an LLM, not an LLM turn. Start each one-time or approved recurring patrol with the bundled read-only script. Supply verified root agents through `HERDR_PATROL_ROOTS_JSON`:
+The default bundled patrol is read-only and runs externally without an LLM, not as an LLM turn. Start each one-time or approved recurring patrol with the bundled script. Supply verified root agents through `HERDR_PATROL_ROOTS_JSON`:
 
 ```bash
 export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"},{"machine":"saved-machine-label","agent":"root"}]'
@@ -36,6 +36,14 @@ export HERDR_PATROL_ROOTS_JSON='[{"machine":null,"agent":"meta"},{"machine":"sav
 Each array item has a `machine` and `agent`: use `null` for the local server or the exact enabled saved-machine label, and the live agent name for `agent`. Include only roots whose role and parentage you verified below. The script lists local agents and agents on every enabled saved machine, then reports blocked agents, non-null `.tokens.inbox` values, and non-empty root input lines. It judges each root's input line with the parser bundled with the required shunk031-herdr-orchestrate-workers skill. The patrol continues after a saved machine is unavailable.
 
 Output is JSON Lines with one object per finding; no output means no findings. Findings include agent attention, occupied or unreadable root input, unavailable servers, and invalid root targets. Use the script for these standard checks instead of recreating them ad hoc. Inspect reported inbox entries and unclear root roles in the corresponding pane or transcript before relaying anything.
+
+## Meta usage-limit hold
+
+## Meta usage-limit hold
+
+The recurring external patrol also checks meta's visible pane for Claude Code's explicit usage-limit banner and meta's inbox for a `! Limit: resets <time>` token. Once per limit episode, it notifies the user through Herdr and sends a guarded notice to each live meta-prefixed worker whose latest queue STATUS says it is waiting for meta review. The notice tells the worker to hold periodic STATUS updates while waiting and gives it the approved Codex review fallback. The episode stays active until meta is observed working without a limit signal; an unavailable agent list or unreadable pane does not clear it.
+
+When waiting for meta's fresh review during a limit hold, a worker may run exactly one fresh, independent, one-shot non-interactive Codex reviewer on the exact HEAD under review. Keep the review read-only, disable further delegation, and use the independent reviewer checklist in the shunk031-herdr-orchestrate-workers skill. Act on the verdict and record its exact HEAD and that it was reviewed by Codex during meta's limit. A Codex ACCEPT is provisional for any merge requiring the user's approval: after the limit clears, meta must freshly re-check the exact HEAD before that merge. Keep the model and launch details in private worker guidance.
 
 ## Find and ask root orchestrators
 

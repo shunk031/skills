@@ -20,6 +20,14 @@ Send `STATUS <worker-name>: <HH:MM> <current stage>; ETA <time>` to <orch-name> 
 
 Keep each pull request's core code change at or under 400 lines: additions plus deletions from `git diff --shortstat` against the base, excluding tests, documentation, lock files, and generated files. If the design you are about to implement is expected to exceed this, or the diff exceeds it before push, stop without pushing and send `BLOCKED <worker-name>:` with a split plan or a simpler design.
 
+## Meta usage-limit hold
+
+If meta's patrol tells you that meta is usage-limited until a reset time and you are waiting for meta's fresh review, stop periodic STATUS updates while you wait. Continue to report only a new milestone, verdict, blocker, or material ETA change.
+
+During that hold, you may run exactly one fresh, independent, one-shot non-interactive Codex reviewer on the exact committed HEAD awaiting review. Keep that review read-only, do not delegate, and use the [independent review checklist](review-checklist.md) that meta follows. Act on its verdict; if it rejects the HEAD, address the findings and report the resulting exact HEAD without starting another Codex review during the same limit episode. Record the verdict, exact HEAD, and `Codex review during meta usage limit` as its source.
+
+A Codex ACCEPT does not replace meta's fresh review after the reset for any merge that needs the user's approval. Once meta works again, send the recorded verdict and exact HEAD to meta and wait for meta's re-check before that merge.
+
 ## Become a sub-orchestrator
 
 <!-- textlint-disable sentence-length -->
