@@ -108,6 +108,14 @@ Before each dispatch, record the worker's current `state_change_seq`. Dispatch w
 
 This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding.
 
+After accepting a receipt, immediately record the direct dispatch before starting the lifecycle wait. Record only workers you started directly:
+
+```bash
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-tab-cleanup.sh --record-worker <worker-name>
+```
+
+The record stores caller/worker names, both terminal IDs, and the worker tab/pane IDs in `$XDG_STATE_HOME/herdr-tab-cleanup/dispatches.tsv`. The default path is `~/.local/state/herdr-tab-cleanup/dispatches.tsv`.
+
 After each receipt is observed, start one background lifecycle wait for that outstanding worker with `herdr agent wait <worker-name> &`; omit `--until` so Herdr's settled-state defaults apply. When the wait settles, read the worker's deliverable and transcript directly and verify the result; do not use report arrival to detect completion. A blocking `agent wait` is lifecycle waiting, not polling.
 
 Name in the task each milestone at which you want a `STATUS` report; the worker protocol says when a worker sends one. Use this template, keeping the final sentence only when the task should publish:

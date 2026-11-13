@@ -4,6 +4,14 @@
 
 Close a worker's pane with `herdr pane close <pane-id>` as soon as you have collected and verified its result and will send it nothing more, not only after a merge; before ending a turn in which you collected results, close the pane of every worker whose result you collected unless you will still route it work. Closing a pane never removes its worktree or branch.
 
+### Preview and close worker tabs
+
+After collecting a worker result or confirming its pull request merged, preview local tabs with `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-tab-cleanup.sh`.
+
+For a finished worker tab with an unmerged pull request, include `--results-collected <tab-id>` in the preview command; otherwise the helper keeps it. To close reviewed tabs, pass each tab ID with `--apply --results-collected <tab-id>` and repeat the option for each tab.
+
+The helper rechecks agent status and visible input immediately before closing. Tabs whose labels start with ⛔ stay open. The helper never removes worktrees or branches.
+
 ## Remove resources only after merge
 
 A worker's worktree and branch live exactly as long as its pull request: once the PR merges they are spent, so clean them up as soon as you notice — check each worker's reported URL with `gh pr view <url>` whenever you revisit the session, wrap up other work, or are asked to tidy up; never run a polling loop for it. Close the tab if it is still open, then remove the worktree and delete the branch only if the worktree has no uncommitted changes and its local branch tip, `git rev-parse <branch>`, equals the pull request's final head commit, `headRefOid` from `gh pr view <url> --json headRefOid`.
