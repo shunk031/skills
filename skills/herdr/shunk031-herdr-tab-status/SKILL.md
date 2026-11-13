@@ -37,7 +37,7 @@ A published but open PR with DONE reported is still blocked while its approval o
 
 When asked to choose a label, put the literal label on the first line, then explain it.
 
-Before reporting BLOCKED, run the rename and report in one guarded sequence. The normal BLOCKED report is sent only after Herdr returns the requested tab ID and label. On failure, report that the rename was not verified. Send either report with the guarded sender that the `shunk031-herdr-orchestrate-workers` skill requires for every send; that skill also says what to do when a send is not delivered. The reason is read from a quoted heredoc so the shell never expands it; `$(cat <<'EOF' …)` is not used because Bash 3.2 fails on an apostrophe in its body:
+Before reporting BLOCKED, run the rename and report in one guarded sequence. The normal BLOCKED report is sent only after Herdr returns the requested tab ID and label. On failure, report that the rename was not verified. Send either report with the guarded sender that the `shunk031-herdr-orchestrate-workers` skill requires for every send; that skill also says what to do when a send is not delivered, and when to use the meta patrol queue command in place of the guarded sender. The reason is read from a quoted heredoc so the shell never expands it; `$(cat <<'EOF' …)` is not used because Bash 3.2 fails on an apostrophe in its body:
 
 ```bash
 label="⛔ <next action>"

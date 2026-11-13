@@ -20,4 +20,5 @@ Apply the reporting rule below in every user-facing reply. Use the inbox-specifi
 ## Close user items
 
 - Close a question only after the user answers it. Close a task only when its action is verified done or no longer applies.
+- If a question closes without the user's answer, raise it again in your next reply and record it again.
 - Use `mcp__inbox__close` with the item's `id` and the user's answer or a short reason. Never close a question with your own answer.
