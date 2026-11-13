@@ -26,9 +26,9 @@ When your work is ready for meta's fresh review, report the canonical queue stag
 
 After any review verdict, stop using the ready-for-review stage. Immediately queue a STATUS with a different stage, verdict, exact HEAD, and source. For example: `STATUS <worker-name>: <HH:MM> review verdict ACCEPT head=<sha>; ETA <time>`. This verdict STATUS is a milestone, including during a meta usage-limit hold. After a rejection, report a fixing stage and do not report ready until the corrected HEAD is ready for a fresh review.
 
-If meta's patrol tells you that meta is usage-limited until a reset time and you are waiting for review, stop periodic STATUS updates. During that hold, you may run exactly one fresh, independent, one-shot non-interactive Codex reviewer on the exact committed HEAD. Keep that review read-only, do not delegate, and use the [DONE verification and independent-review checklist](review-and-pr.md#verify-done-against-the-users-original-request). Act on its verdict; if it rejects the HEAD, address the findings without starting another Codex review during the same limit episode.
+If meta's patrol tells you that meta is usage-limited until a reset time and you are waiting for review, stop periodic STATUS updates. During that hold, use the launch guidance in your user-level instructions to run exactly one fresh, independent, read-only review session on the exact committed HEAD. Follow the [DONE verification and independent-review checklist](review-and-pr.md#verify-done-against-the-users-original-request). Act on its verdict; if it rejects the HEAD, address the findings without starting another review session during the same limit episode.
 
-For this fallback, use `Codex review during meta usage limit` as the source in that queued verdict STATUS. Do not wait for meta to recover. Meta re-checks the exact HEAD when it reads its backlog after recovery, before any merge that needs the user's approval.
+For this fallback, use `user-level review session during meta usage limit` as the source in that queued verdict STATUS. Do not wait for meta to recover. Meta re-checks the exact HEAD when it reads its backlog after recovery, before any merge that needs the user's approval.
 
 ## Become a sub-orchestrator
 
