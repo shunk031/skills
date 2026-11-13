@@ -3,16 +3,18 @@
 # @file skills/herdr/shunk031-herdr-meta-orchestrate/scripts/herdr-meta-rotate.sh
 # @brief Replace the local meta Claude session after a fresh handoff is written.
 # @description
-#   Start a detached rotation that waits for meta to become idle or done, captures its
-#   explicit model option, exits the old session, and starts a fresh session in
-#   the same pane. The pane shell supplies the existing environment.
-# @arg [--dry-run] HANDOFF_FILE
-# @exitcode 2 when the handoff or runtime preconditions are invalid.
+#   Start a detached rotation that waits for meta to become idle or done, carries its
+#   explicit model option, and starts a fresh session in the same pane. The pane shell
+#   supplies the existing environment.
+# @option --dry-run Print the planned rotation without changing the pane.
+# @arg $1 string Handoff file path.
+# @exitcode 1 The handoff is invalid or the rotation fails.
+# @exitcode 2 Usage error.
 # @example
 #   herdr-meta-rotate.sh "$HOME/.local/state/meta/open.md"
 #   herdr-meta-rotate.sh --dry-run "$HOME/.local/state/meta/open.md"
 
-set -Eeuo pipefail
+set -euo pipefail
 
 readonly agent_name=meta
 readonly handoff_max_age=600
@@ -23,6 +25,8 @@ readonly process_exit_timeout=60
 background_worker=false
 dry_run=false
 restart_command=''
+failure_message=''
+failure_notified=false
 
 function usage() {
     printf 'usage: herdr-meta-rotate.sh [--dry-run] HANDOFF_FILE\n' >&2
@@ -35,16 +39,20 @@ function notify_failure() {
 
 function fail() {
     local message="$1"
-    if [[ "$background_worker" == true ]]; then
-        notify_failure "$message"
-    fi
+    failure_message="$message"
     printf 'herdr-meta-rotate: %s\n' "$message" >&2
     exit 1
 }
 
-function notify_unexpected_failure() {
-    local message='The detached meta rotation stopped unexpectedly.'
-    if [[ -n "$restart_command" ]]; then
+function notify_background_failure() {
+    local exit_status="$1"
+    local message
+
+    [[ "$background_worker" == true && "$failure_notified" != true && "$exit_status" -ne 0 ]] || return 0
+    failure_notified=true
+    message="$failure_message"
+    [[ -n "$message" ]] || message="The detached meta rotation stopped unexpectedly (exit status ${exit_status})."
+    if [[ -n "$restart_command" && "$message" != *'Restart command:'* ]]; then
         message="${message}
 
 Restart command:
@@ -53,21 +61,35 @@ ${restart_command}"
     notify_failure "$message"
 }
 
+function on_background_exit() {
+    local exit_status="$1"
+
+    notify_background_failure "$exit_status"
+    trap - EXIT
+    exit "$exit_status"
+}
+
+function on_background_term() {
+    failure_message='The detached meta rotation received SIGTERM.'
+    exit 143
+}
+
 function fail_restart() {
     local message="$1"
-    notify_failure "${message}
+    if [[ -n "$restart_command" ]]; then
+        message="${message}
 
 Restart command:
 ${restart_command}"
-    printf 'herdr-meta-rotate: %s\n' "$message" >&2
-    exit 1
+    fi
+    fail "$message"
 }
 
 function check_handoff() {
     local path="$1"
     local mtime now age
 
-    [[ -f "$path" && -r "$path" ]] || fail "handoff file is missing or unreadable: $path"
+    [[ -s "$path" && -r "$path" ]] || fail "handoff file is missing, empty, or unreadable: $path"
     mtime="$(date -r "$path" '+%s')" || fail "cannot read handoff file timestamp: $path"
     now="$(date '+%s')"
     age=$((now - mtime))
@@ -77,14 +99,14 @@ function check_handoff() {
 function get_meta_pane() {
     local agent_info current_info pane_id current_pane
 
-    agent_info="$(herdr agent get "$agent_name")" || fail 'cannot find the meta agent'
+    agent_info="$(herdr agent get "$agent_name")" || return 1
     pane_id="$(jq -er '.result.agent | select(.agent == "claude") | .pane_id | strings' <<< "$agent_info")" ||
-        fail 'the meta agent is not a Claude session'
-    current_info="$(herdr pane current --current)" || fail 'cannot identify the caller pane'
+        return 1
+    current_info="$(herdr pane current --current)" || return 1
     current_pane="$(jq -er '.result.pane.pane_id | strings' <<< "$current_info")" ||
-        fail 'cannot identify the caller pane'
-    [[ "$current_pane" == "$pane_id" ]] || fail 'run this script from the meta pane'
-    printf '%s\n' "$pane_id"
+        return 1
+    [[ "$current_pane" == "$pane_id" ]] || return 1
+    meta_pane_id="$pane_id"
 }
 
 function capture_model_args() {
@@ -164,15 +186,45 @@ function wait_for_shell() {
     return 1
 }
 
-function get_meta_pane_after_start() {
-    local agent_info pane_id state
+function meta_claude_is_running() {
+    local process_info
 
-    agent_info="$(herdr agent get "$agent_name")" || return 1
-    pane_id="$(jq -er '.result.agent | select(.agent == "claude") | .pane_id | strings' <<< "$agent_info")" ||
-        return 1
-    [[ "$pane_id" == "$meta_pane_id" ]] || return 1
-    state="$(jq -er '.result.agent.agent_status | strings' <<< "$agent_info")" || return 1
-    [[ "$state" == idle || "$state" == working || "$state" == "done" ]]
+    process_info="$(herdr pane process-info --pane "$meta_pane_id")" || return 2
+    jq -e 'any(.result.process_info.foreground_processes[]; .name == "claude")' \
+        <<< "$process_info" > /dev/null
+}
+
+function get_meta_pane_after_start() {
+    local agent_info pane_id state attempt process_status
+
+    for ((attempt = 0; attempt < 5; attempt++)); do
+        if ! agent_info="$(herdr agent get "$agent_name")"; then
+            if meta_claude_is_running; then
+                return 2
+            else
+                process_status=$?
+                ((process_status == 1)) || return 2
+                return 1
+            fi
+        fi
+        if ! pane_id="$(jq -er '.result.agent | select(.agent == "claude") | .pane_id | strings' <<< "$agent_info")"; then
+            if meta_claude_is_running; then
+                return 2
+            else
+                process_status=$?
+                ((process_status == 1)) || return 2
+                return 1
+            fi
+        fi
+        [[ "$pane_id" == "$meta_pane_id" ]] || return 2
+        state="$(jq -er '.result.agent.agent_status | strings' <<< "$agent_info")" || return 2
+        case "$state" in
+        idle | working | done | blocked) return 0 ;;
+        unknown) sleep 1 ;;
+        *) return 2 ;;
+        esac
+    done
+    return 2
 }
 
 function return_failed_start_to_shell() {
@@ -217,10 +269,20 @@ function start_meta_session() {
 }
 
 function start_and_verify_meta() {
-    if ! start_meta_session; then
-        return 1
+    local start_reported_ready=false verification_status
+
+    if start_meta_session; then
+        start_reported_ready=true
     fi
-    get_meta_pane_after_start
+    if get_meta_pane_after_start; then
+        return 0
+    else
+        verification_status=$?
+    fi
+    if [[ "$start_reported_ready" == true ]] || ((verification_status == 2)); then
+        return 2
+    fi
+    return 1
 }
 
 if [[ "${1:-}" == --background-worker ]]; then
@@ -228,7 +290,8 @@ if [[ "${1:-}" == --background-worker ]]; then
     shift
 fi
 if [[ "$background_worker" == true ]]; then
-    trap 'notify_unexpected_failure' ERR
+    trap 'on_background_exit "$?"' EXIT
+    trap 'on_background_term' TERM
 fi
 if [[ "${1:-}" == --dry-run ]]; then
     dry_run=true
@@ -252,7 +315,7 @@ for command in herdr jq date nohup sleep awk; do
     command -v "$command" > /dev/null || fail "required command is missing: $command"
 done
 check_handoff "$handoff_file"
-meta_pane_id="$(get_meta_pane)"
+get_meta_pane || fail 'cannot identify the caller meta Claude pane'
 model_args=()
 claude_pid=''
 pane_shell_pid=''
@@ -297,18 +360,25 @@ idle | done) ;;
 *) fail "meta became active before /exit (state: $meta_state); the pane was left unchanged" ;;
 esac
 
-herdr pane send-text "$meta_pane_id" '/exit' || fail 'could not send /exit to meta'
-herdr pane send-keys "$meta_pane_id" enter || fail 'could not submit /exit to meta'
-wait_for_shell "$meta_pane_id" "$claude_pid" || fail 'the old Claude process did not return the pane to its shell'
-
 printf -v initial_prompt \
     'Read the handoff file at %s first and follow its references. Re-arm the background herdr-meta-patrol-queue wait command, then continue as the meta orchestrator.' \
     "$handoff_file"
 build_restart_command
+herdr pane send-text "$meta_pane_id" '/exit' || fail 'could not send /exit to meta'
+herdr pane send-keys "$meta_pane_id" enter || fail 'could not submit /exit to meta'
+wait_for_shell "$meta_pane_id" "$claude_pid" || fail 'the old Claude process did not return the pane to its shell'
 
-if ! start_and_verify_meta; then
+start_result=0
+start_and_verify_meta || start_result=$?
+if ((start_result == 2)); then
+    fail_restart 'Herdr started Claude but could not verify its state; the new session was left untouched'
+elif ((start_result != 0)); then
     return_failed_start_to_shell "$meta_pane_id" || true
-    if ! start_and_verify_meta; then
+    start_result=0
+    start_and_verify_meta || start_result=$?
+    if ((start_result == 2)); then
+        fail_restart 'Herdr started Claude but could not verify its state after one retry; the new session was left untouched'
+    elif ((start_result != 0)); then
         if return_failed_start_to_shell "$meta_pane_id"; then
             fail_restart 'the new Claude session failed after one retry; the pane is back at its shell'
         fi

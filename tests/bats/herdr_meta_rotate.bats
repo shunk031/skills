@@ -25,12 +25,32 @@ set -Eeuo pipefail
 printf '%s\n' "$*" >> "$ROTATE_STUB_STATE/calls"
 case "$1 $2" in
     "agent get")
+        if [[ -f "$ROTATE_STUB_STATE/agent_start_failed" && ! -f "$ROTATE_STUB_STATE/started" ]]; then
+            printf '%s\n' '{"result":{"agent":null}}'
+            exit 0
+        fi
         agent_status=idle
         if [[ -f "$ROTATE_STUB_STATE/started" ]]; then
-            touch "$ROTATE_STUB_STATE/verified"
-            if [[ "${ROTATE_STUB_AFTER_START_DONE:-}" == 1 ]]; then
+            if [[ "${ROTATE_STUB_AFTER_START_BLOCKED:-}" == 1 ]]; then
+                agent_status=blocked
+            elif [[ "${ROTATE_STUB_AFTER_START_UNKNOWN:-}" == 1 ]]; then
+                agent_status=unknown
+            elif [[ "${ROTATE_STUB_UNKNOWN_GETS:-0}" -gt 0 ]]; then
+                get_count=0
+                if [[ -f "$ROTATE_STUB_STATE/after_start_get_count" ]]; then
+                    get_count="$(cat "$ROTATE_STUB_STATE/after_start_get_count")"
+                fi
+                get_count=$((get_count + 1))
+                printf '%s\n' "$get_count" > "$ROTATE_STUB_STATE/after_start_get_count"
+                if ((get_count <= ROTATE_STUB_UNKNOWN_GETS)); then
+                    agent_status=unknown
+                fi
+            elif [[ "${ROTATE_STUB_AFTER_START_DONE:-}" == 1 ]]; then
                 agent_status=done
             fi
+        fi
+        if [[ -f "$ROTATE_STUB_STATE/started" && "$agent_status" != unknown ]]; then
+            touch "$ROTATE_STUB_STATE/verified"
         fi
         if [[ -f "$ROTATE_STUB_STATE/composer_checked" && "${ROTATE_STUB_WAKE_BEFORE_EXIT:-}" == 1 && ! -f "$ROTATE_STUB_STATE/started" ]]; then
             agent_status=working
@@ -49,9 +69,9 @@ case "$1 $2" in
         printf '%s\n' '{"result":{"pane":{"pane_id":"test:p1"}}}'
         ;;
     "pane process-info")
-        if [[ -f "$ROTATE_STUB_STATE/agent_start_failed" && ! -f "$ROTATE_STUB_STATE/cleaned" ]]; then
-            printf '%s\n' '{"result":{"process_info":{"shell_pid":9,"foreground_processes":[{"pid":43,"name":"claude","argv":["claude"]}]}}}'
-        elif [[ -f "$ROTATE_STUB_STATE/exited" || -f "$ROTATE_STUB_STATE/cleaned" ]]; then
+        if [[ -f "$ROTATE_STUB_STATE/started" ]]; then
+            printf '%s\n' '{"result":{"process_info":{"shell_pid":9,"foreground_processes":[{"pid":44,"name":"claude","argv":["claude","--model","test-model"]}]}}}'
+        elif [[ -f "$ROTATE_STUB_STATE/agent_start_failed" || -f "$ROTATE_STUB_STATE/exited" || -f "$ROTATE_STUB_STATE/cleaned" ]]; then
             touch "$ROTATE_STUB_STATE/shell_verified"
             printf '%s\n' '{"result":{"process_info":{"shell_pid":9,"foreground_processes":[{"pid":9,"name":"zsh","argv":["zsh"]}]}}}'
         elif [[ "${ROTATE_STUB_NO_MODEL:-}" == 1 ]]; then
@@ -66,6 +86,10 @@ case "$1 $2" in
         ;;
     "pane send-text")
         [[ "$4" == '/exit' ]]
+        if [[ "${ROTATE_STUB_TERM_ON_SEND:-}" == 1 ]]; then
+            kill -TERM "$PPID"
+            sleep 0.1
+        fi
         ;;
     "pane send-keys")
         [[ "$4" == enter ]]
@@ -84,8 +108,6 @@ case "$1 $2" in
         fi
         [[ "$*" == *'handoff.md'* ]]
         [[ "$*" == *'herdr-meta-patrol-queue wait'* ]]
-        [[ "$*" != *'standing-permissions.md'* ]]
-        [[ "$*" != *'open-items.md'* ]]
         start_count=0
         if [[ -f "$ROTATE_STUB_STATE/start_count" ]]; then
             start_count="$(cat "$ROTATE_STUB_STATE/start_count")"
@@ -97,6 +119,9 @@ case "$1 $2" in
             exit 1
         fi
         touch "$ROTATE_STUB_STATE/started"
+        if [[ "${ROTATE_STUB_AFTER_START_BLOCKED:-}" == 1 ]]; then
+            exit 1
+        fi
         ;;
     "notification show")
         printf '%s\n' "$*" >> "$ROTATE_STUB_STATE/notification"
@@ -134,7 +159,17 @@ EOF
     run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/missing.md"
 
     [ "$status" -eq 1 ]
-    [[ "$output" == *'missing or unreadable'* ]]
+    [[ "$output" == *'missing, empty, or unreadable'* ]]
+    ! grep -Eq 'agent wait|send-text|send-keys|agent start' "$ROTATE_STUB_STATE/calls"
+}
+
+@test "empty handoffs are rejected before starting a rotation" {
+    : > "$ROTATE_STUB_STATE/empty.md"
+
+    run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/empty.md"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'missing, empty, or unreadable'* ]]
     ! grep -Eq 'agent wait|send-text|send-keys|agent start' "$ROTATE_STUB_STATE/calls"
 }
 
@@ -158,6 +193,57 @@ EOF
     grep -q 'pane send-text test:p1 /exit' "$ROTATE_STUB_STATE/calls"
     grep -q 'pane send-keys test:p1 enter' "$ROTATE_STUB_STATE/calls"
     grep -q 'agent start meta --kind claude --pane test:p1' "$ROTATE_STUB_STATE/calls"
+}
+
+@test "a permission prompt in the new session is accepted without exiting it" {
+    export ROTATE_STUB_AFTER_START_BLOCKED=1
+
+    run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/handoff.md"
+
+    [ "$status" -eq 0 ]
+    for ((attempt = 0; attempt < 50; attempt++)); do
+        [[ -f "$ROTATE_STUB_STATE/verified" ]] && break
+        sleep 0.1
+    done
+    [ -f "$ROTATE_STUB_STATE/verified" ]
+    [ "$(cat "$ROTATE_STUB_STATE/start_count")" -eq 1 ]
+    [ "$(grep -c 'pane send-text test:p1 /exit' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
+    [ "$(grep -c 'pane send-keys test:p1 enter' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
+    [ ! -f "$ROTATE_STUB_STATE/notified" ]
+}
+
+@test "a briefly unknown new session is accepted when Herdr sees it" {
+    export ROTATE_STUB_UNKNOWN_GETS=2
+
+    run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/handoff.md"
+
+    [ "$status" -eq 0 ]
+    for ((attempt = 0; attempt < 50; attempt++)); do
+        [[ -f "$ROTATE_STUB_STATE/after_start_get_count" && -f "$ROTATE_STUB_STATE/verified" ]] && break
+        sleep 0.1
+    done
+    [ "$(cat "$ROTATE_STUB_STATE/after_start_get_count")" -ge 3 ]
+    [ "$(cat "$ROTATE_STUB_STATE/start_count")" -eq 1 ]
+    [ ! -f "$ROTATE_STUB_STATE/notified" ]
+}
+
+@test "a ready session that remains unknown is left running and not retried" {
+    export ROTATE_STUB_AFTER_START_UNKNOWN=1
+
+    run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/handoff.md"
+
+    [ "$status" -eq 0 ]
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        [[ -f "$ROTATE_STUB_STATE/notified" ]] && break
+        sleep 0.1
+    done
+    [ -f "$ROTATE_STUB_STATE/notified" ]
+    [ "$(cat "$ROTATE_STUB_STATE/start_count")" -eq 1 ]
+    [ "$(grep -c 'pane send-text test:p1 /exit' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
+    [ "$(grep -c 'pane send-keys test:p1 enter' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
+    ! grep -q 'pane send-keys test:p1 ctrl+c' "$ROTATE_STUB_STATE/calls"
+    grep -q 'Restart command:' "$ROTATE_STUB_STATE/notification"
+    [ "$(grep -c '^notification show ' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
 }
 
 @test "a missing model option restarts successfully without an empty-array error" {
@@ -206,10 +292,6 @@ EOF
     grep -q -- '--model test-model' "$ROTATE_STUB_STATE/notification"
     grep -q 'handoff.md' "$ROTATE_STUB_STATE/notification"
     grep -q 'herdr-meta-patrol-queue' "$ROTATE_STUB_STATE/notification"
-    if [[ ! -f "$ROTATE_STUB_STATE/cleaned" ]]; then
-        cat "$ROTATE_STUB_STATE/calls"
-        false
-    fi
 }
 
 @test "the detached worker notifies on an unexpected error" {
@@ -219,6 +301,18 @@ EOF
 
     [ "$status" -eq 1 ]
     [ -f "$ROTATE_STUB_STATE/notified" ]
+    [ "$(grep -c '^notification show ' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
+}
+
+@test "the detached worker notifies once when it receives SIGTERM" {
+    export ROTATE_STUB_TERM_ON_SEND=1
+
+    run "$ROTATE_SCRIPT_PATH" --background-worker "$ROTATE_STUB_STATE/handoff.md"
+
+    [ "$status" -eq 143 ]
+    [ -f "$ROTATE_STUB_STATE/notified" ]
+    grep -q 'Restart command:' "$ROTATE_STUB_STATE/notification"
+    [ "$(grep -c '^notification show ' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
 }
 
 @test "a patrol wake before exit aborts when meta is working" {
