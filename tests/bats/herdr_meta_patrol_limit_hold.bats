@@ -91,16 +91,33 @@ function line_count() {
     printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
     run bash "${PATROL_SCRIPT_PATH}" --limit-hold
     [ "${status}" -eq 0 ]
-    [ ! -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
+    [ "$(jq -r '.active' "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json")" = false ]
+    jq -e '.suppressed_resets | index("9pm") != null' "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" > /dev/null
     [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
     [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
+
+    write_agents idle null done
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+    [ "${status}" -eq 0 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
+
+    printf '%s\n' 'Meta resumed; the old banner has left the pane' > "${FAKE_PANE}"
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+    [ "${status}" -eq 0 ]
+    [ ! -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
+
+    printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+    [ "${status}" -eq 0 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 2 ]
 
     write_agents idle null done
     printf '%s\n' "⎿ You've hit your weekly limit · resets Mon 12:00am" > "${FAKE_PANE}"
     run bash "${PATROL_SCRIPT_PATH}" --limit-hold
     [ "${status}" -eq 0 ]
-    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 2 ]
-    [ "$(line_count "${PROMPT_LOG}")" -eq 2 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 3 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 3 ]
     grep -Fq 'until Mon 12:00am' "${NOTIFICATION_LOG}"
 }
 
@@ -172,6 +189,41 @@ function line_count() {
     [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
 }
 
+@test "the sender's latest DONE record removes it from the review waiters" {
+    write_agents idle null done
+    {
+        jq -cn '{seq:1,t:1,kind:"message",from:"meta-review",text:"STATUS meta-review: 21:00 ready for review head=0123456789abcdef0123456789abcdef01234567; ETA 21:30"}'
+        jq -cn '{seq:2,t:2,kind:"message",from:"meta-review",text:"DONE meta-review: Codex review verdict accepted for head 0123456789abcdef0123456789abcdef01234567"}'
+    } > "${HERDR_META_PATROL_STATE_DIR}/queue.jsonl"
+    printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
+
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+
+    [ "${status}" -eq 0 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 0 ]
+}
+
+@test "a changed reset starts a new episode when patrol missed recovery" {
+    write_agents idle null done
+    write_ready_review_status
+    printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
+
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+
+    [ "${status}" -eq 0 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
+
+    printf '%s\n' "⎿ You've hit your weekly limit · resets 10pm" > "${FAKE_PANE}"
+    run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+
+    [ "${status}" -eq 0 ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 2 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 2 ]
+    grep -Fq 'until 10pm' "${NOTIFICATION_LOG}"
+}
+
 @test "reset times accept full weekday names and month-day dates" {
     local reset
     write_ready_review_status
@@ -187,7 +239,8 @@ function line_count() {
         write_agents working null done
         run bash "${PATROL_SCRIPT_PATH}" --limit-hold
         [ "${status}" -eq 0 ]
-        [ ! -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
+        [ "$(jq -r '.active' "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json")" = false ]
+        jq -e --arg reset "${reset}" '.suppressed_resets | index($reset) != null' "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" > /dev/null
     done
     [ "$(line_count "${NOTIFICATION_LOG}")" -eq 5 ]
     [ "$(line_count "${PROMPT_LOG}")" -eq 5 ]

@@ -154,7 +154,7 @@ function reset_time_from_signal() {
     printf '%s\n' "$reset"
 }
 
-# @description Return meta workers whose latest STATUS uses the canonical review-ready stage.
+# @description Return meta workers whose latest queue record uses the canonical review-ready stage.
 #   While waiting for its verdict, a worker keeps that stage and exact HEAD in every STATUS.
 # @stdout One meta-prefixed worker name per line.
 function ready_for_review_workers() {
@@ -166,36 +166,39 @@ function ready_for_review_workers() {
         | map(select(type == "object"))
         | sort_by(.seq // 0)
         | reduce .[] as $record ({};
-            if (($record.from // "") | startswith($prefix)) and
-                (($record.text // "") | startswith("STATUS "))
-            then .[$record.from] = $record.text
+            if (($record.from // "") | startswith($prefix))
+            then .[$record.from] = $record
             else .
             end
         )
         | to_entries[]
         | .key as $name
-        | select(.value | test("^STATUS " + $name + ": [0-9]{2}:[0-9]{2} ready for review head=[0-9a-f]{40}; ETA .+$"))
+        | select((.value.text // "") | test("^STATUS " + $name + ": [0-9]{2}:[0-9]{2} ready for review head=[0-9a-f]{40}; ETA .+$"))
         | .key
     ' "$queue_file"
 }
 
-# @description Save the active limit episode atomically.
+# @description Save active episode and suppressed-banner state atomically.
 # @arg $1 string Reset time displayed by the limit signal.
 # @arg $2 boolean Whether the user notification has been sent.
 # @arg $3 JSON Array of workers already notified in this episode.
+# @arg $4 boolean Whether a limit episode is active.
+# @arg $5 JSON Array of reset signals to ignore until they leave the screen.
 function write_limit_episode() {
-    local reset="$1" notification_sent="$2" workers="$3" temporary
+    local reset="$1" notification_sent="$2" workers="$3" active="$4" suppressed_resets="$5" temporary
     temporary="${episode_file}.$$"
-    jq -cn --arg reset "$reset" --argjson notification_sent "$notification_sent" --argjson workers "$workers" \
-        '{reset:$reset,notification_sent:$notification_sent,workers_notified:$workers}' > "$temporary" &&
+    jq -cn --arg reset "$reset" --argjson active "$active" --argjson notification_sent "$notification_sent" \
+        --argjson workers "$workers" --argjson suppressed "$suppressed_resets" \
+        '{active:$active,reset:$reset,notification_sent:$notification_sent,workers_notified:$workers,suppressed_resets:$suppressed}' > "$temporary" &&
         mv "$temporary" "$episode_file"
 }
 
 # @description Detect and handle a local meta usage-limit episode.
 function run_meta_limit_hold() {
     local agents_json meta_agent meta_status pane_id inbox_text pane_text pane_read_ok
-    local limit_active reset inbox_match banner_line waiters worker worker_agent worker_status
-    local notification_sent workers_notified message worker_index prompt_count=0
+    local limit_active reset inbox_match inbox_reset banner_line banner_reset candidate_resets observed_resets
+    local episode_active episode_reset notification_sent workers_notified suppressed_resets
+    local waiters worker worker_agent worker_status message worker_index prompt_count=0
     local -a prompt_pids=() prompt_workers=()
     local api_error_line limit_error_pattern
 
@@ -247,45 +250,99 @@ function run_meta_limit_hold() {
         pane_read_ok=1
     fi
 
-    limit_active=0
-    reset=""
     inbox_match="$(LC_ALL=C grep -Eio '^![[:space:]]*Limit:[[:space:]]*resets?[[:space:]]+.*' <<< "$inbox_text" | head -n 1)" || inbox_match=""
+    inbox_reset=""
     if [[ -n "$inbox_match" ]]; then
-        limit_active=1
-        reset="$(reset_time_from_signal "$inbox_match")"
-    elif [[ "$meta_status" != working ]] && ((pane_read_ok)); then
-        api_error_line='^(■ |[[:space:]]*⎿[[:space:]]+(API Error|Claude usage limit|[0-9]+-hour limit|You.{1,3}ve hit your|Weekly limit|Session limit))'
-        limit_error_pattern='Claude usage limit|[0-9]+-hour limit|You.{1,3}ve hit your ([a-z]+ )?limit|Weekly limit|Session limit'
-        banner_line="$(LC_ALL=C grep -E -- "$api_error_line" <<< "$pane_text" | LC_ALL=C grep -v -- 'Retrying in' | LC_ALL=C grep -iE -- "$limit_error_pattern")" || banner_line=""
-        if [[ -n "$banner_line" ]]; then
-            limit_active=1
-            reset="$(reset_time_from_signal "$banner_line")"
-        fi
+        inbox_reset="$(reset_time_from_signal "$inbox_match")"
     fi
 
-    if ((limit_active == 0)); then
-        if [[ "$meta_status" == working && "$pane_read_ok" == 1 && -f "$episode_file" ]]; then
+    api_error_line='^(■ |[[:space:]]*⎿[[:space:]]+(API Error|Claude usage limit|[0-9]+-hour limit|You.{1,3}ve hit your|Weekly limit|Session limit))'
+    limit_error_pattern='Claude usage limit|[0-9]+-hour limit|You.{1,3}ve hit your ([a-z]+ )?limit|Weekly limit|Session limit'
+    banner_line=""
+    if ((pane_read_ok)); then
+        banner_line="$(LC_ALL=C grep -E -- "$api_error_line" <<< "$pane_text" | LC_ALL=C grep -v -- 'Retrying in' | LC_ALL=C grep -iE -- "$limit_error_pattern")" || banner_line=""
+    fi
+    banner_reset=""
+    if [[ -n "$banner_line" ]]; then
+        banner_reset="$(reset_time_from_signal "$banner_line")"
+    fi
+    candidate_resets="$(jq -cn --arg inbox "$inbox_reset" --arg banner "$banner_reset" '[$inbox,$banner] | map(select(length > 0))')"
+    observed_resets="$(jq -c 'unique' <<< "$candidate_resets")"
+    limit_active=0
+    reset=""
+
+    episode_active=false
+    episode_reset=""
+    notification_sent=false
+    workers_notified='[]'
+    suppressed_resets='[]'
+    if [[ -f "$episode_file" ]] && jq -e '
+        type == "object" and
+        (.active == null or (.active | type == "boolean")) and
+        (.notification_sent | type == "boolean") and
+        (.workers_notified | type == "array") and
+        (.suppressed_resets == null or (.suppressed_resets | type == "array"))
+    ' "$episode_file" > /dev/null 2>&1; then
+        episode_active="$(jq -r 'if .active == null then true else .active end' "$episode_file")"
+        episode_reset="$(jq -r '.reset // empty' "$episode_file")"
+        notification_sent="$(jq -r '.notification_sent' "$episode_file")"
+        workers_notified="$(jq -c '.workers_notified' "$episode_file")"
+        suppressed_resets="$(jq -c '.suppressed_resets // []' "$episode_file")"
+    fi
+
+    if [[ "$meta_status" == working ]]; then
+        if [[ "$observed_resets" == "[]" ]]; then
             rm -f "$episode_file"
+        else
+            write_limit_episode "" false '[]' false "$observed_resets"
         fi
         return 0
     fi
 
-    mkdir -p "$state_dir"
-    if [[ -f "$episode_file" ]] && jq -e '
-        type == "object" and (.notification_sent | type == "boolean") and (.workers_notified | type == "array")
-    ' "$episode_file" > /dev/null 2>&1; then
-        notification_sent="$(jq -r '.notification_sent' "$episode_file")"
-        workers_notified="$(jq -c '.workers_notified' "$episode_file")"
-    else
+    suppressed_resets="$(jq -cn --argjson previous "$suppressed_resets" --argjson observed "$observed_resets" \
+        '[$previous[] as $reset | select(($observed | index($reset)) != null) | $reset] | unique')"
+
+    if [[ "$candidate_resets" != "[]" ]]; then
+        limit_active=1
+        reset="$(jq -rn --argjson candidates "$candidate_resets" --argjson suppressed "$suppressed_resets" \
+            --arg active "$episode_active" --arg previous "$episode_reset" '
+            if $active == "true" then
+                ([ $candidates[] | select(. != $previous) ] | first) // (if ($candidates | index($previous)) != null then $previous else ($candidates[0] // "") end)
+            else
+                ([ $candidates[] as $candidate | select(($suppressed | index($candidate)) == null) | $candidate ] | first) // ($candidates[0] // "")
+            end
+        ')"
+    fi
+
+    if ((limit_active == 0)); then
+        if [[ "$episode_active" != true ]]; then
+            if [[ "$suppressed_resets" == "[]" ]]; then
+                rm -f "$episode_file"
+            else
+                write_limit_episode "" false '[]' false "$suppressed_resets"
+            fi
+        fi
+        return 0
+    fi
+
+    if [[ "$episode_active" != true ]] &&
+        jq -e --arg reset "$reset" 'index($reset) != null' <<< "$suppressed_resets" > /dev/null; then
+        write_limit_episode "" false '[]' false "$suppressed_resets"
+        return 0
+    fi
+
+    if [[ "$episode_active" != true || "$episode_reset" != "$reset" ]]; then
         notification_sent=false
         workers_notified='[]'
+        suppressed_resets='[]'
     fi
-    write_limit_episode "$reset" "$notification_sent" "$workers_notified"
+    mkdir -p "$state_dir"
+    write_limit_episode "$reset" "$notification_sent" "$workers_notified" true "$suppressed_resets"
 
     if [[ "$notification_sent" != true ]]; then
         if herdr_timed notification show 'meta usage limit' --body "Meta is usage-limited until ${reset}. Workers waiting at a ready-for-review HEAD should hold periodic STATUS and use the approved Codex review route."; then
             notification_sent=true
-            write_limit_episode "$reset" true "$workers_notified"
+            write_limit_episode "$reset" true "$workers_notified" true "$suppressed_resets"
         else
             printf '%s\n' 'patrol: limit notification failed; it will be retried next cycle' >&2
         fi
@@ -314,7 +371,7 @@ function run_meta_limit_hold() {
         if wait "${prompt_pids[$worker_index]}"; then
             worker="${prompt_workers[$worker_index]}"
             workers_notified="$(jq -c --arg worker "$worker" '.workers_notified = ((.workers_notified + [$worker]) | unique) | .workers_notified' "$episode_file")"
-            write_limit_episode "$reset" "$notification_sent" "$workers_notified"
+            write_limit_episode "$reset" "$notification_sent" "$workers_notified" true "$suppressed_resets"
         else
             printf 'patrol: limit hold message was not delivered to %s; it will be retried next cycle\n' "${prompt_workers[$worker_index]}" >&2
         fi

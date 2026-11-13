@@ -22,6 +22,8 @@ For repository artifacts, reviewers must check for user chat, instructions given
 
 The orchestrator keeps receipt checks and state reconciliation, consolidates reviewer findings, makes accept/reject decisions, and routes results to owners or users. Worker summaries, test names, pass counts, manifests, CI, and artifact hashes remain candidate evidence only, not acceptance; reviewer reports are findings for the orchestrator to consolidate, not decisions. Reject and redispatch claims based on test-local reconstructions or runtime paths that do not exist or are not exercised.
 
+The same checklist applies to the one-shot independent review permitted while meta is usage-limited.
+
 ## Process actionable REJECT
 
 <!-- textlint-disable sentence-length -->
