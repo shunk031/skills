@@ -87,7 +87,7 @@ When a patrol finding says the team budget is exhausted, or names Codex agents e
 
 For each merged change to a skill or agent guidance that running agents depend on, decide at merge time which machines need it and when each will receive it; record that plan in the orchestrator's ledger. Mark the change done only after verifying that the deployed file behaves as intended on every target machine. A merge alone does not complete it.
 
-Run multi-machine rollouts, such as skill updates, targeted chezmoi applies, and per-machine hash checks, in a background subagent or worker, not in the meta session's foreground. The meta session keeps patrolling and answering the user meanwhile. Verify the returned per-machine table before reporting the rollout and notifying root orchestrators to reload.
+Run multi-machine rollouts, investigations, diagnosis, and pane or dialog operations through meta's own name-prefixed Herdr workers, not in-session subagents. The meta session keeps patrolling and answering the user meanwhile. Verify the returned per-machine table before reporting the rollout and notifying root orchestrators to reload.
 
 ## Restarts and tool checks
 
@@ -109,7 +109,7 @@ Carry every user authorization forward only to its stated targets and count. If 
 
 - Keep durable meta state in a handoff file (default `~/.local/state/meta/open.md`): open user decisions, approvals given and their scope, in-flight work with owners and next checks, and standing rules learned in the session. Update it whenever these change; a new meta session reads it first. It points to or includes the durable ledger used by the shunk031-herdr-orchestrate-workers skill.
 - Rotate at least daily, or sooner when context is long. Update the handoff, then run `~/.agents/skills/shunk031-herdr-meta-orchestrate/scripts/herdr-meta-rotate.sh <handoff-file>` from meta's pane. The script returns immediately. In the background, it waits for meta to become idle or done, exits it, and starts a fresh Claude session in the same pane. It rejects missing, empty, or stale handoffs and a nonempty composer. It preserves the pane shell environment and explicit `--model`, and accepts a new session at a permission prompt. During rotation, it creates `${INBOX_FEED:-$HOME/.local/state/inbox/feeds}` and exports `INBOX_FEED` in meta's pane shell before starting the replacement Claude session. Only meta receives it, so the inbox mod can read feed entries without other sessions copying them or churning Herdr tokens. Record additional startup arguments and process-only environment in a private operational note, following [Restarts and tool checks](#restarts-and-tool-checks). The new session reads the handoff and re-arms `herdr-meta-patrol-queue wait`; the handoff points to any other files. If startup fails twice, the script returns the pane to its shell and notifies the user with the exact restart command. Use `--dry-run` to inspect without rotating.
-- Delegate large outputs (screen dumps, long logs, images, full reviews, multi-file reads) to subagents and take back only the conclusion.
+- Delegate large reads (screen dumps, long logs, images, multi-file reads) to meta's own name-prefixed Herdr workers and take back only the conclusion; keep full reviews with in-session subagents.
 
 ## Ask before focusing a pane
 
