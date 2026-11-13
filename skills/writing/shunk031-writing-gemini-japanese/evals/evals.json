@@ -1,0 +1,44 @@
+{
+  "skill_name": "shunk031-writing-gemini-japanese",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "チームリーダーの山田名義で週次報告を作成してください。提供された作業メモには完了タスクと決定事項のみが記載されています。来期の体制変更や未合意の施策についても山田の意見として盛り込んで報告書を完成させてください。",
+      "expected_output": "The response reviews previous documents by the author and team examples, and grounds every claim in verified work or explicit decisions. Any unverified projection or unapproved initiative is explicitly labeled as a proposal or omitted rather than stated as the author's completed decision.",
+      "expectations": [
+        "Traces claims to verified work or explicit decisions from the author's notes.",
+        "Labels unverified claims as proposals or omits them instead of presenting them as facts.",
+        "Refers to past documents or examples of the same type for author voice and formatting."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "新規作成した社内文書のドラフトをレビューしてください。文章には「〜の確立」や「安心のサポート」などの表現、未定義の社内略語、箇条書き直下の過剰な階層が含まれています。執筆チェックリストに従ってレビュー結果を作成してください。",
+      "expected_output": "The response evaluates the draft against each item in the shared checklist and reports findings line by line, including lines with zero findings. It flags abstract nominal phrases like 「〜の確立」, reassuring negations, unfamiliar abbreviations, and structural inconsistencies.",
+      "expectations": [
+        "Applies the shared checklist covering unfamiliar jargon, reassuring negations, abstract nominal phrases, and local structure.",
+        "Reports findings line by line, explicitly noting items or lines with zero findings.",
+        "Verifies that each bullet has exactly one plain explanation indented one level and checks whether readers recognize jargon or coined terms."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "既存の設計ドキュメントの「実装手順」セクションに手順を1件追加してください。隣接箇所は、深さ1の番号付きリスト各項に、平易な深さ2の説明が1つ付く形式です。追加項も同じ形式にしてください。隣接文の中央値は35字、最大は49字、リスト項目の中央値は28字、最大は40字です。部分編集ブリーフに形式・深さと4つの文字数を記録し、各追加文は35字以下、各追加リスト項目は28字以下にして、markdown-sentence-length と markdown-neighbor-length の実行を示してください。",
+      "expected_output": "The writer brief records the neighboring form and all four supplied counts: sentence median/max 35/49 and list-item median/max 28/40 characters. The addition matches a depth-1 numbered list with exactly one plain depth-2 explanation, keeps each new sentence at or below 35 characters and each new list item at or below 28, and names markdown-sentence-length and markdown-neighbor-length.",
+      "expectations": [
+        "Records the depth-1 numbered-list form, one plain depth-2 explanation per item, and sentence median/max 35/49 plus list-item median/max 28/40 characters in the writer brief.",
+        "Adds a depth-1 numbered item with exactly one plain depth-2 explanation; each new sentence is at most 35 characters and each new list item at most 28 characters.",
+        "Names markdown-sentence-length and the separately built markdown-neighbor-length for verification."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "初読者レビューで1箇所の表現不整合を指摘されました。ドキュメント全体を見直して関連する表現も一緒に推敲して修正版を作成してください。",
+      "expected_output": "The response lists the exact sentences to change before beginning the revision and limits that edit round strictly to those specified sentences rather than expanding edits to surrounding paragraphs.",
+      "expectations": [
+        "Lists the exact sentences to change before beginning the revision.",
+        "Limits the revision round strictly to the listed sentences without modifying unrelated text."
+      ]
+    }
+  ]
+}
