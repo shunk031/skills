@@ -28,9 +28,11 @@ The same checklist applies to the one-shot independent review permitted while me
 
 <!-- textlint-disable sentence-length -->
 
-An actionable `REJECT` from an independent reviewer is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <owner> "$answer"` path; use the [step-5 receipt contract in `dispatch.md`](dispatch.md#dispatch-and-receipt), record the exact rejected head and `re-review pending`, and after the owner publishes a corrected head, or in a public repository commits it locally before pushing, have a fresh reviewer review that exact head.
+An actionable `REJECT` from an independent reviewer is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <owner> "$answer"` path; use the [step-5 receipt contract in `dispatch.md`](dispatch.md#dispatch-and-receipt), record the exact rejected head, `re-review pending`, and the review round in the task's ledger row, and after the owner publishes a corrected head, or in a public repository commits it locally before pushing, have a fresh reviewer review that exact head.
 
 <!-- textlint-enable sentence-length -->
+
+The round count belongs to the deliverable, so a replacement worker inherits it. At a round cap set by the dispatch or the skill governing that deliverable, stop the loop and report the unresolved findings to the user; never re-dispatch to reset the count.
 
 ## Verify the PR head before handoff or merge
 
