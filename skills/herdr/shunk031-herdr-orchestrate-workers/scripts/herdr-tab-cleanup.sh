@@ -8,7 +8,7 @@
 #   or branches; it leaves one tab in each workspace.
 # @option --apply Close only named candidates after fresh safety checks.
 # @option --results-collected TAB_ID Confirm results and select one tab; repeatable.
-# @option --record-worker NAME Record a directly dispatched worker's tab and pane.
+# @option --record-worker NAME Record a directly dispatched worker's terminal, tab, and pane.
 # @option --help Show usage.
 # @example
 #   scripts/herdr-tab-cleanup.sh
@@ -24,6 +24,7 @@ RESULTS_COLLECTED_TABS=()
 RECORD_WORKER=''
 CALLER_NAME=''
 CALLER_TAB=''
+CALLER_TERMINAL=''
 CALLER_IDENTITY_OK=0
 TABS_JSON=''
 PANES_JSON=''
@@ -56,7 +57,7 @@ By default, report a close/keep verdict for each local Herdr tab.
 those named tabs after refreshing inventories and repeating safety checks.
 --results-collected <tab-id> confirms collection for that worker tab and selects
 it for closure when the tab otherwise qualifies; repeat the option per tab.
---record-worker <name> records a worker tab/pane after this caller dispatches it.
+--record-worker <name> records a worker terminal/tab/pane after this caller dispatches it.
 USAGE
 }
 
@@ -121,15 +122,22 @@ function load_inventory() {
 
 # @description Identify the caller from its Herdr pane.
 function identify_caller() {
-    local matches
-    matches="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$HERDR_PANE_ID" '[.result.agents[] | select(.pane_id == $pane)] | length')"
+    local matches agent_json pane_matches pane_json agent_terminal pane_terminal
     CALLER_IDENTITY_OK=0
     CALLER_NAME=''
     CALLER_TAB=''
+    CALLER_TERMINAL=''
+    matches="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$HERDR_PANE_ID" --arg tab "$HERDR_TAB_ID" '[.result.agents[] | select(.pane_id == $pane and .tab_id == $tab)] | length')"
     [ "$matches" = "1" ] || return 1
-    CALLER_NAME="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$HERDR_PANE_ID" '[.result.agents[] | select(.pane_id == $pane)][0].name // empty')"
-    CALLER_TAB="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$HERDR_PANE_ID" '[.result.agents[] | select(.pane_id == $pane)][0].tab_id // empty')"
-    [ -n "$CALLER_NAME" ] && [ "$CALLER_TAB" = "$HERDR_TAB_ID" ] || return 1
+    agent_json="$(printf '%s\n' "$AGENTS_JSON" | jq -c --arg pane "$HERDR_PANE_ID" --arg tab "$HERDR_TAB_ID" '[.result.agents[] | select(.pane_id == $pane and .tab_id == $tab)][0]')"
+    CALLER_NAME="$(printf '%s\n' "$agent_json" | jq -r '.name // empty')"
+    CALLER_TAB="$(printf '%s\n' "$agent_json" | jq -r '.tab_id // empty')"
+    CALLER_TERMINAL="$(printf '%s\n' "$agent_json" | jq -r '.terminal_id // empty')"
+    pane_matches="$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$HERDR_PANE_ID" --arg tab "$HERDR_TAB_ID" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab)] | length')"
+    [ "$pane_matches" = "1" ] || return 1
+    pane_json="$(printf '%s\n' "$PANES_JSON" | jq -c --arg pane "$HERDR_PANE_ID" --arg tab "$HERDR_TAB_ID" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab)][0]')"
+    pane_terminal="$(printf '%s\n' "$pane_json" | jq -r '.terminal_id // empty')"
+    [ -n "$CALLER_NAME" ] && [ "$CALLER_TAB" = "$HERDR_TAB_ID" ] && [ -n "$CALLER_TERMINAL" ] && [ "$CALLER_TERMINAL" = "$pane_terminal" ] || return 1
     CALLER_IDENTITY_OK=1
 }
 
@@ -143,25 +151,27 @@ function inspect_dispatch_records() {
         RECORDS_STATE='invalid'
         return 0
     fi
-    if awk -F '\t' 'NF != 4 || $1 == "" || $2 == "" || $3 == "" || $4 == "" { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE"; then
+    if awk -F '\t' 'NF != 6 || $1 == "" || $2 == "" || $3 == "" || $4 == "" || $5 == "" || $6 == "" { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE"; then
         RECORDS_STATE='valid'
     else
         RECORDS_STATE='invalid'
     fi
 }
 
-# @description Count exact caller/worker/tab/pane dispatch records.
+# @description Count exact caller/worker/terminal/tab/pane dispatch records.
 # @arg $1 caller Caller agent name.
-# @arg $2 worker Dispatched worker name.
-# @arg $3 tab_id Herdr tab ID.
-# @arg $4 pane_id Herdr pane ID.
+# @arg $2 caller_terminal Caller terminal ID.
+# @arg $3 worker Dispatched worker name.
+# @arg $4 worker_terminal Worker terminal ID.
+# @arg $5 tab_id Herdr tab ID.
+# @arg $6 pane_id Herdr pane ID.
 function dispatch_record_count() {
     [ "$RECORDS_STATE" = 'valid' ] || {
         printf '0\n'
         return 0
     }
-    awk -F '\t' -v caller="$1" -v worker="$2" -v tab="$3" -v pane="$4" \
-        '$1 == caller && $2 == worker && $3 == tab && $4 == pane { count++ } END { print count + 0 }' \
+    awk -F '\t' -v caller="$1" -v caller_terminal="$2" -v worker="$3" -v worker_terminal="$4" -v tab="$5" -v pane="$6" \
+        '$1 == caller && $2 == caller_terminal && $3 == worker && $4 == worker_terminal && $5 == tab && $6 == pane { count++ } END { print count + 0 }' \
         "$RECORDS_FILE"
 }
 
@@ -211,10 +221,10 @@ function acquire_dispatch_lock() {
     return 1
 }
 
-# @description Record the exact live tab and pane for a directly dispatched worker.
-# @stdout A confirmation with worker, tab, and pane IDs.
+# @description Record the caller and worker terminal IDs with a directly dispatched worker's tab and pane.
+# @stdout A confirmation with caller, worker, terminal, tab, and pane identities.
 function record_worker_dispatch() {
-    local worker_matches worker_json worker_pane worker_tab worker_pane_count tab_matches existing conflicting
+    local worker_matches worker_json worker_pane worker_tab worker_terminal worker_pane_matches worker_pane_json worker_pane_terminal tab_matches existing conflicting
     [ "$CALLER_IDENTITY_OK" -eq 1 ] || fail "caller identity could not be proven"
     [ -n "$RECORDS_FILE" ] || fail "XDG_STATE_HOME or HOME is required for dispatch records"
     worker_matches="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg name "$RECORD_WORKER" '[.result.agents[] | select(.name == $name)] | length')"
@@ -222,10 +232,14 @@ function record_worker_dispatch() {
     worker_json="$(printf '%s\n' "$AGENTS_JSON" | jq -c --arg name "$RECORD_WORKER" '[.result.agents[] | select(.name == $name)][0]')"
     worker_pane="$(printf '%s\n' "$worker_json" | jq -r '.pane_id // empty')"
     worker_tab="$(printf '%s\n' "$worker_json" | jq -r '.tab_id // empty')"
-    [ -n "$worker_pane" ] && [ -n "$worker_tab" ] || fail "worker pane or tab ID is unknown"
+    worker_terminal="$(printf '%s\n' "$worker_json" | jq -r '.terminal_id // empty')"
+    [ -n "$worker_pane" ] && [ -n "$worker_tab" ] && [ -n "$worker_terminal" ] || fail "worker pane, tab, or terminal ID is unknown"
     [ "$worker_tab" != "$CALLER_TAB" ] && [ "$worker_tab" != "$HERDR_TAB_ID" ] || fail "cannot record the caller's own tab"
-    worker_pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$worker_pane" --arg tab "$worker_tab" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab)] | length')"
-    [ "$worker_pane_count" = '1' ] || fail "worker pane does not uniquely match the live pane inventory"
+    worker_pane_matches="$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$worker_pane" --arg tab "$worker_tab" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab)] | length')"
+    [ "$worker_pane_matches" = '1' ] || fail "worker pane does not uniquely match the live pane inventory"
+    worker_pane_json="$(printf '%s\n' "$PANES_JSON" | jq -c --arg pane "$worker_pane" --arg tab "$worker_tab" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab)][0]')"
+    worker_pane_terminal="$(printf '%s\n' "$worker_pane_json" | jq -r '.terminal_id // empty')"
+    [ "$worker_terminal" = "$worker_pane_terminal" ] || fail "worker agent and pane terminal IDs do not match"
     tab_matches="$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$worker_tab" '[.result.tabs[] | select(.tab_id == $tab)] | length')"
     [ "$tab_matches" = '1' ] || fail "worker tab does not uniquely match the live tab inventory"
 
@@ -235,11 +249,11 @@ function record_worker_dispatch() {
     fi
     if [ -e "$RECORDS_FILE" ]; then
         [ -r "$RECORDS_FILE" ] || fail "dispatch-record file is unreadable"
-        awk -F '\t' 'NF != 4 || $1 == "" || $2 == "" || $3 == "" || $4 == "" { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE" || fail "dispatch-record file is malformed"
-        existing="$(awk -F '\t' -v caller="$CALLER_NAME" -v worker="$RECORD_WORKER" -v tab="$worker_tab" -v pane="$worker_pane" \
-            '$1 == caller && $2 == worker && $3 == tab && $4 == pane { count++ } END { print count + 0 }' "$RECORDS_FILE")"
-        conflicting="$(awk -F '\t' -v tab="$worker_tab" -v pane="$worker_pane" -v caller="$CALLER_NAME" -v worker="$RECORD_WORKER" \
-            '$3 == tab && $4 == pane && !($1 == caller && $2 == worker) { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+        awk -F '\t' 'NF != 6 || $1 == "" || $2 == "" || $3 == "" || $4 == "" || $5 == "" || $6 == "" { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE" || fail "dispatch-record file is malformed"
+        existing="$(awk -F '\t' -v caller="$CALLER_NAME" -v caller_terminal="$CALLER_TERMINAL" -v worker="$RECORD_WORKER" -v worker_terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" \
+            '$1 == caller && $2 == caller_terminal && $3 == worker && $4 == worker_terminal && $5 == tab && $6 == pane { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+        conflicting="$(awk -F '\t' -v caller="$CALLER_NAME" -v caller_terminal="$CALLER_TERMINAL" -v worker="$RECORD_WORKER" -v worker_terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" \
+            '$4 == worker_terminal && $5 == tab && $6 == pane && !($1 == caller && $2 == caller_terminal && $3 == worker) { count++ } END { print count + 0 }' "$RECORDS_FILE")"
     else
         existing=0
         conflicting=0
@@ -248,12 +262,12 @@ function record_worker_dispatch() {
     [ "$existing" -le 1 ] || fail "dispatch record is duplicated"
     if [ "$existing" -eq 0 ]; then
         (umask 077 && : >> "$RECORDS_FILE") || fail "cannot create dispatch-record file"
-        printf '%s\t%s\t%s\t%s\n' "$CALLER_NAME" "$RECORD_WORKER" "$worker_tab" "$worker_pane" >> "$RECORDS_FILE" || fail "cannot append dispatch record"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$CALLER_NAME" "$CALLER_TERMINAL" "$RECORD_WORKER" "$worker_terminal" "$worker_tab" "$worker_pane" >> "$RECORDS_FILE" || fail "cannot append dispatch record"
     fi
     chmod 600 "$RECORDS_FILE" 2> /dev/null || fail "cannot secure dispatch-record file"
     release_dispatch_lock
     trap - EXIT INT TERM
-    printf 'recorded caller=%s worker=%s tab=%s pane=%s\n' "$CALLER_NAME" "$RECORD_WORKER" "$worker_tab" "$worker_pane"
+    printf 'recorded caller=%s caller-terminal=%s worker=%s worker-terminal=%s tab=%s pane=%s\n' "$CALLER_NAME" "$CALLER_TERMINAL" "$RECORD_WORKER" "$worker_terminal" "$worker_tab" "$worker_pane"
 }
 
 # @description Resolve a Git metadata path to an absolute path.
@@ -292,8 +306,8 @@ function merged_pr_evidence() {
 function classify_tab() {
     local tab_id="$1"
     local tab_json workspace_id focused declared_count pane_rows pane_count
-    local pane_id cwd foreground_cwd check_path root git_dir common_dir canonical_git canonical_common
-    local agent_matches agent_json agent_name agent_status input_text input_state
+    local pane_id pane_terminal cwd foreground_cwd check_path root git_dir common_dir canonical_git canonical_common
+    local agent_matches agent_json agent_name agent_terminal agent_status input_text input_state
     local candidate_root candidate_branch merged_evidence tab_match_count unique_pane_count tab_agent_count record_count
 
     if [ "$CALLER_IDENTITY_OK" -ne 1 ]; then
@@ -336,7 +350,7 @@ function classify_tab() {
         return 0
     }
 
-    pane_rows="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab)] | .[] | [.pane_id, (.cwd // ""), (.foreground_cwd // "")] | @tsv')"
+    pane_rows="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab)] | .[] | [.pane_id, (.terminal_id // ""), (.cwd // ""), (.foreground_cwd // "")] | @tsv')"
     pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab)] | length')"
     unique_pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab) | .pane_id | select(type == "string" and length > 0)] | unique | length')"
     tab_agent_count="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg tab "$tab_id" '[.result.agents[] | select(.tab_id == $tab)] | length')"
@@ -361,27 +375,28 @@ function classify_tab() {
 
     candidate_root=''
     candidate_branch=''
-    while IFS="$(printf '\t')" read -r pane_id cwd foreground_cwd; do
+    while IFS="$(printf '\t')" read -r pane_id pane_terminal cwd foreground_cwd; do
         if [ -z "$pane_id" ]; then
             [ -z "$cwd" ] && [ -z "$foreground_cwd" ] && continue
             printf 'keep\tpane inventory contains an unnamed pane\n'
             return 0
         fi
-        agent_matches="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$pane_id" '[.result.agents[] | select(.pane_id == $pane)] | length')"
+        agent_matches="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$pane_id" --arg tab "$tab_id" '[.result.agents[] | select(.pane_id == $pane and .tab_id == $tab)] | length')"
         [ "$agent_matches" = "1" ] || {
             printf 'keep\tpane %s has no unique named agent; owner is unknown\n' "$pane_id"
             return 0
         }
-        agent_json="$(printf '%s\n' "$AGENTS_JSON" | jq -c --arg pane "$pane_id" '[.result.agents[] | select(.pane_id == $pane)][0]')"
+        agent_json="$(printf '%s\n' "$AGENTS_JSON" | jq -c --arg pane "$pane_id" --arg tab "$tab_id" '[.result.agents[] | select(.pane_id == $pane and .tab_id == $tab)][0]')"
         agent_name="$(printf '%s\n' "$agent_json" | jq -r '.name // empty')"
+        agent_terminal="$(printf '%s\n' "$agent_json" | jq -r '.terminal_id // empty')"
         agent_status="$(printf '%s\n' "$agent_json" | jq -r '.agent_status // empty')"
-        [ -n "$agent_name" ] || {
-            printf 'keep\tpane %s agent identity is unknown\n' "$pane_id"
+        [ -n "$agent_name" ] && [ -n "$pane_terminal" ] && [ "$agent_terminal" = "$pane_terminal" ] || {
+            printf 'keep\tpane %s agent or terminal identity is unknown or inconsistent\n' "$pane_id"
             return 0
         }
         case "$RECORDS_STATE" in
         valid)
-            record_count="$(dispatch_record_count "$CALLER_NAME" "$agent_name" "$tab_id" "$pane_id")"
+            record_count="$(dispatch_record_count "$CALLER_NAME" "$CALLER_TERMINAL" "$agent_name" "$agent_terminal" "$tab_id" "$pane_id")"
             [ "$record_count" = '1' ] || {
                 printf 'keep\tpane %s was not recorded as created by this caller at dispatch\n' "$pane_id"
                 return 0
@@ -488,8 +503,8 @@ function workspace_tab_count() {
 # @arg $1 tab_id Herdr tab ID.
 function recheck_after_pr() {
     local tab_id="$1" tab_json tab_matches workspace_id focused declared_count pane_rows pane_count unique_pane_count tab_agent_count
-    local pane_id pane_cwd foreground_cwd check_path root git_dir common_dir canonical_git canonical_common candidate_root
-    local agent_matches agent_json agent_name agent_status record_count input_text input_state
+    local pane_id pane_terminal pane_cwd foreground_cwd check_path root git_dir common_dir canonical_git canonical_common candidate_root
+    local agent_matches agent_json agent_name agent_terminal agent_status record_count input_text input_state
     RECHECK_EVIDENCE=''
 
     TABS_JSON="$(herdr tab list 2> /dev/null)" || {
@@ -550,7 +565,7 @@ function recheck_after_pr() {
         RECHECK_EVIDENCE='workspace ownership is unknown'
         return 1
     }
-    pane_rows="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab)] | .[] | [.pane_id, (.cwd // ""), (.foreground_cwd // "")] | @tsv')"
+    pane_rows="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab)] | .[] | [.pane_id, (.terminal_id // ""), (.cwd // ""), (.foreground_cwd // "")] | @tsv')"
     pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab)] | length')"
     unique_pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$tab_id" '[.result.panes[] | select(.tab_id == $tab) | .pane_id | select(type == "string" and length > 0)] | unique | length')"
     tab_agent_count="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg tab "$tab_id" '[.result.agents[] | select(.tab_id == $tab)] | length')"
@@ -564,21 +579,22 @@ function recheck_after_pr() {
     }
 
     candidate_root=''
-    while IFS="$(printf '\t')" read -r pane_id pane_cwd foreground_cwd; do
+    while IFS="$(printf '\t')" read -r pane_id pane_terminal pane_cwd foreground_cwd; do
         [ -n "$pane_id" ] || {
             RECHECK_EVIDENCE='pane inventory contains an unnamed pane'
             return 1
         }
-        agent_matches="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$pane_id" '[.result.agents[] | select(.pane_id == $pane)] | length')"
+        agent_matches="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg pane "$pane_id" --arg tab "$tab_id" '[.result.agents[] | select(.pane_id == $pane and .tab_id == $tab)] | length')"
         [ "$agent_matches" = '1' ] || {
             RECHECK_EVIDENCE="pane ${pane_id} has no unique live agent"
             return 1
         }
-        agent_json="$(printf '%s\n' "$AGENTS_JSON" | jq -c --arg pane "$pane_id" '[.result.agents[] | select(.pane_id == $pane)][0]')"
+        agent_json="$(printf '%s\n' "$AGENTS_JSON" | jq -c --arg pane "$pane_id" --arg tab "$tab_id" '[.result.agents[] | select(.pane_id == $pane and .tab_id == $tab)][0]')"
         agent_name="$(printf '%s\n' "$agent_json" | jq -r '.name // empty')"
+        agent_terminal="$(printf '%s\n' "$agent_json" | jq -r '.terminal_id // empty')"
         agent_status="$(printf '%s\n' "$agent_json" | jq -r '.agent_status // empty')"
-        record_count="$(dispatch_record_count "$CALLER_NAME" "$agent_name" "$tab_id" "$pane_id")"
-        [ -n "$agent_name" ] && [ "$record_count" = '1' ] || {
+        record_count="$(dispatch_record_count "$CALLER_NAME" "$CALLER_TERMINAL" "$agent_name" "$agent_terminal" "$tab_id" "$pane_id")"
+        [ -n "$agent_name" ] && [ -n "$pane_terminal" ] && [ "$agent_terminal" = "$pane_terminal" ] && [ "$record_count" = '1' ] || {
             RECHECK_EVIDENCE="pane ${pane_id} no longer matches a caller dispatch record"
             return 1
         }

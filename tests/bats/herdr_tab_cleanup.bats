@@ -138,6 +138,7 @@ for tab_id, workspace_id, label, pane_specs in definitions:
         panes.append({
             "pane_id": pane_id,
             "tab_id": tab_id,
+            "terminal_id": "terminal-" + pane_id,
             "cwd": cwd,
             "foreground_cwd": cwd,
         })
@@ -146,12 +147,14 @@ for tab_id, workspace_id, label, pane_specs in definitions:
                 "name": name,
                 "pane_id": pane_id,
                 "tab_id": tab_id,
+                "terminal_id": "terminal-" + pane_id,
                 "agent_status": status,
             })
 agents.append({
     "name": "meta-worker-hidden-live",
     "pane_id": "unlisted-live-pane",
     "tab_id": "hidden-agent-tab",
+    "terminal_id": "terminal-unlisted-live-pane",
     "agent_status": "working",
 })
 for path, value in [
@@ -196,14 +199,133 @@ PYTHON
     [ ! -s "$HERDR_TEST_CLOSES" ]
 }
 
-@test "dispatch registration records exact worker, tab, and pane and is idempotent" {
-    [ "$(awk -F '\t' '$1 == "meta" && $2 == "meta-worker-1" && $3 == "worker-tab" && $4 == "worker-pane" { n++ } END { print n + 0 }' "$HERDR_TAB_CLEANUP_STATE_DIR/dispatches.tsv")" -eq 1 ]
+@test "dispatch registration records exact agent terminals, tab, and pane and is idempotent" {
+    [ "$(awk -F '\t' '$1 == "meta" && $2 == "terminal-caller-pane" && $3 == "meta-worker-1" && $4 == "terminal-worker-pane" && $5 == "worker-tab" && $6 == "worker-pane" { n++ } END { print n + 0 }' "$HERDR_TAB_CLEANUP_STATE_DIR/dispatches.tsv")" -eq 1 ]
 
     run "$CLEANUP_SCRIPT" --record-worker meta-worker-1
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *'recorded caller=meta worker=meta-worker-1 tab=worker-tab pane=worker-pane'* ]]
-    [ "$(awk -F '\t' '$1 == "meta" && $2 == "meta-worker-1" && $3 == "worker-tab" && $4 == "worker-pane" { n++ } END { print n + 0 }' "$HERDR_TAB_CLEANUP_STATE_DIR/dispatches.tsv")" -eq 1 ]
+    [[ "$output" == *'recorded caller=meta caller-terminal=terminal-caller-pane worker=meta-worker-1 worker-terminal=terminal-worker-pane tab=worker-tab pane=worker-pane'* ]]
+    [ "$(awk -F '\t' '$1 == "meta" && $2 == "terminal-caller-pane" && $3 == "meta-worker-1" && $4 == "terminal-worker-pane" && $5 == "worker-tab" && $6 == "worker-pane" { n++ } END { print n + 0 }' "$HERDR_TAB_CLEANUP_STATE_DIR/dispatches.tsv")" -eq 1 ]
+}
+
+@test "missing dispatch-record file keeps every tab" {
+    rm "$HERDR_TAB_CLEANUP_STATE_DIR/dispatches.tsv"
+
+    run "$CLEANUP_SCRIPT" --results-collected worker-tab --results-collected merged-tab
+
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | awk '/verdict=keep/ { n++ } END { print n + 0 }')" -eq 16 ]
+    [[ "$output" != *'verdict=close'* ]]
+    [ ! -s "$HERDR_TEST_CLOSES" ]
+}
+
+@test "malformed dispatch-record file keeps every tab" {
+    printf 'meta\tbroken-record\n' > "$HERDR_TAB_CLEANUP_STATE_DIR/dispatches.tsv"
+
+    run "$CLEANUP_SCRIPT" --results-collected worker-tab --results-collected merged-tab
+
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | awk '/verdict=keep/ { n++ } END { print n + 0 }')" -eq 16 ]
+    [[ "$output" != *'verdict=close'* ]]
+    [ ! -s "$HERDR_TEST_CLOSES" ]
+}
+
+@test "worker terminal IDs must match the saved record and live pane" {
+    python3 - "$HERDR_TEST_PANES" "$HERDR_TEST_AGENTS" << 'PYTHON'
+import json
+import sys
+
+panes_path, agents_path = sys.argv[1:]
+for path in (panes_path, agents_path):
+    with open(path, encoding="utf-8") as input_file:
+        inventory = json.load(input_file)
+    for entry in inventory["result"]["panes" if path == panes_path else "agents"]:
+        if entry["pane_id"] == "worker-pane":
+            entry["terminal_id"] = "replacement-terminal"
+    with open(path, "w", encoding="utf-8") as output:
+        json.dump(inventory, output)
+PYTHON
+
+    run "$CLEANUP_SCRIPT" --results-collected worker-tab
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'tab=worker-tab label="Worker" verdict=keep evidence=pane worker-pane was not recorded as created by this caller at dispatch'* ]]
+    [ ! -s "$HERDR_TEST_CLOSES" ]
+}
+
+@test "saved worker terminal ID must match the current agent and pane IDs" {
+    python3 - "$HERDR_TEST_PANES" "$HERDR_TEST_AGENTS" << 'PYTHON'
+import json
+import sys
+
+panes_path, agents_path = sys.argv[1:]
+with open(agents_path, encoding="utf-8") as input_file:
+    inventory = json.load(input_file)
+for agent in inventory["result"]["agents"]:
+    if agent["pane_id"] == "worker-pane":
+        agent["terminal_id"] = "different-agent-terminal"
+with open(agents_path, "w", encoding="utf-8") as output:
+    json.dump(inventory, output)
+PYTHON
+
+    run "$CLEANUP_SCRIPT" --results-collected worker-tab
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'tab=worker-tab label="Worker" verdict=keep evidence=pane worker-pane agent or terminal identity is unknown or inconsistent'* ]]
+    [ ! -s "$HERDR_TEST_CLOSES" ]
+}
+
+@test "current caller terminal ID must match its saved dispatch records" {
+    python3 - "$HERDR_TEST_PANES" "$HERDR_TEST_AGENTS" << 'PYTHON'
+import json
+import sys
+
+panes_path, agents_path = sys.argv[1:]
+with open(agents_path, encoding="utf-8") as input_file:
+    inventory = json.load(input_file)
+for agent in inventory["result"]["agents"]:
+    if agent["pane_id"] == "caller-pane":
+        agent["terminal_id"] = "replacement-caller-terminal"
+with open(agents_path, "w", encoding="utf-8") as output:
+    json.dump(inventory, output)
+
+with open(panes_path, encoding="utf-8") as input_file:
+    inventory = json.load(input_file)
+for pane in inventory["result"]["panes"]:
+    if pane["pane_id"] == "caller-pane":
+        pane["terminal_id"] = "replacement-caller-terminal"
+with open(panes_path, "w", encoding="utf-8") as output:
+    json.dump(inventory, output)
+PYTHON
+
+    run "$CLEANUP_SCRIPT" --results-collected worker-tab
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'tab=worker-tab label="Worker" verdict=keep evidence=pane worker-pane was not recorded as created by this caller at dispatch'* ]]
+    [ ! -s "$HERDR_TEST_CLOSES" ]
+}
+
+@test "caller agent and pane terminal IDs must agree" {
+    python3 - "$HERDR_TEST_AGENTS" << 'PYTHON'
+import json
+import sys
+
+agents_path = sys.argv[1]
+with open(agents_path, encoding="utf-8") as input_file:
+    inventory = json.load(input_file)
+for agent in inventory["result"]["agents"]:
+    if agent["pane_id"] == "caller-pane":
+        agent["terminal_id"] = "different-caller-terminal"
+with open(agents_path, "w", encoding="utf-8") as output:
+    json.dump(inventory, output)
+PYTHON
+
+    run "$CLEANUP_SCRIPT" --results-collected worker-tab
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'tab=worker-tab label="Worker" verdict=keep evidence=caller identity could not be proven'* ]]
+    [ ! -s "$HERDR_TEST_CLOSES" ]
 }
 
 @test "apply closes only the named tabs and never removes their worktrees" {
