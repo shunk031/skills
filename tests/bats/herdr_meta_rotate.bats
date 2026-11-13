@@ -25,6 +25,10 @@ set -Eeuo pipefail
 printf '%s\n' "$*" >> "$ROTATE_STUB_STATE/calls"
 case "$1 $2" in
     "agent get")
+        if [[ -f "$ROTATE_STUB_STATE/started" && "${ROTATE_STUB_EXIT_AFTER_START:-}" == 1 ]]; then
+            printf '%s\n' '{"result":{"agent":null}}'
+            exit 0
+        fi
         if [[ -f "$ROTATE_STUB_STATE/agent_start_failed" && ! -f "$ROTATE_STUB_STATE/started" ]]; then
             printf '%s\n' '{"result":{"agent":null}}'
             exit 0
@@ -69,7 +73,10 @@ case "$1 $2" in
         printf '%s\n' '{"result":{"pane":{"pane_id":"test:p1"}}}'
         ;;
     "pane process-info")
-        if [[ -f "$ROTATE_STUB_STATE/started" ]]; then
+        if [[ -f "$ROTATE_STUB_STATE/started" && "${ROTATE_STUB_EXIT_AFTER_START:-}" == 1 ]]; then
+            touch "$ROTATE_STUB_STATE/shell_verified"
+            printf '%s\n' '{"result":{"process_info":{"shell_pid":9,"foreground_processes":[{"pid":9,"name":"zsh","argv":["zsh"]}]}}}'
+        elif [[ -f "$ROTATE_STUB_STATE/started" ]]; then
             printf '%s\n' '{"result":{"process_info":{"shell_pid":9,"foreground_processes":[{"pid":44,"name":"claude","argv":["claude","--model","test-model"]}]}}}'
         elif [[ -f "$ROTATE_STUB_STATE/agent_start_failed" || -f "$ROTATE_STUB_STATE/exited" || -f "$ROTATE_STUB_STATE/cleaned" ]]; then
             touch "$ROTATE_STUB_STATE/shell_verified"
@@ -238,7 +245,8 @@ EOF
     [ "$(cat "$ROTATE_STUB_STATE/start_count")" -eq 1 ]
     [ "$(grep -c 'pane send-text test:p1 /exit' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
     [ "$(grep -c 'pane send-keys test:p1 enter' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
-    ! grep -q 'pane send-keys test:p1 ctrl+c' "$ROTATE_STUB_STATE/calls"
+    ctrl_c_count="$(grep -c 'pane send-keys test:p1 ctrl+c' "$ROTATE_STUB_STATE/calls" || true)"
+    [ "$ctrl_c_count" -eq 0 ]
     grep -q 'Restart command:' "$ROTATE_STUB_STATE/notification"
     [ "$(grep -c '^notification show ' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
 }
@@ -270,6 +278,25 @@ EOF
     [ -f "$ROTATE_STUB_STATE/verified" ]
     [ "$(cat "$ROTATE_STUB_STATE/start_count")" -eq 2 ]
     [ ! -f "$ROTATE_STUB_STATE/notified" ]
+}
+
+@test "a ready start that exits to shell is retried and reports shell recovery" {
+    export ROTATE_STUB_EXIT_AFTER_START=1
+
+    run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/handoff.md"
+
+    [ "$status" -eq 0 ]
+    for ((attempt = 0; attempt < 50; attempt++)); do
+        [[ -f "$ROTATE_STUB_STATE/notified" ]] && break
+        sleep 0.1
+    done
+    [ -f "$ROTATE_STUB_STATE/notified" ]
+    [ "$(cat "$ROTATE_STUB_STATE/start_count")" -eq 2 ]
+    [ -f "$ROTATE_STUB_STATE/shell_verified" ]
+    grep -q 'the new Claude session failed after one retry; the pane is back at its shell' "$ROTATE_STUB_STATE/notification"
+    grep -q 'Restart command:' "$ROTATE_STUB_STATE/notification"
+    untouched_alert_count="$(grep -c 'the new session was left untouched' "$ROTATE_STUB_STATE/notification" || true)"
+    [ "$untouched_alert_count" -eq 0 ]
 }
 
 @test "persistent startup failure retries once, notifies with the command, and returns to shell" {

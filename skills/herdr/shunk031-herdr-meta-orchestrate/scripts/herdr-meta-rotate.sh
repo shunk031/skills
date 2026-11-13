@@ -269,17 +269,15 @@ function start_meta_session() {
 }
 
 function start_and_verify_meta() {
-    local start_reported_ready=false verification_status
+    local verification_status
 
-    if start_meta_session; then
-        start_reported_ready=true
-    fi
+    start_meta_session || true
     if get_meta_pane_after_start; then
         return 0
     else
         verification_status=$?
     fi
-    if [[ "$start_reported_ready" == true ]] || ((verification_status == 2)); then
+    if ((verification_status == 2)); then
         return 2
     fi
     return 1
