@@ -17,6 +17,7 @@
 # @option HERDR_META_PATROL_META Meta agent name (default `meta`).
 # @option HERDR_META_PATROL_STATE_DIR Shared patrol and queue state directory.
 # @option HERDR_META_PATROL_CALL_TIMEOUT Seconds allowed for one Herdr operation (default 20).
+# @option HERDR_META_PATROL_SHARE_PROCESS_GROUP Reuse the enclosing process group for nested handler calls (default 0).
 # @option HERDR_META_PATROL_PROMPT_GUARD Guarded Herdr prompt sender path.
 
 set -Eeuo pipefail
@@ -81,8 +82,8 @@ function herdr_for_machine() {
     fi
 }
 
-# @description Run a command in its own process group and terminate that group at the timeout.
-# @arg $1 number Seconds before the process group is terminated.
+# @description Run a command with a timeout, reusing the caller's process group when configured.
+# @arg $1 number Seconds before the command is terminated.
 # @arg $@ command Command and arguments to run.
 function run_with_timeout() {
     local timeout="$1"
@@ -90,18 +91,21 @@ function run_with_timeout() {
     perl -MPOSIX=setpgid -e '
         my $timeout = shift;
         my @command = @ARGV;
+        my $share_process_group = ($ENV{HERDR_META_PATROL_SHARE_PROCESS_GROUP} || "") eq "1";
         my $pid = fork();
         defined($pid) or die "timeout fork: $!\n";
         if ($pid == 0) {
-            setpgid(0, 0) == 0 or die "timeout process group: $!\n";
+            if (!$share_process_group) {
+                setpgid(0, 0) == 0 or die "timeout process group: $!\n";
+            }
             exec { $command[0] } @command or die "timeout exec: $!\n";
         }
-        setpgid($pid, $pid);
+        setpgid($pid, $pid) if !$share_process_group;
         local $SIG{ALRM} = sub {
-            kill "TERM", -$pid;
+            kill "TERM", -$pid if !$share_process_group;
             kill "TERM", $pid;
             sleep 1;
-            kill "KILL", -$pid;
+            kill "KILL", -$pid if !$share_process_group;
             kill "KILL", $pid;
             exit 124;
         };
@@ -141,15 +145,17 @@ function emit_root_finding() {
 # @description Extract the reset clock token from a limit signal.
 # @arg $1 string Limit signal text.
 function reset_time_from_signal() {
-    local signal match reset
+    local signal match reset reset_pattern
     signal="$1"
-    match="$(LC_ALL=C grep -Eio 'resets?[[:space:]]+(at[[:space:]]+)?((mon|tue|wed|thu|fri|sat|sun)(day)?[[:space:]]+)?[0-9]{1,2}(:[0-9]{2})?[[:space:]]*([ap]m)?' <<< "$signal" | head -n 1)" || match=""
+    reset_pattern='resets?[[:space:]]+(at[[:space:]]+)?((mon|tue|wed|thu|fri|sat|sun)[a-z]*[[:space:],]+)?([[:alpha:]]{3,9}[[:space:]]+[0-9]{1,2}([[:space:]]+at[[:space:]]+[0-9]{1,2}(:[0-9]{2})?[[:space:]]*([ap]m)?)?|[0-9]{1,2}(:[0-9]{2})?[[:space:]]*([ap]m)?)'
+    match="$(LC_ALL=C grep -Eio "$reset_pattern" <<< "$signal" | head -n 1)" || match=""
     reset="$(sed -E 's/^[Rr]esets?[[:space:]]+([Aa]t[[:space:]]+)?//' <<< "$match" | sed -E 's/[[:space:]]+$//' | tr -d '\r')"
     [[ -n "$reset" ]] || reset='the displayed reset time'
     printf '%s\n' "$reset"
 }
 
 # @description Return meta workers whose latest STATUS uses the canonical review-ready stage.
+#   While waiting for its verdict, a worker keeps that stage and exact HEAD in every STATUS.
 # @stdout One meta-prefixed worker name per line.
 function ready_for_review_workers() {
     local queue_file="${state_dir}/queue.jsonl"
@@ -189,7 +195,8 @@ function write_limit_episode() {
 function run_meta_limit_hold() {
     local agents_json meta_agent meta_status pane_id inbox_text pane_text pane_read_ok
     local limit_active reset inbox_match banner_line waiters worker worker_agent worker_status
-    local notification_sent workers_notified message
+    local notification_sent workers_notified message worker_index prompt_count=0
+    local -a prompt_pids=() prompt_workers=()
     local api_error_line limit_error_pattern
 
     if [[ "${HERDR_META_PATROL_LIMIT_LOCKED:-}" != 1 ]]; then
@@ -246,7 +253,7 @@ function run_meta_limit_hold() {
     if [[ -n "$inbox_match" ]]; then
         limit_active=1
         reset="$(reset_time_from_signal "$inbox_match")"
-    elif ((pane_read_ok)); then
+    elif [[ "$meta_status" != working ]] && ((pane_read_ok)); then
         api_error_line='^(■ |[[:space:]]*⎿[[:space:]]+(API Error|Claude usage limit|[0-9]+-hour limit|You.{1,3}ve hit your|Weekly limit|Session limit))'
         limit_error_pattern='Claude usage limit|[0-9]+-hour limit|You.{1,3}ve hit your ([a-z]+ )?limit|Weekly limit|Session limit'
         banner_line="$(LC_ALL=C grep -E -- "$api_error_line" <<< "$pane_text" | LC_ALL=C grep -v -- 'Retrying in' | LC_ALL=C grep -iE -- "$limit_error_pattern")" || banner_line=""
@@ -276,7 +283,7 @@ function run_meta_limit_hold() {
     write_limit_episode "$reset" "$notification_sent" "$workers_notified"
 
     if [[ "$notification_sent" != true ]]; then
-        if herdr_timed notification show 'meta usage limit' --body "Meta is usage-limited until ${reset}. Workers whose latest STATUS is ready for review should hold periodic STATUS and use the approved Codex review route."; then
+        if herdr_timed notification show 'meta usage limit' --body "Meta is usage-limited until ${reset}. Workers waiting at a ready-for-review HEAD should hold periodic STATUS and use the approved Codex review route."; then
             notification_sent=true
             write_limit_episode "$reset" true "$workers_notified"
         else
@@ -297,13 +304,21 @@ function run_meta_limit_hold() {
             continue
         fi
         message="Meta is usage-limited until ${reset}. Please hold periodic STATUS updates while waiting. For this exact ready-for-review HEAD, use the authorized one-shot Codex route in the worker protocol: review it independently, in a fresh read-only context, without further delegation, using the DONE verification checklist. Immediately queue the verdict, exact HEAD, and source as Codex review during meta's limit. Meta will re-check the exact HEAD when it reads its backlog after recovery, before any merge that needs user approval."
-        if run_with_timeout "$call_timeout" env HERDR_ENV=1 "$prompt_guard" "$worker" "$message"; then
+        run_with_timeout "$call_timeout" env HERDR_ENV=1 "$prompt_guard" "$worker" "$message" &
+        prompt_pids[$prompt_count]="$!"
+        prompt_workers[$prompt_count]="$worker"
+        prompt_count=$((prompt_count + 1))
+    done <<< "$waiters"
+
+    for ((worker_index = 0; worker_index < prompt_count; worker_index++)); do
+        if wait "${prompt_pids[$worker_index]}"; then
+            worker="${prompt_workers[$worker_index]}"
             workers_notified="$(jq -c --arg worker "$worker" '.workers_notified = ((.workers_notified + [$worker]) | unique) | .workers_notified' "$episode_file")"
             write_limit_episode "$reset" "$notification_sent" "$workers_notified"
         else
-            printf 'patrol: limit hold message was not delivered to %s; it will be retried next cycle\n' "$worker" >&2
+            printf 'patrol: limit hold message was not delivered to %s; it will be retried next cycle\n' "${prompt_workers[$worker_index]}" >&2
         fi
-    done <<< "$waiters"
+    done
 }
 
 function visible_input_state() {

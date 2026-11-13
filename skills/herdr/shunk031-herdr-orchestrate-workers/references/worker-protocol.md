@@ -22,7 +22,7 @@ Keep each pull request's core code change at or under 400 lines: additions plus 
 
 ## Meta usage-limit hold
 
-When your work is ready for meta's fresh review, report the canonical queue stage `STATUS <worker-name>: <HH:MM> ready for review head=<40-character-commit-sha>; ETA <time>`. The LLM-free patrol uses only this exact stage and a matching latest STATUS from a live meta-prefixed worker to identify a review waiter.
+When your work is ready for meta's fresh review, report the canonical queue stage `STATUS <worker-name>: <HH:MM> ready for review head=<40-character-commit-sha>; ETA <time>`. While waiting for that verdict, keep this exact stage and the same HEAD in every STATUS you send; update only the time and ETA. Do not replace it with a generic waiting or progress stage until the verdict arrives. The LLM-free patrol uses only this exact stage and a matching latest STATUS from a live meta-prefixed worker to identify a review waiter.
 
 If meta's patrol tells you that meta is usage-limited until a reset time and you are waiting for review, stop periodic STATUS updates. During that hold, you may run exactly one fresh, independent, one-shot non-interactive Codex reviewer on the exact committed HEAD. Keep that review read-only, do not delegate, and use the [DONE verification and independent-review checklist](../SKILL.md#done-verification-and-independent-reviews). Act on its verdict; if it rejects the HEAD, address the findings without starting another Codex review during the same limit episode.
 

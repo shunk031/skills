@@ -88,10 +88,12 @@ function line_count() {
     [ -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
 
     write_agents working null done
-    printf '%s\n' 'Meta resumed work' > "${FAKE_PANE}"
+    printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
     run bash "${PATROL_SCRIPT_PATH}" --limit-hold
     [ "${status}" -eq 0 ]
     [ ! -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
 
     write_agents idle null done
     printf '%s\n' "⎿ You've hit your weekly limit · resets Mon 12:00am" > "${FAKE_PANE}"
@@ -118,7 +120,7 @@ function line_count() {
 @test "Claude limit banners cover supported usage-limit line variants" {
     local banner expected=1
     write_ready_review_status
-    write_agents working null done
+    write_agents idle null done
     for banner in \
         "⎿ You've hit your limit · resets 9pm" \
         "⎿ You’ve hit your limit · resets 9pm" \
@@ -126,6 +128,7 @@ function line_count() {
         "⎿ 5-hour limit reached · resets 9pm" \
         "⎿ Weekly limit reached · resets 9pm" \
         "⎿ Session limit reached · resets 9pm"; do
+        write_agents idle null done
         printf '%s\n' "$banner" > "${FAKE_PANE}"
         run bash "${PATROL_SCRIPT_PATH}" --limit-hold
         [ "${status}" -eq 0 ]
@@ -133,6 +136,7 @@ function line_count() {
         expected=$((expected + 1))
 
         printf '%s\n' 'Meta resumed work' > "${FAKE_PANE}"
+        write_agents working null done
         run bash "${PATROL_SCRIPT_PATH}" --limit-hold
         [ "${status}" -eq 0 ]
         [ ! -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
@@ -141,7 +145,7 @@ function line_count() {
 }
 
 @test "quoted usage-limit text in meta's pane does not start a limit episode" {
-    write_agents working null done
+    write_agents idle null done
     write_ready_review_status
     printf '%s\n' 'Meta summarized: ⎿ Weekly limit reached · resets 9pm' > "${FAKE_PANE}"
 
@@ -153,11 +157,11 @@ function line_count() {
     [ ! -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
 }
 
-@test "only the latest canonical review-ready STATUS authorizes a worker notice" {
+@test "periodic STATUS keeps a waiting worker eligible for its review notice" {
     write_agents idle null done
     {
         jq -cn '{seq:1,t:1,kind:"message",from:"meta-review",text:"STATUS meta-review: 21:00 ready for review head=0123456789abcdef0123456789abcdef01234567; ETA 21:30"}'
-        jq -cn '{seq:2,t:2,kind:"message",from:"meta-review",text:"STATUS meta-review: 21:01 waiting for root review"}'
+        jq -cn '{seq:2,t:2,kind:"message",from:"meta-review",text:"STATUS meta-review: 21:01 ready for review head=0123456789abcdef0123456789abcdef01234567; ETA 21:45"}'
     } > "${HERDR_META_PATROL_STATE_DIR}/queue.jsonl"
     printf '%s\n' "⎿ You've hit your weekly limit · resets 9pm" > "${FAKE_PANE}"
 
@@ -165,5 +169,26 @@ function line_count() {
 
     [ "${status}" -eq 0 ]
     [ "$(line_count "${NOTIFICATION_LOG}")" -eq 1 ]
-    [ "$(line_count "${PROMPT_LOG}")" -eq 0 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 1 ]
+}
+
+@test "reset times accept full weekday names and month-day dates" {
+    local reset
+    write_ready_review_status
+    for reset in "Tuesday 9pm" "Wednesday 9pm" "Thursday 9pm" "Saturday 9pm" "Nov 20"; do
+        write_agents idle null done
+        printf '%s\n' "⎿ Weekly limit reached · resets ${reset}" > "${FAKE_PANE}"
+
+        run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+
+        [ "${status}" -eq 0 ]
+        grep -Fq "until ${reset}" "${NOTIFICATION_LOG}"
+
+        write_agents working null done
+        run bash "${PATROL_SCRIPT_PATH}" --limit-hold
+        [ "${status}" -eq 0 ]
+        [ ! -e "${HERDR_META_PATROL_STATE_DIR}/meta-limit-episode.json" ]
+    done
+    [ "$(line_count "${NOTIFICATION_LOG}")" -eq 5 ]
+    [ "$(line_count "${PROMPT_LOG}")" -eq 5 ]
 }
