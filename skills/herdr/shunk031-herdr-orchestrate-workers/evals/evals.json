@@ -73,20 +73,20 @@
     {
       "id": 8,
       "prompt": "You are a Herdr worker whose DONE report was rejected with agent_blocked, or whose guarded sender exited 75 and printed the unsent report because the orchestrator's input stayed busy. The orchestrator was waiting for an answer to a user question. In an offline dry run, describe the worker's recovery and what the orchestrator must do immediately after the user answers. Do not execute commands.",
-      "expected_output": "The worker keeps the exact report, treats both agent_blocked and exit 75 as undelivered, and waits for a lifecycle change with herdr agent wait before one guarded resend; it repeats only after another such failure and stays within a two-hour deadline. If delivery still fails, it leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn. After the interactive wait ends, the orchestrator immediately reconciles every dispatched worker with herdr agent get and herdr agent read before other work.",
+      "expected_output": "The worker keeps the exact report, treats both agent_blocked and exit 75 as undelivered, and waits for a lifecycle change with herdr agent wait before one guarded resend; it repeats only after another such failure and stays within a two-hour deadline. If delivery still fails, it leaves the full report in its transcript, and ends its turn; the background title plugin marks it blocked. After the interactive wait ends, the orchestrator immediately reconciles every dispatched worker with herdr agent get and herdr agent read before other work.",
       "expectations": [
         "Treats exit 75 as an undelivered report that was printed by the helper, as well as treating agent_blocked as undelivered.",
         "Waits for a lifecycle change with herdr agent wait before a single guarded resend, repeats only after another undelivered result, and keeps the total recovery window to two hours instead of polling at a fixed interval.",
-        "If the deadline expires, leaves the full report in the worker transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn.",
+        "If the deadline expires, leaves the full report in the worker transcript, and ends its turn; the background title plugin marks it blocked.",
         "Requires immediate reconciliation of every dispatched worker with herdr agent get and herdr agent read after the user question, before other work."
       ]
     },
     {
       "id": 9,
       "prompt": "You are a Herdr worker whose report send failed with agent_blocked. During recovery, herdr agent get or herdr agent wait returns agent_not_found because the orchestrator's name has vanished. In an offline dry run, what do you do next? Do not execute commands.",
-      "expected_output": "The worker immediately, without waiting for the deadline and without a resend, leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends the turn.",
+      "expected_output": "The worker immediately, without waiting for the deadline and without a resend, leaves the full report in its transcript, and ends the turn; the background title plugin marks it blocked.",
       "expectations": [
-        "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, uses the blocked status, and ends the turn."
+        "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, ends the turn while the background title plugin marks the tab blocked."
       ]
     },
     {
