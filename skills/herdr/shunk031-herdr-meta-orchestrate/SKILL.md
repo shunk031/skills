@@ -39,11 +39,9 @@ Output is JSON Lines with one object per finding; no output means no findings. F
 
 ## Meta usage-limit hold
 
-## Meta usage-limit hold
+The recurring external patrol also checks meta's visible pane for a Claude usage-limit error line and meta's inbox for a `! Limit: resets <time>` token. It starts an episode only from those signals, not from quoted text elsewhere in the pane. Once per episode, it notifies the user through Herdr and sends a guarded notice to each live meta-prefixed worker whose latest queue STATUS uses the canonical `ready for review head=<sha>` stage. The notice tells the worker to hold periodic STATUS updates while waiting and gives it the approved Codex review fallback. The episode remains active until meta's status is `working` and the limit signal is gone; `done`, `idle`, or unreadable state does not establish recovery.
 
-The recurring external patrol also checks meta's visible pane for Claude Code's explicit usage-limit banner and meta's inbox for a `! Limit: resets <time>` token. Once per limit episode, it notifies the user through Herdr and sends a guarded notice to each live meta-prefixed worker whose latest queue STATUS says it is waiting for meta review. The notice tells the worker to hold periodic STATUS updates while waiting and gives it the approved Codex review fallback. The episode stays active until meta is observed working without a limit signal; an unavailable agent list or unreadable pane does not clear it.
-
-When waiting for meta's fresh review during a limit hold, a worker may run exactly one fresh, independent, one-shot non-interactive Codex reviewer on the exact HEAD under review. Keep the review read-only, disable further delegation, and use the independent reviewer checklist in the shunk031-herdr-orchestrate-workers skill. Act on the verdict and record its exact HEAD and that it was reviewed by Codex during meta's limit. A Codex ACCEPT is provisional for any merge requiring the user's approval: after the limit clears, meta must freshly re-check the exact HEAD before that merge. Keep the model and launch details in private worker guidance.
+Workers use the [meta usage-limit hold protocol](../shunk031-herdr-orchestrate-workers/references/worker-protocol.md#meta-usage-limit-hold). After recovery, meta must freshly re-check the exact HEAD before any merge requiring the user's approval. Keep the model and launch details in private worker guidance.
 
 ## Find and ask root orchestrators
 

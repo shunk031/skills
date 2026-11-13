@@ -22,11 +22,11 @@ Keep each pull request's core code change at or under 400 lines: additions plus 
 
 ## Meta usage-limit hold
 
-If meta's patrol tells you that meta is usage-limited until a reset time and you are waiting for meta's fresh review, stop periodic STATUS updates while you wait. Continue to report only a new milestone, verdict, blocker, or material ETA change.
+When your work is ready for meta's fresh review, report the canonical queue stage `STATUS <worker-name>: <HH:MM> ready for review head=<40-character-commit-sha>; ETA <time>`. The LLM-free patrol uses only this exact stage and a matching latest STATUS from a live meta-prefixed worker to identify a review waiter.
 
-During that hold, you may run exactly one fresh, independent, one-shot non-interactive Codex reviewer on the exact committed HEAD awaiting review. Keep that review read-only, do not delegate, and use the [independent review checklist](review-checklist.md) that meta follows. Act on its verdict; if it rejects the HEAD, address the findings and report the resulting exact HEAD without starting another Codex review during the same limit episode. Record the verdict, exact HEAD, and `Codex review during meta usage limit` as its source.
+If meta's patrol tells you that meta is usage-limited until a reset time and you are waiting for review, stop periodic STATUS updates. During that hold, you may run exactly one fresh, independent, one-shot non-interactive Codex reviewer on the exact committed HEAD. Keep that review read-only, do not delegate, and use the [DONE verification and independent-review checklist](../SKILL.md#done-verification-and-independent-reviews). Act on its verdict; if it rejects the HEAD, address the findings without starting another Codex review during the same limit episode.
 
-A Codex ACCEPT does not replace meta's fresh review after the reset for any merge that needs the user's approval. Once meta works again, send the recorded verdict and exact HEAD to meta and wait for meta's re-check before that merge.
+Immediately enqueue the verdict, exact HEAD, and source label with `herdr-meta-patrol-queue add --from <worker-name> "$report"`. Use `Codex review during meta usage limit` as the source. Do not wait for meta to recover. Meta re-checks the exact HEAD when it reads its backlog after recovery, before any merge that needs the user's approval.
 
 ## Become a sub-orchestrator
 

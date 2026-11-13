@@ -417,7 +417,12 @@ def main() -> int:
                     title=reference_title(reference.stem), icon="lucide/book-open"
                 )
             )
-            destination.write_text(body + reference.read_text())
+            # Source references can link to their owning `SKILL.md`; the site
+            # renders that file as the skill directory's `index.md` instead.
+            reference_text = reference.read_text().replace(
+                "../SKILL.md#", "../index.md#"
+            )
+            destination.write_text(body + reference_text)
             pages += 1
 
     nav_path = (REPO_ROOT / args.nav).resolve()
