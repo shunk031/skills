@@ -359,8 +359,8 @@ function run_meta_limit_hold() {
         fi
         message="Meta is usage-limited until ${reset}. Please hold periodic STATUS updates while waiting. For this exact ready-for-review HEAD, use the authorized one-shot Codex route in the worker protocol: review it independently, in a fresh read-only context, without further delegation, using the DONE verification checklist. Immediately queue the verdict, exact HEAD, and source as Codex review during meta usage limit. Meta will re-check the exact HEAD when it reads its backlog after recovery, before any merge that needs user approval."
         run_with_timeout "$call_timeout" env HERDR_ENV=1 "$prompt_guard" "$worker" "$message" &
-        prompt_pids[$prompt_count]="$!"
-        prompt_workers[$prompt_count]="$worker"
+        prompt_pids[prompt_count]="$!"
+        prompt_workers[prompt_count]="$worker"
         prompt_count=$((prompt_count + 1))
     done <<< "$waiters"
 
