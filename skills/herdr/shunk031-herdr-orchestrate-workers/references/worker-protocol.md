@@ -22,4 +22,8 @@ Keep each pull request's core code change at or under 400 lines: additions plus 
 
 ## Become a sub-orchestrator
 
-If your task splits into large independent parts, become a sub-orchestrator: keep your existing agent name, tab, parent orchestrator, and report target; read all of SKILL.md and follow it as an orchestrator, using its steps 2-5 to create and dispatch each child with distinct identities and a separately built prompt, verify each child with the SKILL.md step-5 receipt contract, then consolidate child reports and report only to <orch-name>. Sub-workers report to you using the sub-orchestrator's own worker name as the report target; for example, if parent `orch`'s worker is `orch-api-migration`, sub-workers report to `orch-api-migration`, never directly to `orch`.
+<!-- textlint-disable sentence-length -->
+
+If your task splits into large independent parts, become a sub-orchestrator: keep your existing agent name, tab, parent orchestrator, and report target; read all of SKILL.md and follow it as an orchestrator, using its steps 2-5 in [references/dispatch.md](dispatch.md) to create and dispatch each child with distinct identities and a separately built prompt, verify each child with [the “Dispatch and receipt” section in references/dispatch.md](dispatch.md#dispatch-and-receipt), then consolidate child reports and report only to <orch-name>. Sub-workers report to you using the sub-orchestrator's own worker name as the report target; for example, if parent `orch`'s worker is `orch-api-migration`, sub-workers report to `orch-api-migration`, never directly to `orch`.
+
+<!-- textlint-enable sentence-length -->
