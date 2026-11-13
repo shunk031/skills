@@ -35,13 +35,13 @@ Inspect each apply plan with `chezmoi status` or a redacted diff. Stop on unexpl
 Confirm the target's existing `gh` authentication is available without printing its token. Run public apply:
 
 ```sh
-ssh <target> 'GITHUB_TOKEN="$(gh auth token)" chezmoi apply'
+ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi apply'
 ```
 
 Read the result. Only after success, run private apply. `chezmoi-private` may be an alias unavailable over non-interactive SSH; resolve its configured source/config and use the explicit equivalent. With the conventional paths:
 
 ```sh
-ssh <target> 'GITHUB_TOKEN="$(gh auth token)" chezmoi --source "$HOME/.local/share/chezmoi-private" --config "$HOME/.config/chezmoi-private/chezmoi.yaml" apply'
+ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi --source "$HOME/.local/share/chezmoi-private" --config "$HOME/.config/chezmoi-private/chezmoi.yaml" apply'
 ```
 
 For `Local`, run the command inside the quotes directly. Token lookup happens on the target and is scoped to that invocation; do not copy tokens between machines, switch accounts automatically, or print credential values.
