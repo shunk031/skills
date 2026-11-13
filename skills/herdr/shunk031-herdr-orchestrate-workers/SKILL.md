@@ -27,13 +27,13 @@ This skill adds only the orchestration protocol. When one session oversees multi
 
 Read each step's linked reference before performing it.
 
-1. **Plan and identify tasks:** [dispatch](references/dispatch.md#plan-and-identity) — establish the orchestrator identity, design record, and independent owners.
-2. **Create workspaces and launch:** [dispatch](references/dispatch.md#workspace-and-worker-startup) — create or reopen a deliverable workspace, start a named worker, and handle startup trust dialogs.
-3. **Dispatch and confirm receipt:** [dispatch](references/dispatch.md#dispatch-and-receipt) — guarded send, newer `state_change_seq`, readable receipt, and lifecycle wait.
-4. **Collect and reconcile:** [reconciliation](references/reconciliation.md#collect-and-reconcile) — lifecycle state, transcripts, deliverables, missing reports, and worker recovery.
-5. **Verify and route:** [review and PR lifecycle](references/review-and-pr.md) — independent DONE and first-look review, REJECT handling, PR head SHA, and worker-owned merge.
-6. **Report:** [reconciliation](references/reconciliation.md#user-reporting-and-decisions) and [task/question tracking](references/task-and-question-tracking.md).
-7. **Clean up:** [cleanup](references/cleanup.md) — close collected panes and safely remove merged-PR worktrees/branches.
+- **Plan and identify tasks:** [dispatch](references/dispatch.md#plan-and-identity) — establish the orchestrator identity, design record, and independent owners.
+- **Create workspaces and launch:** [dispatch](references/dispatch.md#workspace-and-worker-startup) — create or reopen a deliverable workspace, start a named worker, and handle startup trust dialogs.
+- **Dispatch and confirm receipt:** [dispatch](references/dispatch.md#dispatch-and-receipt) — guarded send, newer `state_change_seq`, readable receipt, and lifecycle wait.
+- **Collect and reconcile:** [reconciliation](references/reconciliation.md#collect-and-reconcile) — lifecycle state, transcripts, deliverables, missing reports, and worker recovery.
+- **Verify and route:** [review and PR lifecycle](references/review-and-pr.md) — independent DONE and first-look review, REJECT handling, PR head SHA, and worker-owned merge.
+- **Report:** [reconciliation](references/reconciliation.md#user-reporting-and-decisions) and [task/question tracking](references/task-and-question-tracking.md).
+- **Clean up:** [cleanup](references/cleanup.md) — close collected panes and safely remove merged-PR worktrees/branches.
 
 ## Special cases
 
