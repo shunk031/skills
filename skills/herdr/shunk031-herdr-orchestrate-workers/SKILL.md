@@ -1,6 +1,6 @@
 ---
 name: shunk031-herdr-orchestrate-workers
-description: "Orchestrate coding workers in Herdr: dispatch parallel Codex workers into git worktree tabs, reconcile their state, validate their reports against raw results, and route task, review, and pull-request lifecycles. Use when a request mentions Herdr and asks to orchestrate, delegate to, or coordinate workers, or to audit their reports or where a constraint came from, or when a prompt says you are a Herdr worker reporting to an orchestrator. Not for single-pane or single-agent Herdr control, pane-output questions, general CLI questions, or parallel work and git worktrees without Herdr."
+description: "Orchestrate coding workers in Herdr: dispatch parallel worker agents into git worktree tabs, reconcile their state, validate their reports against raw results, and route task, review, and pull-request lifecycles. Use when a request mentions Herdr and asks to orchestrate, delegate to, or coordinate workers, or to audit their reports or where a constraint came from, or when a prompt says you are a Herdr worker reporting to an orchestrator. Not for single-pane or single-agent Herdr control, pane-output questions, general CLI questions, or parallel work and git worktrees without Herdr."
 ---
 
 > [!NOTE]
@@ -48,5 +48,3 @@ Read each step's linked reference before performing it.
 ## Working as a dispatched worker
 
 A dispatched worker follows [the worker protocol](references/worker-protocol.md).
-
-Worker-specific obligations are in the [worker protocol](references/worker-protocol.md).
