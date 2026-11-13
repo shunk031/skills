@@ -59,7 +59,7 @@ Never start a worker in a `herdr pane split` of your own pane. The herdr skill's
 
 ### Workspace labels across the PR lifecycle
 
-Treat each deliverable that will become one pull request as one workspace, and open its implementer and reviewer tabs there. Rename the workspace with `herdr workspace rename <workspace-id> "WIP <topic>"`, then `herdr workspace rename <workspace-id> "Issue#<N> <topic>"`, then `herdr workspace rename <workspace-id> "PR#<N> <topic>"`; perform the Issue or PR rename in the same turn that receives its URL, and leave tab labels worker-owned under `shunk031-herdr-tab-status`.
+Treat each deliverable that will become one pull request as one workspace, and open its implementer and reviewer tabs there. Name the workspace `WIP <topic>`, then `Issue#<N> <topic>`, then `PR#<N> <topic>` with `herdr workspace rename`. Perform the Issue or PR rename in the same turn that receives its URL. Let the background title plugin update worker tab labels.
 
 ### 4. Start the worker
 
