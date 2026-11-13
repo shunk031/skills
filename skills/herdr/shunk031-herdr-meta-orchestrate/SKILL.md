@@ -109,4 +109,4 @@ Carry every user authorization forward only to its stated targets and count. If 
 
 If a pane needs the user's eyes or input, ask, “Would you like me to focus it?” Wait for an explicit yes. Then focus only the identified workspace and tab with `herdr workspace focus` and `herdr tab focus`; if the target changes, ask again. Follow the herdr skill for pane controls and handling sensitive input.
 
-Keep your own tab status under the shunk031-herdr-tab-status skill. The herdr skill owns CLI mechanics, IDs, pane control, and remote-machine safety; the shunk031-herdr-orchestrate-workers skill owns worker dispatch, lifecycle, and reports.
+Keep your root tab labeled `🤖 Orchestrator`; the background Herdr tab-title plugin preserves it. The herdr skill owns CLI mechanics, IDs, pane control, and remote-machine safety; the shunk031-herdr-orchestrate-workers skill owns worker dispatch, lifecycle, and reports.

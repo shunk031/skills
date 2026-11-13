@@ -8,7 +8,7 @@ description: "Move a root orchestrator's role between Claude Code and Codex thro
 
 # Herdr Root Orchestrator Handoff
 
-Use this skill only for root orchestrators. Keep the same role, skills, and rules across Claude Code and Codex. The `shunk031-herdr-orchestrate-workers` skill remains the source for worker dispatch, receipts, reviews, and task-ledger status; the `shunk031-herdr-tab-status` skill owns tab status labels.
+Use this skill only for root orchestrators. Keep the same role, skills, and rules across Claude Code and Codex. The `shunk031-herdr-orchestrate-workers` skill remains the source for worker dispatch, receipts, reviews, and task-ledger status. The background Herdr tab-title plugin updates worker tab labels.
 
 ## Handoff in either direction
 
@@ -35,7 +35,7 @@ herdr pane read <outgoing-pane> --source visible
 
 If a usage limit stopped the outgoing root, the user checks its restatement and Meta checks the remaining suspension conditions. If a condition cannot be verified, Meta keeps the incoming session staged and asks the user what to do.
 
-After verification, Meta records the suspension time. Meta renames the outgoing pane with `herdr agent rename <pane> <root-name>-<engine>`. This keeps worker reports from reaching the parked session. Meta then renames the incoming pane with `herdr agent rename <pane> <root-name>` and activates it. Meta labels root tabs `🤖 Orchestrator · <engine>` and marks parked sessions in the label, following the `shunk031-herdr-tab-status` skill. Meta reports the stable name, engine, active pane/tab, and session ID. Keep the outgoing session and transcript; Meta resumes it only when the role returns. Meta resumes Claude with `claude --resume <session-id>` (or continues it if still live) from the new delta record. To resume Codex, Meta creates a root pane with the two environment options in the Codex root launch instructions below, then runs the Codex root resume line from the launch guidance in your user-level instructions (Launching Herdr workers):
+After verification, Meta records the suspension time. Meta renames the outgoing pane with `herdr agent rename <pane> <root-name>-<engine>`. This keeps worker reports from reaching the parked session. Meta then renames the incoming pane with `herdr agent rename <pane> <root-name>` and activates it. Meta labels root tabs `🤖 Orchestrator · <engine>` and marks parked sessions in the label; the background title plugin preserves those labels. Meta reports the stable name, engine, active pane/tab, and session ID. Keep the outgoing session and transcript; Meta resumes it only when the role returns. Meta resumes Claude with `claude --resume <session-id>` (or continues it if still live) from the new delta record. To resume Codex, Meta creates a root pane with the two environment options in the Codex root launch instructions below, then runs the Codex root resume line from the launch guidance in your user-level instructions (Launching Herdr workers):
 
 ```bash
 codex <launch-flags> resume <session-id>
