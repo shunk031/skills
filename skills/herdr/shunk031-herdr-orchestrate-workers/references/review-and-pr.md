@@ -12,7 +12,7 @@ This first-look review uses the same independent-review mechanism as DONE verifi
 
 ### Run one-shot reviews
 
-Run every one-shot review — independent review, first-look review, and DONE verification — as an in-session subagent with a fresh context instead of a new Herdr pane, so nothing is left behind; if a review must run in a Herdr pane, close it with `herdr pane close <pane-id>` right after its verdict.
+Run every one-shot review — independent review, first-look review, and DONE verification — in a new, read-only review session using the launch guidance in your user-level instructions.
 
 ## Verify DONE against the user's original request
 

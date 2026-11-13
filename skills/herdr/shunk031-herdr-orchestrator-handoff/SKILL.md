@@ -80,7 +80,7 @@ If either is set, run `unset CODEX_ROOT_ORCHESTRATOR PONYTAIL_DEFAULT_MODE` in t
 
 Do not start in-session subagents: they inherit the root model and are billed at its price. Delegate through Herdr workers using the existing worker skill and the launch guidance in your user-level instructions (Launching Herdr workers).
 
-For Codex roots, this rule overrides the worker skill's instruction to run one-shot reviews as in-session subagents; use a Herdr review worker launched as that launch guidance gives for review.
+Run one-shot reviews in a new, read-only review session using the launch guidance in your user-level instructions.
 
 For every user-facing reply, begin with one fresh `date '+%Y-%m-%dT%H:%M:%S%z'` output line. Do not send timer-based interim progress lines.
 
