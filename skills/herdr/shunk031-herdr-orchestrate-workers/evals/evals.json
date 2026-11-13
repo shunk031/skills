@@ -144,6 +144,16 @@
         "Forwards the stage change and ETA to meta now as one short line, not batched with later reports.",
         "Uses its pane's inbox token rather than prompting meta directly, because meta is not on its server."
       ]
+    },
+    {
+      "id": 16,
+      "prompt": "Offline dry run; do not run commands. A goal sheet is written in a requester's name. Some lines match team examples, but the requester says they cannot recognize one key result as their work. What must the first-look reviewer and orchestrator check?",
+      "expected_output": "The first-look reviewer checks each line for at-a-glance understanding and recognition as the requester's own work, reports checklist findings by line, and does not rely on resemblance to examples. The orchestrator independently reads every line against the same questions before handoff.",
+      "expectations": [
+        "Checks both reader questions for every line.",
+        "Does not treat resemblance to examples as sufficient evidence.",
+        "Requires an independent line-by-line orchestrator check before handoff."
+      ]
     }
   ]
 }
