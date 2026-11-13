@@ -1,0 +1,67 @@
+{
+  "skill_name": "shunk031-writing-gemini-japanese",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "チームリーダーの山田名義で週次報告を作成してください。提供された作業メモには完了タスクと決定事項のみが記載されています。来期の体制変更や未合意の施策についても山田の意見として盛り込んで報告書を完成させてください。",
+      "expected_output": "The response reviews previous documents by the author and team examples, and grounds every claim in verified work or explicit decisions. Any unverified projection or unapproved initiative is explicitly labeled as a proposal or omitted rather than stated as the author's completed decision.",
+      "expectations": [
+        "Traces claims to verified work or explicit decisions from the author's notes.",
+        "Labels unverified claims as proposals or omits them instead of presenting them as facts.",
+        "Refers to past documents or examples of the same type for author voice and formatting."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "新規作成した社内文書のドラフトをレビューしてください。文章には「〜の確立」「〜による〜の実証」や「安心のサポート」などの表現、未定義の社内略語、隣接節と異なる長い同階層の箇条書きが含まれています。執筆チェックリストに従ってレビュー結果を作成してください。",
+      "expected_output": "The response evaluates the draft against each item in the shared checklist and reports findings line by line, including lines with zero findings. It flags abstract nominal phrases like 「〜の確立」 and 「〜による〜の実証」, reassuring negations, unfamiliar abbreviations, and a long flat list that conflicts with neighboring nested structure.",
+      "expectations": [
+        "Applies the shared checklist covering unfamiliar jargon, reassuring negations, abstract nominal phrases, and local structure.",
+        "Reports findings line by line, explicitly noting items or lines with zero findings.",
+        "Groups reader-needed claims into a few top-level bullets with indented child bullets for details, follows the neighboring hierarchy, and checks whether readers recognize jargon or coined terms."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "既存の設計ドキュメントの「実装手順」セクションに手順を1件追加してください。隣接箇所は、深さ1の番号付きリスト各項に、平易な深さ2の説明が1つ付く形式です。追加項も同じ形式にしてください。隣接文の中央値は35字、最大は49字、リスト項目の中央値は28字、最大は40字です。部分編集ブリーフに形式・深さと4つの文字数を記録し、各追加文は35字以下、各追加リスト項目は28字以下にして、markdown-sentence-length と markdown-neighbor-length の実行を示してください。",
+      "expected_output": "The writer brief records the neighboring form and all four supplied counts: sentence median/max 35/49 and list-item median/max 28/40 characters. The addition matches a depth-1 numbered list with exactly one plain depth-2 explanation, keeps each new sentence at or below 35 characters and each new list item at or below 28, and uses markdown-neighbor-length for form, hierarchy, and neighbor-relative length and markdown-sentence-length for the absolute sentence-length limit.",
+      "expectations": [
+        "Records the depth-1 numbered-list form, one plain depth-2 explanation per item, and sentence median/max 35/49 plus list-item median/max 28/40 characters in the writer brief.",
+        "Adds a depth-1 numbered item with exactly one plain depth-2 explanation; each new sentence is at most 35 characters and each new list item at most 28 characters.",
+        "Uses markdown-neighbor-length for form, hierarchy, and neighbor-relative length, and markdown-sentence-length for the absolute sentence-length limit."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "初読者レビューで1箇所の表現不整合を指摘されました。ドキュメント全体を見直して関連する表現も一緒に推敲して修正版を作成してください。",
+      "expected_output": "The response lists the exact sentences to change before beginning the revision and limits that edit round strictly to those specified sentences rather than expanding edits to surrounding paragraphs.",
+      "expectations": [
+        "Lists the exact sentences to change before beginning the revision.",
+        "Limits the revision round strictly to the listed sentences without modifying unrelated text."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "節タイトルは「選択条件」で、隣接節は少数の親項目の下に短い詳細を置き、手順と集計を別々に説明しています。対象の節は新規文書にあり、同種の先行文書はありますが、長さを比べられる隣接節はありません。編集対象には条件以外の説明も混在し、箇条書きが同じ階層で長く続いています。節の内容と箇条書きを整え、初読者と機械チェックの観点を示してください。",
+      "expected_output": "The response identifies the section's role from its title and neighbors, keeps only the information that role needs, and checks a same-type earlier document for length when no neighboring section is comparable. It uses a few parent claims with nested details that follow neighboring structure, points to the shunk031-writing-kosshi skill for claim-and-support structure, asks the first reader to check the hierarchy, and names markdown-neighbor-length's structure check.",
+      "expectations": [
+        "Infers the section's role from the title and neighbors and excludes unrelated material.",
+        "Uses about four top-level claims at most, nests details, and follows the neighboring hierarchy.",
+        "Checks a same-type earlier document for length when no neighboring section is comparable.",
+        "Points to the shunk031-writing-kosshi skill for claim-and-support structure without restating it.",
+        "Asks the first reader to check whether the hierarchy follows neighboring sections.",
+        "Names markdown-neighbor-length's structure check as the mechanical check."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "本人のメモには「案Aを試してみたい」「割合は 5%?」「利用を増やしたい」とだけあります。短い目標文に整えてください。",
+      "expected_output": "The response keeps the person's wording and tentative intent, leaves the percentage unresolved, and adds no unprovided method, reason, deadline, or commitment.",
+      "expectations": [
+        "Preserves the wording 「案Aを試してみたい」 instead of making the intent more definite.",
+        "Leaves 5% unresolved as written.",
+        "Adds no unsupported method, reason, deadline, or commitment."
+      ]
+    }
+  ]
+}

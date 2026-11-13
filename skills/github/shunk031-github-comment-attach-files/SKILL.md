@@ -26,11 +26,11 @@ If the body does not reference an attached media file, `gh pr edit` appends the 
 
 ## Issue and pull request comments
 
-Use `gh issue comment <number-or-url> --attach file#alt` when supported media belongs in a submitted issue or pull request comment:
+Use `gh issue comment <number-or-url> --attach file#alt` when supported media belongs in a submitted issue or pull request comment. Write any comment text to a Markdown file and pass it with `--body-file`, not inline with `--body`:
 
 ```bash
 gh issue comment 123 \
-  --body 'Rendered comparison:' \
+  --body-file comment.md \
   --attach "results/before.png#Before" \
   --attach "results/after.png#After"
 ```

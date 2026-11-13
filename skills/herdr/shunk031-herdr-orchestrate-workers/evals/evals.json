@@ -73,20 +73,20 @@
     {
       "id": 8,
       "prompt": "You are a Herdr worker whose DONE report was rejected with agent_blocked, or whose guarded sender exited 75 and printed the unsent report because the orchestrator's input stayed busy. The orchestrator was waiting for an answer to a user question. In an offline dry run, describe the worker's recovery and what the orchestrator must do immediately after the user answers. Do not execute commands.",
-      "expected_output": "The worker keeps the exact report, treats both agent_blocked and exit 75 as undelivered, and waits for a lifecycle change with herdr agent wait before one guarded resend; it repeats only after another such failure and stays within a two-hour deadline. If delivery still fails, it leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn. After the interactive wait ends, the orchestrator immediately reconciles every dispatched worker with herdr agent get and herdr agent read before other work.",
+      "expected_output": "The worker keeps the exact report, treats both agent_blocked and exit 75 as undelivered, and waits for a lifecycle change with herdr agent wait before one guarded resend; it repeats only after another such failure and stays within a two-hour deadline. If delivery still fails, it leaves the full report in its transcript, and ends its turn; the background title plugin marks it blocked. After the interactive wait ends, the orchestrator immediately reconciles every dispatched worker with herdr agent get and herdr agent read before other work.",
       "expectations": [
         "Treats exit 75 as an undelivered report that was printed by the helper, as well as treating agent_blocked as undelivered.",
         "Waits for a lifecycle change with herdr agent wait before a single guarded resend, repeats only after another undelivered result, and keeps the total recovery window to two hours instead of polling at a fixed interval.",
-        "If the deadline expires, leaves the full report in the worker transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends its turn.",
+        "If the deadline expires, leaves the full report in the worker transcript, and ends its turn; the background title plugin marks it blocked.",
         "Requires immediate reconciliation of every dispatched worker with herdr agent get and herdr agent read after the user question, before other work."
       ]
     },
     {
       "id": 9,
       "prompt": "You are a Herdr worker whose report send failed with agent_blocked. During recovery, herdr agent get or herdr agent wait returns agent_not_found because the orchestrator's name has vanished. In an offline dry run, what do you do next? Do not execute commands.",
-      "expected_output": "The worker immediately, without waiting for the deadline and without a resend, leaves the full report in its transcript, uses the blocked status defined by shunk031-herdr-tab-status, and ends the turn.",
+      "expected_output": "The worker immediately, without waiting for the deadline and without a resend, leaves the full report in its transcript, and ends the turn; the background title plugin marks it blocked.",
       "expectations": [
-        "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, uses the blocked status, and ends the turn."
+        "Immediately, without waiting for the deadline and without a resend, leaves the full report in the transcript, ends the turn while the background title plugin marks the tab blocked."
       ]
     },
     {
@@ -134,6 +134,25 @@
         "States that a fresh reviewer must review the exact live head B before the merge.",
         "States that on ACCEPT with passing required checks, the merge is routed to orch-docs without asking the user for a new approval.",
         "States that an actionable REJECT is routed to orch-docs and the corrected head is re-reviewed, instead of merging."
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "In an offline dry run, do not run commands. You are root orchestrator `orch` on a saved remote machine, and a meta-orchestrator named `meta` oversees you from another machine, so `herdr agent get meta` on your server returns `agent_not_found`. Your worker `orch-docs` sends `STATUS orch-docs: 14:20 draft finished, starting review; ETA 15:00`. The user has not asked for progress. What do you do with this report?",
+      "expected_output": "Forwards the change to meta at once as one line by publishing it on its own pane's inbox token, because meta is not on its server, without batching it or waiting for the user to ask.",
+      "expectations": [
+        "Forwards the stage change and ETA to meta now as one short line, not batched with later reports.",
+        "Uses its pane's inbox token rather than prompting meta directly, because meta is not on its server."
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "Offline dry run; do not run commands. A goal sheet is written in a requester's name. Some lines match team examples, but the requester says they cannot recognize one key result as their work. What must the first-look reviewer and orchestrator check?",
+      "expected_output": "The first-look reviewer checks each line for at-a-glance understanding and recognition as the requester's own work, reports checklist findings by line, and does not rely on resemblance to examples. The orchestrator independently reads every line against the same questions before handoff.",
+      "expectations": [
+        "Checks both reader questions for every line.",
+        "Does not treat resemblance to examples as sufficient evidence.",
+        "Requires an independent line-by-line orchestrator check before handoff."
       ]
     }
   ]

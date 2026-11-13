@@ -9,7 +9,7 @@ Use the repository's checkpoint writer and resume command. Store checkpoints in 
 For a Hub-backed Lightning run, download the selected checkpoint inside the next job script before starting the training command. The launcher passes the declared `--hub-input` references to that script and makes the restricted token available at `/content/hf-job-token` when one was provided.
 
 ```bash
-HF_TOKEN="$(cat /content/hf-job-token)" hf download <user>/colab-jobs --include '<project>/<run-id>/ckpt/last.ckpt' --local-dir /content/hub
+hf_token="$(cat /content/hf-job-token)" && test -n "$hf_token" && HF_TOKEN="$hf_token" hf download <user>/colab-jobs --include '<project>/<run-id>/ckpt/last.ckpt' --local-dir /content/hub
 mkdir -p /content/out/ckpt
 cp /content/hub/<project>/<run-id>/ckpt/last.ckpt /content/out/ckpt/last.ckpt
 test -s /content/out/ckpt/last.ckpt
