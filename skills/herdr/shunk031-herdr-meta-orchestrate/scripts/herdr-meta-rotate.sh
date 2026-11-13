@@ -362,9 +362,16 @@ idle | done) ;;
 *) fail "meta became active before /exit (state: $meta_state); the pane was left unchanged" ;;
 esac
 
+feed_dir="${INBOX_FEED:-$HOME/.local/state/inbox/feeds}"
+mkdir -p "$feed_dir" || fail "cannot create INBOX_FEED directory: $feed_dir"
+
 herdr pane send-text "$meta_pane_id" '/exit' || fail 'could not send /exit to meta'
 herdr pane send-keys "$meta_pane_id" enter || fail 'could not submit /exit to meta'
 wait_for_shell "$meta_pane_id" "$claude_pid" || fail 'the old Claude process did not return the pane to its shell'
+
+printf -v export_command 'export INBOX_FEED=%q' "$feed_dir"
+herdr pane run "$meta_pane_id" "$export_command" || fail 'could not export INBOX_FEED in the meta pane shell'
+wait_for_shell "$meta_pane_id" "$claude_pid" || fail 'the meta pane did not return to its shell after exporting INBOX_FEED'
 
 start_result=0
 start_and_verify_meta || start_result=$?

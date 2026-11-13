@@ -4,12 +4,14 @@ readonly ROTATE_SCRIPT_PATH="./skills/herdr/shunk031-herdr-meta-orchestrate/scri
 
 function setup() {
     ROTATE_STUB_STATE="$BATS_TEST_TMPDIR/rotate-stub"
+    unset INBOX_FEED
     export HOME="$BATS_TEST_TMPDIR/home"
+    ROTATE_STUB_EXPECT_FEED_DIR="$HOME/.local/state/inbox/feeds"
     mkdir -p "$ROTATE_STUB_STATE/bin"
     mkdir -p "$HOME/.agents/skills/shunk031-herdr-orchestrate-workers/scripts"
     cp ./skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-visible-input-state.awk \
         "$HOME/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/"
-    export ROTATE_STUB_STATE HERDR_ENV=1 ROTATE_TEST_ENV=preserved
+    export ROTATE_STUB_STATE ROTATE_STUB_EXPECT_FEED_DIR HERDR_ENV=1 ROTATE_TEST_ENV=preserved
     ln -s /bin/bash "$ROTATE_STUB_STATE/bin/bash"
     cat > "$ROTATE_STUB_STATE/bin/date" << 'EOF'
 #!/usr/bin/env bash
@@ -93,10 +95,24 @@ case "$1 $2" in
         ;;
     "pane send-text")
         [[ "$4" == '/exit' ]]
+        [[ -d "$ROTATE_STUB_EXPECT_FEED_DIR" ]]
+        touch "$ROTATE_STUB_STATE/feed_dir_ready_before_exit"
         if [[ "${ROTATE_STUB_TERM_ON_SEND:-}" == 1 ]]; then
             kill -TERM "$PPID"
             sleep 0.1
         fi
+        ;;
+    "pane run")
+        [[ "$3" == test:p1 ]]
+        [[ -f "$ROTATE_STUB_STATE/exited" ]]
+        [[ -d "$ROTATE_STUB_EXPECT_FEED_DIR" ]]
+        [[ "$4" == export\ INBOX_FEED=* ]]
+        printf '%s\n' "$4" > "$ROTATE_STUB_STATE/export_command"
+        (
+            unset INBOX_FEED
+            eval "$4"
+            printf '%s' "$INBOX_FEED"
+        ) > "$ROTATE_STUB_STATE/exported_feed"
         ;;
     "pane send-keys")
         [[ "$4" == enter ]]
@@ -108,6 +124,8 @@ case "$1 $2" in
         ;;
     "agent start")
         [[ "$ROTATE_TEST_ENV" == preserved ]]
+        [[ -f "$ROTATE_STUB_STATE/exported_feed" ]]
+        [[ "$(cat "$ROTATE_STUB_STATE/exported_feed")" == "$ROTATE_STUB_EXPECT_FEED_DIR" ]]
         if [[ "${ROTATE_STUB_NO_MODEL:-}" == 1 ]]; then
             [[ "$*" != *'--model'* ]]
         else
@@ -146,7 +164,7 @@ EOF
 
     [ "$status" -eq 0 ]
     [[ "$output" == *'--model test-model'* ]]
-    ! grep -Eq 'agent wait|send-text|send-keys|agent start' "$ROTATE_STUB_STATE/calls"
+    ! grep -Eq 'agent wait|send-text|send-keys|pane run|agent start' "$ROTATE_STUB_STATE/calls"
 }
 
 @test "stale handoffs are rejected before starting a rotation" {
@@ -156,7 +174,7 @@ EOF
 
     [ "$status" -eq 1 ]
     [[ "$output" == *'no more than 10 minutes old'* ]]
-    ! grep -Eq 'agent wait|send-text|send-keys|agent start' "$ROTATE_STUB_STATE/calls"
+    ! grep -Eq 'agent wait|send-text|send-keys|pane run|agent start' "$ROTATE_STUB_STATE/calls"
 }
 
 @test "missing handoffs are rejected before starting a rotation" {
@@ -164,7 +182,7 @@ EOF
 
     [ "$status" -eq 1 ]
     [[ "$output" == *'missing, empty, or unreadable'* ]]
-    ! grep -Eq 'agent wait|send-text|send-keys|agent start' "$ROTATE_STUB_STATE/calls"
+    ! grep -Eq 'agent wait|send-text|send-keys|pane run|agent start' "$ROTATE_STUB_STATE/calls"
 }
 
 @test "empty handoffs are rejected before starting a rotation" {
@@ -174,7 +192,7 @@ EOF
 
     [ "$status" -eq 1 ]
     [[ "$output" == *'missing, empty, or unreadable'* ]]
-    ! grep -Eq 'agent wait|send-text|send-keys|agent start' "$ROTATE_STUB_STATE/calls"
+    ! grep -Eq 'agent wait|send-text|send-keys|pane run|agent start' "$ROTATE_STUB_STATE/calls"
 }
 
 @test "rotation waits for done and accepts a completed session after restart" {
@@ -196,7 +214,45 @@ EOF
     grep -q 'agent wait meta --until idle --until done' "$ROTATE_STUB_STATE/calls"
     grep -q 'pane send-text test:p1 /exit' "$ROTATE_STUB_STATE/calls"
     grep -q 'pane send-keys test:p1 enter' "$ROTATE_STUB_STATE/calls"
+    [ -f "$ROTATE_STUB_STATE/feed_dir_ready_before_exit" ]
+    [ "$(cat "$ROTATE_STUB_STATE/exported_feed")" = "$ROTATE_STUB_EXPECT_FEED_DIR" ]
+    [ "$(cat "$ROTATE_STUB_STATE/export_command")" = "export INBOX_FEED=$ROTATE_STUB_EXPECT_FEED_DIR" ]
+    export_line="$(grep -n '^pane run test:p1 export INBOX_FEED=' "$ROTATE_STUB_STATE/calls" | cut -d: -f1)"
+    start_line="$(grep -n '^agent start meta ' "$ROTATE_STUB_STATE/calls" | cut -d: -f1)"
+    [ "$export_line" -lt "$start_line" ]
     grep -q 'agent start meta --kind claude --pane test:p1' "$ROTATE_STUB_STATE/calls"
+}
+
+@test "an override with spaces, quotes, and dollars survives shell quoting" {
+    export INBOX_FEED="$ROTATE_STUB_STATE/feeds with 'quotes' and \$dollars"
+    export ROTATE_STUB_EXPECT_FEED_DIR="$INBOX_FEED"
+
+    run "$ROTATE_SCRIPT_PATH" --background-worker "$ROTATE_STUB_STATE/handoff.md"
+
+    [ "$status" -eq 0 ]
+    [ -f "$ROTATE_STUB_STATE/verified" ]
+    [ "$(cat "$ROTATE_STUB_STATE/exported_feed")" = "$INBOX_FEED" ]
+    printf -v expected_export 'export INBOX_FEED=%q' "$INBOX_FEED"
+    [ "$(cat "$ROTATE_STUB_STATE/export_command")" = "$expected_export" ]
+    export_line="$(grep -n '^pane run test:p1 export INBOX_FEED=' "$ROTATE_STUB_STATE/calls" | cut -d: -f1)"
+    start_line="$(grep -n '^agent start meta ' "$ROTATE_STUB_STATE/calls" | cut -d: -f1)"
+    [ "$export_line" -lt "$start_line" ]
+}
+
+@test "an INBOX_FEED directory creation failure leaves meta untouched" {
+    printf 'not a directory\n' > "$ROTATE_STUB_STATE/not-a-directory"
+    export INBOX_FEED="$ROTATE_STUB_STATE/not-a-directory/feeds"
+    export ROTATE_STUB_EXPECT_FEED_DIR="$INBOX_FEED"
+
+    run "$ROTATE_SCRIPT_PATH" --background-worker "$ROTATE_STUB_STATE/handoff.md"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'cannot create INBOX_FEED directory'* ]]
+    ! grep -Eq '^(pane send-text|pane send-keys|pane run|agent start) ' "$ROTATE_STUB_STATE/calls"
+}
+
+@test "the root-orchestrator handoff launch path does not receive INBOX_FEED" {
+    ! grep -R -q 'INBOX_FEED' ./skills/herdr/shunk031-herdr-orchestrator-handoff
 }
 
 @test "a successful start at a permission prompt is accepted without exiting it" {
@@ -350,7 +406,7 @@ EOF
         sleep 0.1
     done
     [ -f "$ROTATE_STUB_STATE/notified" ]
-    ! grep -Eq '^(pane send-text|pane send-keys|agent start) ' "$ROTATE_STUB_STATE/calls"
+    ! grep -Eq '^(pane send-text|pane send-keys|pane run|agent start) ' "$ROTATE_STUB_STATE/calls"
 }
 
 @test "occupied composer input aborts before exiting meta" {
@@ -364,5 +420,5 @@ EOF
         sleep 0.1
     done
     [ -f "$ROTATE_STUB_STATE/notified" ]
-    ! grep -Eq 'send-text|send-keys|agent start' "$ROTATE_STUB_STATE/calls"
+    ! grep -Eq 'send-text|send-keys|pane run|agent start' "$ROTATE_STUB_STATE/calls"
 }
