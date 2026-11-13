@@ -16,7 +16,7 @@ This skill adds only the orchestration protocol. When one session oversees multi
 
 ## Core invariants
 
-- **Guarded messaging:** Follow [the send rule](references/send-rule.md) before any send; never send into occupied input.
+- **Guarded messaging:** Every prompt send in this skill follows [the send rule](references/send-rule.md); read it before your first send. Never send into occupied input.
 - **Evidence over reports:** Verify live Herdr state, worker transcripts, deliverables, and git/PR state. A DONE report or green CI alone does not prove acceptance.
 - **Worker ownership:** Route task-scoped implementation and GitHub actions to the live worker that owns them.
 - **Independent review:** Verify completed work and reader-facing artifacts against the user's original requirements before acceptance or publication.
@@ -24,6 +24,8 @@ This skill adds only the orchestration protocol. When one session oversees multi
 - **Lifecycle and cleanup:** Reconcile outstanding workers, answer actionable BLOCKED reports, and remove only verified, protocol-owned resources.
 
 ## Workflow
+
+Read each step's linked reference before performing it.
 
 1. **Plan and identify tasks:** [dispatch](references/dispatch.md#plan-and-identity) — establish the orchestrator identity, design record, and independent owners.
 2. **Create workspaces and launch:** [dispatch](references/dispatch.md#workspace-and-worker-startup) — create or reopen a deliverable workspace, start a named worker, and handle startup trust dialogs.
@@ -37,9 +39,10 @@ This skill adds only the orchestration protocol. When one session oversees multi
 
 - **DONE, REJECT, first-look review, merge:** [review and PR lifecycle](references/review-and-pr.md).
 - **BLOCKED, STATUS, failed worker, missing report, correction sweep:** [reconciliation](references/reconciliation.md).
+- **Task/question tracking:** Always read [task and question tracking](references/task-and-question-tracking.md) for its waiting-list reporting rule.
 - **Anonymous live pane:** [adopt-anonymous-pane](references/adopt-anonymous-pane.md).
-- **Explicit active observation:** [active-observation](references/active-observation.md).
-- **Passive alerts and long runs:** [health-watchers](references/health-watchers.md).
+- **Active observation:** Read [active observation](references/active-observation.md) only when the user explicitly requests it.
+- **Health watchers:** Read [health watchers](references/health-watchers.md) when passive alerts would help; starting them is required for dispatched runs expected to last 30 minutes or longer.
 - **Outbound prompts:** [send-rule](references/send-rule.md).
 
 ## Working as a dispatched worker

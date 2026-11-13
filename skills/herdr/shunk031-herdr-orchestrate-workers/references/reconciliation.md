@@ -14,9 +14,15 @@ When a `DONE`, `BLOCKED`, `STATUS`, or `OBSERVER` report arrives, send the answe
 
 Process queued worker reports during the same user turn; do not defer them until after answering the user.
 
+<!-- textlint-disable sentence-length -->
+
+When a meta-orchestrator oversees you, forward each worker STATUS or BLOCKED that changes a task's state or ETA to meta at once in one line, `STATUS <your-name>: <task> <new state or ETA>`, without batching or waiting to be asked; forward a DONE once you have verified it in [Collect and reconcile](reconciliation.md#collect-and-reconcile). Use the agent name meta gave when it first contacted you, and record it in your ledger. If `herdr agent get <meta-name>` finds meta on your server, append the line with `herdr-meta-patrol-queue add --from <your-name> "$line"`, which meta waits on, and never type it into meta's pane. Otherwise, or if that command fails, publish it on your pane's inbox token as the shunk031-herdr-orchestrator-handoff skill describes.
+
+<!-- textlint-enable sentence-length -->
+
 A confirmed-working STATUS ends reconciliation: send nothing; leave the worker's lifecycle wait running and collect its result from the settled state, deliverable, and transcript. Do not wait for a DONE or BLOCKED report, and do not poll.
 
-A progress STATUS needs no reply to the worker; like a confirmed-working STATUS under Collect results, it ends reconciliation.
+A progress STATUS needs no reply to the worker; like a confirmed-working STATUS in [Collect and reconcile](reconciliation.md#collect-and-reconcile), it ends reconciliation.
 
 ## Durable context and replacing worker sessions
 
