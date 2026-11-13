@@ -352,7 +352,7 @@ function run_meta_limit_hold() {
         worker_agent="$(jq -c --arg name "$worker" '[.result.agents[] | select(.name == $name)] | first // empty' <<< "$agents_json")"
         [[ -n "$worker_agent" ]] || continue
         worker_status="$(jq -r '.agent_status // empty' <<< "$worker_agent")"
-        [[ "$worker_status" == working || "$worker_status" == idle || "$worker_status" == done ]] || continue
+        [[ "$worker_status" == working || "$worker_status" == idle || "$worker_status" == "done" ]] || continue
         if [[ ! -x "$prompt_guard" ]]; then
             printf 'patrol: guarded prompt sender is unavailable for %s\n' "$worker" >&2
             continue
