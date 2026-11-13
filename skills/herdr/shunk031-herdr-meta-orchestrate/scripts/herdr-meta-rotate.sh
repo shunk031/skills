@@ -352,6 +352,10 @@ current_meta_pane="$(jq -er '.result.agent | select(.agent == "claude") | .pane_
 check_handoff "$handoff_file"
 capture_model_args "$meta_pane_id" || fail 'cannot record the current Claude model option'
 check_input_empty "$meta_pane_id" || fail 'meta has text in its input line; the pane was left unchanged'
+printf -v initial_prompt \
+    'Read the handoff file at %s first and follow its references. Re-arm the background herdr-meta-patrol-queue wait command, then continue as the meta orchestrator.' \
+    "$handoff_file"
+build_restart_command
 agent_info="$(herdr agent get "$agent_name")" || fail 'cannot confirm meta is idle before exiting'
 meta_state="$(jq -er '.result.agent.agent_status | strings' <<< "$agent_info")" ||
     fail 'cannot confirm meta is idle before exiting'
@@ -360,10 +364,6 @@ idle | done) ;;
 *) fail "meta became active before /exit (state: $meta_state); the pane was left unchanged" ;;
 esac
 
-printf -v initial_prompt \
-    'Read the handoff file at %s first and follow its references. Re-arm the background herdr-meta-patrol-queue wait command, then continue as the meta orchestrator.' \
-    "$handoff_file"
-build_restart_command
 herdr pane send-text "$meta_pane_id" '/exit' || fail 'could not send /exit to meta'
 herdr pane send-keys "$meta_pane_id" enter || fail 'could not submit /exit to meta'
 wait_for_shell "$meta_pane_id" "$claude_pid" || fail 'the old Claude process did not return the pane to its shell'

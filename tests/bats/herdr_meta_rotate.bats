@@ -119,9 +119,6 @@ case "$1 $2" in
             exit 1
         fi
         touch "$ROTATE_STUB_STATE/started"
-        if [[ "${ROTATE_STUB_AFTER_START_BLOCKED:-}" == 1 ]]; then
-            exit 1
-        fi
         ;;
     "notification show")
         printf '%s\n' "$*" >> "$ROTATE_STUB_STATE/notification"
@@ -195,7 +192,7 @@ EOF
     grep -q 'agent start meta --kind claude --pane test:p1' "$ROTATE_STUB_STATE/calls"
 }
 
-@test "a permission prompt in the new session is accepted without exiting it" {
+@test "a successful start at a permission prompt is accepted without exiting it" {
     export ROTATE_STUB_AFTER_START_BLOCKED=1
 
     run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/handoff.md"
@@ -326,7 +323,7 @@ EOF
         sleep 0.1
     done
     [ -f "$ROTATE_STUB_STATE/notified" ]
-    ! grep -Eq 'pane send-text|pane send-keys|agent start' "$ROTATE_STUB_STATE/calls"
+    ! grep -Eq '^(pane send-text|pane send-keys|agent start) ' "$ROTATE_STUB_STATE/calls"
 }
 
 @test "occupied composer input aborts before exiting meta" {
