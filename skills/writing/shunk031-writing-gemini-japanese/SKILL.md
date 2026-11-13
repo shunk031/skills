@@ -31,7 +31,7 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
    ```bash
    herdr tab create --workspace <workspace-id> --label "✍️ agy" --no-focus
-   herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-high
+   herdr agent start <writer-name> --kind agy --pane <root-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-medium
    ```
 
    起動時の project trust や hooks review のすべての判断は例外を含め `shunk031-herdr-orchestrate-workers` の手順 4 に従う。入力欄（composer）が利用可能になるまで待ってからプロンプトを送信する。各プロンプト送信後は `shunk031-herdr-orchestrate-workers` の手順 5 に従い、新しい `state_change_seq` および可読な送受信テキストを確認する。いずれかが欠けている場合は同じプロンプトを 1 回だけ再送する。
@@ -67,7 +67,7 @@ description: PR や issue の本文・コメント、コミットメッセージ
 
    ```bash
    herdr tab create --workspace <workspace-id> --label "✍️ agy" --no-focus
-   herdr agent start <reviewer-name> --kind agy --pane <root-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-high
+   herdr agent start <reviewer-name> --kind agy --pane <root-pane-id> -- --settings '{"permissions":{"deny":["command(*)"]}}' --model gemini-3.8-flash-medium
    ```
 
    起動確認およびプロンプト検証は執筆担当と同様に行う。元資料、出力先パス、文体規則、および要ブリーフ文書ではレビュー済みブリーフを渡す。レビュー担当はファイルを編集せず、指摘事項を添えた `ACCEPT` または `REJECT` を返す。次のいずれかに該当する場合は `REJECT` とする。
