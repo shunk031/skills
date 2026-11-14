@@ -22,4 +22,4 @@ Before removing, list its ignored files with `git status --ignored --short`, bec
 
 Remove the worktree with `git worktree remove <path>` and never pass `--force`. Delete the local branch with `git branch -D <branch>`, because after a squash merge `git branch -d` refuses the branch unless its upstream branch still exists.
 
-If the worktree still holds uncommitted work or its tip differs, leave it in place and tell the user. Touch only resources created through this protocol; leave unmerged, ⛔, and other people's tabs alone.
+If the worktree has uncommitted changes, leave it in place and tell the user. Leave it in place as well if its tip neither equals nor is an ancestor of `headRefOid`. Touch only resources created through this protocol; leave unmerged, ⛔, and other people's tabs alone.
