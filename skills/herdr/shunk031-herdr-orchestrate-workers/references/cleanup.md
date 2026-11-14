@@ -14,7 +14,7 @@ The helper rechecks agent status and visible input immediately before closing. T
 
 ## Remove resources only after merge
 
-A worker's worktree and branch live exactly as long as its pull request: once the PR merges they are spent, so clean them up as soon as you notice — check each worker's reported URL with `gh pr view <url>` whenever you revisit the session, wrap up other work, or are asked to tidy up; never run a polling loop for it. Close the tab if it is still open, then remove the worktree and delete the branch only if the worktree has no uncommitted changes and its local branch tip, `git rev-parse <branch>`, equals the pull request's final head commit, `headRefOid` from `gh pr view <url> --json headRefOid`.
+Check each worker's reported URL with `gh pr view <url>` when revisiting the session, finishing other work, or asked to tidy up; do not poll. After merge, close the tab if it is still open. Remove the worktree and branch only when the worktree is clean and its local tip equals `headRefOid` or is an ancestor of it. Check ancestry with `git merge-base --is-ancestor <branch> <headRefOid>`; get `headRefOid` from `gh pr view <url> --json headRefOid`.
 
 ## Check uncommitted and ignored data
 
@@ -22,4 +22,4 @@ Before removing, list its ignored files with `git status --ignored --short`, bec
 
 Remove the worktree with `git worktree remove <path>` and never pass `--force`. Delete the local branch with `git branch -D <branch>`, because after a squash merge `git branch -d` refuses the branch unless its upstream branch still exists.
 
-If the worktree still holds uncommitted work or its tip differs, leave it in place and tell the user. Touch only resources created through this protocol; leave unmerged, ⛔, and other people's tabs alone.
+If the worktree has uncommitted changes, leave it in place and tell the user. Leave it in place as well if its tip neither equals nor is an ancestor of `headRefOid`. Touch only resources created through this protocol; leave unmerged, ⛔, and other people's tabs alone.
