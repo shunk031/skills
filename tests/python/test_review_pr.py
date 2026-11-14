@@ -44,7 +44,8 @@ if args == ["rev-parse", "--show-toplevel"]:
 elif args == ["rev-parse", "HEAD"]:
     print(os.environ.get("REVIEW_TEST_LOCAL_HEAD", "head-sha"))
 elif args == ["status", "--porcelain"]:
-    pass
+    if os.environ.get("REVIEW_TEST_DIRTY"):
+        print(" M uncommitted.txt")
 elif args[:2] == ["diff", "--no-ext-diff"]:
     if "--name-only" in args:
         sys.stdout.write("skills/example/SKILL.md\\0")
@@ -183,6 +184,14 @@ print('{"verdict":"ACCEPT","findings":[]}')
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not match", result.stderr)
+        self.assertFalse(self.codex_input.exists())
+
+    def test_dirty_checkout_stops_before_reviewer_launch(self):
+        self.env["REVIEW_TEST_DIRTY"] = "1"
+        result = self._run_review("7", "--acceptance-criteria", str(self.criteria))
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("uncommitted changes", result.stderr)
         self.assertFalse(self.codex_input.exists())
 
     def test_metadata_read_failure_stops_before_reviewer_launch(self):
