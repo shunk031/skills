@@ -30,25 +30,29 @@ Both pulls must succeed. Inspect each resulting Git status before moving to appl
 
 ## Apply separately
 
-Inspect each apply plan with `chezmoi status` or a redacted diff. Stop on unexplained destination edits or a confirmation prompt; do not force an overwrite.
+Run every chezmoi command that renders templates on the target with the existing GitHub CLI token scoped to that invocation, for both public and private sources. This includes `chezmoi status`, `chezmoi diff`, `chezmoi apply` with or without targets, `chezmoi execute-template`, and `chezmoi init`. Use this form for each command:
 
-Confirm the target's existing `gh` authentication is available without printing its token. Run public apply:
+```sh
+ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi <command> [options]'
+```
+
+Inspect each apply plan with `chezmoi status` or a redacted `chezmoi diff`, using the scoped form above. Stop on unexplained destination edits or a confirmation prompt; do not force an overwrite. Then run public apply first:
 
 ```sh
 ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi apply'
 ```
 
-Read the result. Only after success, run private apply. `chezmoi-private` may be an alias unavailable over non-interactive SSH; resolve its configured source/config and use the explicit equivalent. With the conventional paths:
+Only after public apply succeeds, run private apply. `chezmoi-private` may be an alias unavailable over non-interactive SSH; resolve its configured source/config and use the explicit equivalent. With the conventional paths:
 
 ```sh
 ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi --source "$HOME/.local/share/chezmoi-private" --config "$HOME/.config/chezmoi-private/chezmoi.yaml" apply'
 ```
 
-For `Local`, run the command inside the quotes directly. Token lookup happens on the target and is scoped to that invocation; do not copy tokens between machines, switch accounts automatically, or print credential values.
+For `Local`, run the command sequence directly in the local shell. Token lookup runs in the target's shell, and the token is available only to that chezmoi invocation; do not copy tokens between machines, switch accounts, or print credential values. If `gh auth token` fails or returns an empty value on the target, stop and report the failure; do not log in or switch accounts.
 
 ## Diagnose a stopped apply
 
-Identify the failing command before retrying. If `gitHubLatestReleaseAssetURL` fails with a GitHub API 403 rate limit, check that public apply used the token-scoped command above. An anonymous rate limit does not justify changing the external template.
+Identify the failing command before retrying. If a template-rendering command reports an anonymous GitHub API 403 rate limit, rerun it once with the token-scoped form above instead of waiting for the rate limit to reset. If token lookup fails or the token-scoped retry still fails, stop and report the failure. Do not change the external template.
 
 If `mise install` fails to download a pinned tool with a connection reset, test the reported URL directly and through the target's available proxy. When only the proxy works, scope `HTTP_PROXY` and `HTTPS_PROXY` to the failed `mise install`, then retry apply after the tool is installed. Keep the pinned tool and its installer.
 
@@ -56,6 +60,6 @@ If apply stops producing output during skill reconciliation, inspect its child p
 
 ## Report
 
-On failure, stop that target's remaining steps and continue with the others. Inspect the error and current state before any retry; retry once only after correcting the cause. Do not blindly repeat an interrupted apply.
+On failure, stop that target's remaining steps and continue with the others. For errors other than the anonymous GitHub API 403 described above, inspect the error and current state before retrying once after correcting the cause. Do not blindly repeat an interrupted apply.
 
 Report public/private update and apply outcomes for each target, including failures and steps not run. Then give bullets from the summaries recorded before removal: `<target> / <public or private>: Discarded <change summary> in <path>`. Mention preserved paths and remaining actions. Never include secret values or raw private diffs.
