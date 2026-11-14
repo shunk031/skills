@@ -45,6 +45,8 @@ Read each step's linked reference before performing it.
 - **Health watchers:** Read [health watchers](references/health-watchers.md) when passive alerts would help; starting them is required for dispatched runs expected to last 30 minutes or longer.
 - **Outbound prompts:** [send-rule](references/send-rule.md).
 
+Run PR code reviews with the packet runner and review contract in [review and PR lifecycle](references/review-and-pr.md). Supply a task-specific acceptance-criteria file; the runner reads live PR metadata, the committed diff, changed files, and CI status before it starts a one-shot read-only reviewer.
+
 ## Working as a dispatched worker
 
 A dispatched worker follows [the worker protocol](references/worker-protocol.md).
