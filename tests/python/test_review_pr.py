@@ -237,6 +237,18 @@ print('{"verdict":"ACCEPT","findings":[]}')
         self.assertIn("Could not read verification evidence file", result.stderr)
         self.assertFalse(self.codex_input.exists())
 
+    def test_empty_verification_evidence_path_stops_before_github_lookup(self):
+        result = self._run_review(
+            "7",
+            "--acceptance-criteria",
+            str(self.criteria),
+            "--verification-evidence",
+            "",
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.codex_input.exists())
+
     def test_missing_verification_evidence_is_explicit_in_the_packet(self):
         result = self._run_review(
             "7", "--acceptance-criteria", str(self.criteria)

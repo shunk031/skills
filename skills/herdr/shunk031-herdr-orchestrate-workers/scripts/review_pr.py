@@ -71,7 +71,7 @@ def build_packet(pr_reference, criteria_path, verification_evidence_path, start_
     criteria = _read_text_file(criteria_path, "acceptance criteria")
     verification_evidence = (
         _read_text_file(verification_evidence_path, "verification evidence")
-        if verification_evidence_path
+        if verification_evidence_path is not None
         else "No separate verification evidence was supplied."
     )
     repository_root = Path(
