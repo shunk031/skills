@@ -32,7 +32,7 @@ An actionable `REJECT` from an independent reviewer is non-terminal: before repo
 
 <!-- textlint-enable sentence-length -->
 
-The round count belongs to the deliverable, so a replacement worker inherits it. At a round cap set by the dispatch or the skill governing that deliverable, stop the loop and report the unresolved findings to the user; never re-dispatch to reset the count.
+The round count belongs to the deliverable, so a replacement worker inherits it. At a round cap set by dispatch or the governing skill, stop and ask the user if any unresolved finding concerns the deliverable's content. Findings about review setup, base-only updates, or fixable PR-body presentation do not stop the loop. Examples include an incorrect SHA, missing validation details in the PR body, a missing PR title in the review prompt, or a base-only update. Correct them and continue with a fresh review without asking the user. Never re-dispatch to reset the count.
 
 ## Verify the PR head before handoff or merge
 
