@@ -4,9 +4,9 @@ Apply the reporting rule below in every user-facing reply. Use the inbox-specifi
 
 ## In-progress tasks
 
-- Keep the durable ledger as the source of truth. Use `mcp__inbox__record_finding` to maintain exactly one finding per in-progress row, syncing its task, owner, state, and next action whenever the row changes. Findings mirror the ledger but do not own task state.
-- Close a finding only when its task is verified done or dropped, using `mcp__inbox__close` with the finding's `id` and a short reason.
-- Reserve inbox `task` entries for actions only the user can take; do not use them for worker-owned in-progress tasks.
+- Keep the durable ledger as the source of truth. Meta maintains its open work and user-only tasks in the active-items file through the `shunk031-herdr-meta-orchestrate` helper; the Inbox reads that same file. Do not mirror these rows with Inbox `record` or `close` calls. Update an entry when its task, owner, state or next action changes. Remove it only when the work is verified done or dropped.
+- Workers report state changes to their owning root. Meta owns the central active-items file and tracks each worker's current task there.
+- Reserve session-specific Inbox `task` entries for actions only the user can take. Meta's user-only tasks belong in the active-items file.
 
 ## User decisions and actions
 
@@ -21,4 +21,4 @@ Apply the reporting rule below in every user-facing reply. Use the inbox-specifi
 
 - Close a question only after the user answers it. Close a task only when its action is verified done or no longer applies.
 - If a question closes without the user's answer, raise it again in your next reply and record it again.
-- Use `mcp__inbox__close` with the item's `id` and the user's answer or a short reason. Never close a question with your own answer.
+- For session-specific items, use `mcp__inbox__close` with the item's `id` and the user's answer or a short reason. Never close a question with your own answer. Close Meta's active-items entries with its helper after their source task is verified complete or no longer applies.
