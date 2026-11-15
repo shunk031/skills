@@ -32,7 +32,7 @@ An orchestrator session is replaceable only as a last resort, because it accumul
 
 Before asking for a decision again, check the ledger for an explicit answer and reuse it unless the scope changed or the answer is ambiguous.
 
-Update each row and its finding whenever the task, owner, state, or next action changes; on every reconciliation or patrol, compare ledger rows with findings in both directions, create a finding for each row missing one, update mismatched findings, restore a ledger row for any finding whose owned task is still in progress, and close findings only for verified done or dropped tasks, following the task-and-question-tracking reference.
+When Meta owns a task, keep it only in the active-items file through Meta's helper; update its entry when the task, owner, state, or next action changes. During reconciliation, compare live Meta-prefixed workers and roots waiting on the user with that file, using the Inbox's separate read-only warning to surface mismatches. Do not create, update, restore, or close a paired Inbox finding. Continue reconciling your own workers against Herdr state, deliverables, and your durable ledger.
 
 By contrast, a worker session is disposable: when a rejection means "rethink from scratch" rather than "repair this diff", do not re-prompt the owning worker — its context is anchored to the failed approach and will reproduce it under new instructions. Close that agent, spawn a fresh worker (with a new branch/worktree when the old diff itself is the problem), and hand it requirements plus verified evidence, never the old implementation as the starting point.
 
