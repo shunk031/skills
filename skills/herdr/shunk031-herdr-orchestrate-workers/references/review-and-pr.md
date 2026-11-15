@@ -24,6 +24,8 @@ The reviewer returns one JSON object with a verdict and structured findings. Eac
 
 Keep deterministic checks in tooling: formatting, links, PR metadata and head consistency, tests, and required CI. The AI reviewer does not replace those checks; required CI must still pass before merge.
 
+Run the packet command directly as a fresh, noninteractive process. Do not start a one-shot reviewer with `herdr agent start` or create a reviewer pane; the packet runner already launches a fresh ephemeral Codex execution and removes Herdr routing variables.
+
 ## Verify DONE against the user's original request
 
 On DONE, dispatch the verification work to independent reviewers with no prior involvement in the work: have them rerun the applicable gates, reconstruct each claimed contract from its source of truth, inspect the diff and evidence, verify tests exercise the actual package or production path against an independently reconstructed reference, check citations, and recompute every numeric claim from raw data before the orchestrator accepts or relays the result. For structural tasks, reviewers reject a dispatch lacking or contradicting the four-part `Design record:` or a delivered structure that misses its target, regardless of CI. Verify each deliverable against the user's original words, not the dispatch text, because the dispatch itself can be the corrupted layer.

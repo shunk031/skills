@@ -37,58 +37,47 @@ Before starting a piece of work, write what is most likely to fail, how you will
 
 ### 3. Create or reopen each deliverable workspace
 
-Before any task edits, establish the deliverable's repository-associated workspace with `herdr worktree create`; for an already-open deliverable worktree, use `herdr worktree open` and reuse its returned deliverable workspace and root-pane IDs instead of creating a second workspace. Do not substitute manual `git worktree add` plus `herdr tab create`.
+Before any task edits, establish the deliverable's repository-associated workspace with `herdr worktree create`; for an already-open deliverable worktree, use `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
 
-For every implementer, reviewer, or other related tab for that deliverable, move the returned root pane into a new tab in that deliverable workspace before starting the agent. Keep the orchestrator workspace for the orchestrator only, and never build a workspace with `herdr pane move <pane-id> --new-workspace`. For a worker that needs environment variables, use the direct tab-creation path in step 4 instead of moving the root pane.
+Start implementers and related Herdr workers through the lifecycle helper in a dedicated tab in the deliverable workspace. The helper creates the worker tab and records its returned pane and tab IDs. One-shot reviewers use the direct review process in the review guide and do not get Herdr panes. Keep the orchestrator workspace for the orchestrator only.
 
-Read the returned deliverable workspace, destination tab, and pane IDs from each response and use those destination IDs for all subsequent commands:
+Read the returned deliverable workspace ID. The lifecycle helper creates each worker tab in that workspace:
 
 ```bash
 # Choose exactly one for the deliverable:
 herdr worktree create --cwd "$PWD" --branch <topic-branch> --label "WIP <short task>" --no-focus
 # For an already-open deliverable worktree, use this instead of create:
 herdr worktree open --cwd "$PWD" --branch <topic-branch> --label "WIP <short task>" --no-focus
-herdr pane move <returned-root-pane-id> --new-tab --workspace <returned-deliverable-workspace-id> --label "🚧 <short task>" --no-focus
 ```
 
-A worker for a task without a git worktree, such as editing a document through an MCP connector, still gets its own new tab. Create it in the deliverable workspace when one exists, otherwise in your own `"$HERDR_WORKSPACE_ID"`, and start the agent in the returned root pane:
-
-```bash
-herdr tab create --workspace <workspace-id> --cwd <task-dir> --label "🚧 <short task>" --no-focus
-```
+A worker for a task without a git worktree, such as editing a document through an MCP connector, still gets its own tab. Use the deliverable workspace when one exists; otherwise create a dedicated workspace outside your orchestrator workspace.
 
 Never start a worker in a `herdr pane split` of your own pane. The herdr skill's sibling-pane default covers only a single helper agent the user asks for, not orchestrated workers.
 
 ### Workspace labels across the PR lifecycle
 
-Treat each deliverable that will become one pull request as one workspace, and open its implementer and reviewer tabs there. Name the workspace `WIP <topic>`, then `Issue#<N> <topic>`, then `PR#<N> <topic>` with `herdr workspace rename`. Perform the Issue or PR rename in the same turn that receives its URL. Let the background title plugin update worker tab labels.
+Treat each deliverable that will become one pull request as one workspace, and create its implementer tabs there. Name the workspace `WIP <topic>`, then `Issue#<N> <topic>`, then `PR#<N> <topic>` with `herdr workspace rename`. Perform the Issue or PR rename in the same turn that receives its URL. One-shot reviewers do not need workspace tabs.
 
 ### 4. Start the worker
 
 <!-- textlint-disable sentence-length -->
 
-Start the worker in the destination pane with the agent kind, model, and launch flags the launch guidance in your user-level instructions (Launching Herdr workers) gives for its task, prefixing the worker name with your own name so names stay unique across nesting while respecting the 32-character cap.
+Start each implementer through the lifecycle helper, using the launch guidance in your user-level instructions for the agent kind, model, and flags. Prefix the worker name with your name so names stay unique within the 32-character limit.
 
 <!-- textlint-enable sentence-length -->
 
-Use the pane ID returned by `herdr pane move`, or the root-pane ID returned by `herdr tab create` for the environment-variable path; do not reuse the pre-move root pane ID:
+Pass the deliverable workspace ID, worktree directory, and worker label to the lifecycle helper:
 
 ```bash
-herdr agent start <your-name>-<task> --kind <kind> --pane <destination-pane-id> -- <launch-flags>
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --workspace <workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --task <task-key> -- <launch-flags>
 ```
 
 <!-- textlint-disable sentence-length -->
 
-Set worker environment variables on the pane's shell when creating the tab with `herdr tab create --env KEY=VALUE`; `herdr agent start` launches the agent in the existing shell, so prefixing that command with `KEY=VALUE` does not propagate the variable to the worker.
+For a worker that needs environment variables, add one --env KEY=VALUE option per variable to the same lifecycle-helper command. The helper creates the tab with those values before starting the worker.
 
 <!-- textlint-enable sentence-length -->
 
-Use this path instead of the `pane move` path:
-
-```bash
-herdr tab create --workspace <returned-deliverable-workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --env KEY=VALUE --no-focus
-herdr agent start <your-name>-<task> --kind <kind> --pane <returned-root-pane-id> -- <launch-flags>
-```
 
 #### Verify startup and trust prompts
 
@@ -108,15 +97,15 @@ Before each dispatch, record the worker's current `state_change_seq`. Dispatch w
 
 This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding.
 
-After accepting a receipt, immediately record the direct dispatch before starting the lifecycle wait. Record only workers you started directly:
-
-```bash
-~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-tab-cleanup.sh --record-worker <worker-name>
-```
-
-The record stores caller/worker names, both terminal IDs, and the worker tab/pane IDs in `$XDG_STATE_HOME/herdr-tab-cleanup/dispatches.tsv`. The default path is `~/.local/state/herdr-tab-cleanup/dispatches.tsv`.
+The lifecycle helper records the launch before returning, so no separate worker-registration command is needed. If launch succeeded but saving its record failed, run its read-only audit command; the audit warns about unrecorded panes without closing them.
 
 After each receipt is observed, start one background lifecycle wait for that outstanding worker with `herdr agent wait <worker-name> &`; omit `--until` so Herdr's settled-state defaults apply. When the wait settles, read the worker's deliverable and transcript directly and verify the result; do not use report arrival to detect completion. A blocking `agent wait` is lifecycle waiting, not polling.
+
+After verifying a worker result, collect it through the same helper when you will send the worker nothing more:
+
+    ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh collect <worker-name>
+
+Collection closes only a recorded pane started through this helper when its agent is `done` or `idle` and current pane, tab, workspace, and visible-input checks pass. A failed check leaves it open. Run `audit` before ending any turn in which you collected results; it reports settled workers left uncollected, unrecorded live panes, and collected panes still open without closing anything.
 
 By default, follow the [worker protocol's progress-report cadence](worker-protocol.md#progress-reports). Name any additional reports the task needs explicitly in the dispatch; do not request routine stage updates. Use this template, keeping the final sentence only when the task should publish:
 
