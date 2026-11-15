@@ -12,7 +12,7 @@ For a document written in someone's name, style, tone, or resemblance alone is a
 
 ### Run one-shot reviews
 
-Run every one-shot review — independent review, initial first-look review, and DONE verification — in a new, read-only review session using the launch guidance in your user-level instructions. For PR code reviews, run the packet runner from the clean checkout under review:
+Run every one-shot review — independent review, initial first-look review, and DONE verification — in a new, read-only review context using the launch guidance in your user-level instructions. When a one-shot review runs as an in-session subagent, wait in the foreground with a bounded timeout or return a result/STATUS to the parent. Never end a turn waiting on a background command. For PR code reviews, run the packet runner from the clean checkout under review:
 
 ```bash
 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/review_pr.py <PR-number-or-URL> --acceptance-criteria <file> [--verification-evidence <file>]
@@ -22,7 +22,7 @@ The caller supplies the required criteria file. Use the optional evidence file f
 
 The reviewer returns one JSON object with a verdict and structured findings. Each finding has a severity, location, concrete impact, evidence, and an `introduced_by_diff` value. A blocker must identify its location, impact, evidence, and show that the diff introduced it. The reviewer considers only concrete defects introduced by the diff and materially false factual claims in the PR body. Style, nits, duplicates, unsupported findings, pre-existing problems, and PR-body wording are advisory and never block. PR-body review is limited to factual consistency with the diff and verification evidence.
 
-Keep deterministic checks in tooling: formatting, links, PR metadata and head consistency, tests, and required CI. The AI reviewer does not replace those checks; required CI must still pass before merge.
+Keep deterministic checks in tooling: formatting, links, PR metadata and head consistency, tests, and required CI. One-shot reviewers review the current head, report its CI state as observed, and do not wait for CI; the orchestrator checks required checks before merge. The AI reviewer does not replace those checks.
 
 Run the packet command directly as a fresh, noninteractive process. Do not start a one-shot reviewer with `herdr agent start` or create a reviewer pane; the packet runner already launches a fresh ephemeral Codex execution and removes Herdr routing variables.
 

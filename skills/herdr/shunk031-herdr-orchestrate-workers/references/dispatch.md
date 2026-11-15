@@ -37,7 +37,7 @@ Before starting a piece of work, write what is most likely to fail, how you will
 
 ### 3. Create or reopen each deliverable workspace
 
-Before editing, establish the deliverable's repository-associated workspace with `herdr worktree create`. For an already-open worktree, run `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
+Before editing, establish the deliverable's repository-associated workspace with `herdr worktree create`. Before creating it, fetch `origin` and identify the repository's default branch. Pass `--base origin/<default-branch>`; `create` otherwise starts from the current checkout's `HEAD`, which may be stale. For an already-open worktree, run `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
 
 Start implementers and related Herdr workers through the lifecycle helper in a dedicated tab in the deliverable workspace. The helper creates the worker tab and records its returned pane and tab IDs. One-shot reviewers use the direct review process in the review guide and do not get Herdr panes. Keep the orchestrator workspace for the orchestrator only.
 
@@ -45,7 +45,7 @@ Read the returned deliverable workspace ID. The lifecycle helper creates each wo
 
 ```bash
 # Choose exactly one for the deliverable:
-herdr worktree create --cwd "$PWD" --branch <topic-branch> --label "WIP <short task>" --no-focus
+herdr worktree create --cwd "$PWD" --branch <topic-branch> --base origin/<default-branch> --label "WIP <short task>" --no-focus
 # For an already-open deliverable worktree, use this instead of create:
 herdr worktree open --cwd "$PWD" --branch <topic-branch> --label "WIP <short task>" --no-focus
 ```
