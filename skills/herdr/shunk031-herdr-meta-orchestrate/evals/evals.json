@@ -166,11 +166,11 @@
     },
     {
       "id": 17,
-      "prompt": "In an offline dry run, do not run commands. Earlier you recorded an item in the user's inbox for worker `meta-docs`, which is opening a pull request, and the user said they would check back later. While you wait for root `orch-b` to return a review verdict, the worker's transcript ends with `DONE meta-docs: opened https://github.com/example/repo/pull/12; CI passed.`, and you verify it in the transcript. What do you do now?",
-      "expected_output": "Tells the user now, in two or three lines of its own words, that the worker finished and the pull request is open with passing CI, without waiting for the user to check back or for `orch-b`'s verdict, and updates the existing inbox item for that task in the same turn.",
+      "prompt": "In an offline dry run, do not run commands. The active-items file has a work entry for worker `meta-docs`, which is opening a pull request. While you wait for root `orch-b` to return a review verdict, the worker's transcript ends with `DONE meta-docs: opened https://github.com/example/repo/pull/12; CI passed.`, and you verify it in the transcript. What do you do now?",
+      "expected_output": "Tells the user now, in two or three lines of its own words, that the worker finished and the pull request is open with passing CI, without waiting for the user or for `orch-b`'s verdict, and updates the active-items entry to reflect the new owner, state, and next action in the same turn.",
       "expectations": [
         "Sends the user an unprompted summary of two or three lines in meta's own words now, whether or not a verbatim relay of the report follows.",
-        "Updates the existing inbox item for that task in the same turn as the summary."
+        "Updates the active-items entry for that task in the same turn as the summary, without creating or changing an Inbox finding."
       ]
     },
     {
