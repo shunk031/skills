@@ -14,12 +14,10 @@ The helper rechecks agent status and visible input immediately before closing. T
 
 ## Remove resources only after merge
 
-Check each worker's reported URL with `gh pr view <url>` when revisiting the session, finishing other work, or asked to tidy up; do not poll. After merge, close the tab if it is still open. Remove the worktree and branch only when the worktree is clean and its local tip equals `headRefOid` or is an ancestor of it. Check ancestry with `git merge-base --is-ancestor <branch> <headRefOid>`; get `headRefOid` from `gh pr view <url> --json headRefOid`.
+Check each worker's reported URL with `gh pr view <url>` when revisiting the session, finishing other work, or asked to tidy up; do not poll. After merge, close the tab if it is still open. Remove the worktree and branch only when the worktree and each initialized submodule have no uncommitted changes and the worktree's local tip equals `headRefOid` or is an ancestor of it. Check ancestry with `git merge-base --is-ancestor <branch> <headRefOid>`; get `headRefOid` from `gh pr view <url> --json headRefOid`.
 
-## Check uncommitted and ignored data
+Before removing, run `git status --ignored --short` in the worktree and each initialized submodule. Ask the user before removing if any ignored result cannot be regenerated, such as training outputs, checkpoints, or evaluation records. Virtual environments, bytecode, and coverage files can be regenerated and do not block removal. If a submodule has commits or changes not on its remote, stop and report.
 
-Before removing, list its ignored files with `git status --ignored --short`, because `git worktree remove` deletes them with the directory. If they include results that cannot be regenerated, such as training outputs, checkpoints, or evaluation records, leave the worktree in place and ask the user. Regenerable files such as virtual environments, bytecode, and coverage files do not block removal.
+After all checks pass, resolve the worktree's git directory with `git -C <worktree> rev-parse --absolute-git-dir`. For each initialized submodule, run `git -C <worktree> submodule deinit -- <path>`, then remove only `<worktree-git-dir>/modules/<path>`. Never touch the main checkout's `.git/modules`. Run `git worktree remove <worktree>` without `--force`, then delete the local branch with `git branch -D <branch>`; after a squash merge, `git branch -d` may refuse if its upstream no longer exists.
 
-Remove the worktree with `git worktree remove <path>` and never pass `--force`. Delete the local branch with `git branch -D <branch>`, because after a squash merge `git branch -d` refuses the branch unless its upstream branch still exists.
-
-If the worktree has uncommitted changes, leave it in place and tell the user. Leave it in place as well if its tip neither equals nor is an ancestor of `headRefOid`. Touch only resources created through this protocol; leave unmerged, ⛔, and other people's tabs alone.
+If the worktree or any initialized submodule has uncommitted changes, or the worktree tip neither equals nor is an ancestor of `headRefOid`, leave the worktree in place and report. Touch only resources created through this protocol; leave unmerged, ⛔, and other people's tabs alone.
