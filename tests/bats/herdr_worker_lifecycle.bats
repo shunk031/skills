@@ -140,6 +140,10 @@ function add_worker_record() {
 
 @test "audit warns when a settled recorded worker was never explicitly collected" {
     add_worker_slot
+    jq '.result.tabs |= map(select(.tab_id != "anchor-tab"))' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp"
+    mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS"
+    jq '.result.panes |= map(select(.pane_id != "anchor-pane"))' "$HERDR_TEST_PANES" > "${HERDR_TEST_PANES}.tmp"
+    mv "${HERDR_TEST_PANES}.tmp" "$HERDR_TEST_PANES"
     add_worker_agent done
     add_worker_record meta-tabclean started
 
