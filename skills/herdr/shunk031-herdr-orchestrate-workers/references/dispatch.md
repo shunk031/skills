@@ -37,7 +37,7 @@ Before starting a piece of work, write what is most likely to fail, how you will
 
 ### 3. Create or reopen each deliverable workspace
 
-Before any task edits, establish the deliverable's repository-associated workspace with `herdr worktree create`; for an already-open deliverable worktree, use `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
+Before editing, establish the deliverable's repository-associated workspace with `herdr worktree create`. For an already-open worktree, run `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
 
 Start implementers and related Herdr workers through the lifecycle helper in a dedicated tab in the deliverable workspace. The helper creates the worker tab and records its returned pane and tab IDs. One-shot reviewers use the direct review process in the review guide and do not get Herdr panes. Keep the orchestrator workspace for the orchestrator only.
 
@@ -77,7 +77,6 @@ Pass the deliverable workspace ID, worktree directory, and worker label to the l
 For a worker that needs environment variables, add one --env KEY=VALUE option per variable to the same lifecycle-helper command. The helper creates the tab with those values before starting the worker.
 
 <!-- textlint-enable sentence-length -->
-
 
 #### Verify startup and trust prompts
 
