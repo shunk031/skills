@@ -2,11 +2,13 @@
 
 ## Collect and reconcile
 
-After dispatching all workers and verifying each receipt, keep one background lifecycle wait running per outstanding worker with the settled-state defaults. Whenever you return from an interactive wait for user input, first reconcile every dispatched worker with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` before other work; reports attempted during the wait may have been rejected as `agent_blocked`. Let the lifecycle waits settle, then read each worker's deliverable and transcript directly to collect its result and reconcile it with state; each settled wait is a state signal, not a polling iteration.
+Keep one background lifecycle wait running per outstanding worker after dispatch and receipt verification. Use Herdr's settled-state defaults. After returning from an interactive user-input wait, first reconcile each dispatched worker with `herdr agent get <worker-name>` and `herdr agent read <worker-name>`. Reports sent while waiting may have been rejected as `agent_blocked`. Let lifecycle waits settle, then read each worker's deliverable and transcript to verify its result and reconcile state. A settled wait is a state signal, not a polling iteration.
 
-Track outstanding workers by name and tab/pane ID, with their reported PR URLs — but treat that list as a cache. Herdr state (tab labels, lifecycle state, transcripts, live agents), git, and PR state are the durable truth and the primary collection model; the list can always be rebuilt from that truth, even after your own restart. Worker reports are required for attribution and audit, but they are advisory and do not gate progress.
+After verifying a result and deciding to send the worker nothing more, run `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh collect <worker-name>`. This helper closes only a pane recorded at launch by the same helper. It checks settled state and current pane safety. Its read-only `audit` command warns about unrecorded live panes and settled workers left uncollected.
 
-Whenever you finish other work or wonder about progress, reconcile the cache against the truth and repair the difference: use `herdr agent get <worker-name>` and `herdr agent read <worker-name>` plus direct deliverable reads to collect a result even when its report is missing; resend a dispatch or BLOCKED answer that left no trace in the worker's transcript; read a dead worker's pane with `herdr pane read <pane-id>` and restart or take over its task (a dead sub-orchestrator's name-prefixed workers become yours); ignore reports from workers you already settled; and finish interrupted cleanup, such as a merged PR with a leftover worktree. A missing report is not an error when the state wait and direct reads already collected and verified the result.
+Track outstanding workers by name and tab/pane ID, with reported PR URLs, but treat that list as a cache. Herdr state (tab labels, lifecycle state, transcripts, live agents), git, and PR state are durable truth for result verification and reconciliation. Rebuild the cache from that truth, even after your own restart. The lifecycle helper's durable record and explicit collection state govern pane cleanup. Worker reports are required for attribution and audit, but they are advisory and do not gate progress.
+
+Whenever you finish other work or wonder about progress, reconcile the cache against Herdr, git, and PR state. Use `herdr agent get <worker-name>`, `herdr agent read <worker-name>`, and direct deliverable reads to verify a result, even when its report is missing. Then run the lifecycle helper's collect command when you will send that worker nothing more. Resend a dispatch or BLOCKED answer that left no trace in the worker's transcript. For a dead worker, read its pane with `herdr pane read <pane-id>` and restart or take over its task. A dead sub-orchestrator's name-prefixed workers become yours. Ignore reports from workers you already settled. Finish interrupted cleanup, such as a merged PR with a leftover worktree. A missing report is not an error when the state wait and direct reads verified the result.
 
 ### Route queued reports and decisions
 
@@ -20,7 +22,7 @@ When a meta-orchestrator oversees you, forward each worker STATUS or BLOCKED tha
 
 <!-- textlint-enable sentence-length -->
 
-A confirmed-working STATUS ends reconciliation: send nothing; leave the worker's lifecycle wait running and collect its result from the settled state, deliverable, and transcript. Do not wait for a DONE or BLOCKED report, and do not poll.
+A confirmed-working STATUS ends reconciliation. Send nothing and leave the lifecycle wait running. When it settles, verify the result from state, deliverable, and transcript. If you have no further message for the worker, explicitly collect it through the lifecycle helper. Do not wait for DONE or BLOCKED, and do not poll.
 
 A progress STATUS needs no reply to the worker; like a confirmed-working STATUS in [Collect and reconcile](reconciliation.md#collect-and-reconcile), it ends reconciliation.
 

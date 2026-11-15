@@ -2,11 +2,11 @@
 
 ## Close collected worker panes
 
-Close a worker's pane with `herdr pane close <pane-id>` as soon as you have collected and verified its result and will send it nothing more, not only after a merge; before ending a turn in which you collected results, close the pane of every worker whose result you collected unless you will still route it work. Closing a pane never removes its worktree or branch.
+Once you have verified a result and will send the worker nothing more, run `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh collect <worker-name>`. The helper closes only a recorded pane this orchestrator launched. It requires a settled agent and fresh safety checks. Before ending any turn in which you collected results, run its read-only `audit` command. This reports settled workers left uncollected and unrecorded live panes without closing them. Closing a pane never removes its worktree or branch.
 
 ### Preview and close worker tabs
 
-After collecting a worker result or confirming its pull request merged, preview local tabs with `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-tab-cleanup.sh`.
+After confirming its pull request merged, preview local tabs with `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-tab-cleanup.sh`.
 
 For a finished worker tab with an unmerged pull request, include `--results-collected <tab-id>` in the preview command; otherwise the helper keeps it. To close reviewed tabs, pass each tab ID with `--apply --results-collected <tab-id>` and repeat the option for each tab.
 

@@ -44,10 +44,11 @@
     {
       "id": 5,
       "prompt": "You are a Herdr orchestrator preparing a Codex worker that needs the environment assignment KEY=VALUE. You already have the returned deliverable workspace ID and worktree path. In an offline dry run, show the minimal commands to launch the worker with that variable available. Do not execute commands.",
-      "expected_output": "The answer creates the worker tab in the deliverable workspace with herdr tab create --env KEY=VALUE, then starts Codex in the root pane returned by that command. It explains that prefixing herdr agent start with KEY=VALUE does not propagate the variable to the worker.",
+      "expected_output": "The orchestrator starts the worker through herdr-worker-lifecycle.sh with the deliverable workspace, worktree path, tab label, task key, and --env KEY=VALUE. The helper creates the tab with the environment value before it starts the agent.",
       "expectations": [
-        "Creates the tab with --workspace, --cwd, and --env KEY=VALUE, then uses the returned root-pane ID with herdr agent start.",
-        "Does not use a KEY=VALUE prefix on herdr agent start to set the worker's environment."
+        "Uses the lifecycle helper as the only worker launch path.",
+        "Passes --workspace, --cwd, --label, --task, and --env KEY=VALUE to the helper.",
+        "Does not set the worker environment by prefixing agent start with KEY=VALUE."
       ]
     },
     {
@@ -119,10 +120,11 @@
     },
     {
       "id": 13,
-      "prompt": "You are a Herdr orchestrator. Worker orch-memo committed a research memo on its branch and opened no pull request. You have read the memo and the worker's transcript, verified the result, and will send it nothing more. What do you do with its pane, worktree, and branch before ending this turn? Do not execute commands.",
-      "expected_output": "Close the worker's pane now with herdr pane close instead of leaving it idle, and keep its worktree and branch because no merged pull request permits removing them.",
+      "prompt": "You are a Herdr orchestrator. You launched worker orch-memo with the worker lifecycle helper. It committed a research memo on its branch and opened no pull request. You have read the memo and the worker's transcript, verified the result, and will send it nothing more. What do you do with its pane, worktree, and branch before ending this turn? Do not execute commands.",
+      "expected_output": "Run the lifecycle helper's collect command for orch-memo before ending the turn, then run its read-only audit. Keep the worktree and branch because no merged pull request permits removing them.",
       "expectations": [
-        "Closes the worker's pane with `herdr pane close` before ending the turn.",
+        "Runs `herdr-worker-lifecycle.sh collect orch-memo` before ending the turn.",
+        "Runs the lifecycle helper's read-only `audit` command.",
         "Does not remove the worktree or delete the branch."
       ]
     },
