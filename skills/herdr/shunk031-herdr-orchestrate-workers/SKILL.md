@@ -23,6 +23,24 @@ This skill adds only the orchestration protocol. When one session oversees multi
 - **User authority:** Surface decisions about scope, resources, deletion, credentials, license, and settings; follow the merge-approval rule in the user's `AGENTS.md`.
 - **Lifecycle and cleanup:** Reconcile outstanding workers, answer actionable BLOCKED reports, and remove only verified, protocol-owned resources.
 
+## Publish the root's next due action
+
+Every root orchestrator, whether Claude or Codex and whether or not Inbox is installed, owns the due time for its next action. Publish the planned due instant in UTC on the root's own pane with `herdr pane report-metadata`, using the same stable source ID for every update and the dedicated `due` token. The patrol accepts only UTC values in the exact form `YYYY-MM-DDTHH:MM:SSZ`. The command below formats the current instant; it does not schedule a future deadline. For a later action, set `due` to the planned future instant in this same UTC format before publishing:
+
+```bash
+# Format example only: this is the current instant, not a future deadline.
+due=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+herdr pane report-metadata --source root-due --token "due=$due" "$HERDR_PANE_ID"
+```
+
+Update the token with the same command and source ID whenever the next action or its due time changes. Do not use offsets, fractional seconds, lowercase markers, or leap seconds; any other nonempty value is reported as an invalid-due finding and does not trigger a reminder. Clear the token when no due action remains:
+
+```bash
+herdr pane report-metadata --source root-due --clear-token due "$HERDR_PANE_ID"
+```
+
+Use this metadata for due times; do not encode them in freeform inbox text. Keep the existing inbox behavior for reports, questions, and other messages. A due time triggers a later live check by Meta; it does not authorize Meta to infer, move, reassign, or perform the work.
+
 ## Workflow
 
 Read each step's linked reference before performing it.
