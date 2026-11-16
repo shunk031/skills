@@ -18,7 +18,7 @@ This skill adds only the orchestration protocol. When one session oversees multi
 
 - **Guarded messaging:** Every prompt send in this skill follows [the send rule](references/send-rule.md); read it before your first send. Never send into occupied input.
 - **Evidence over reports:** Verify live Herdr state, worker transcripts, deliverables, and git/PR state. A DONE report or green CI alone does not prove acceptance.
-- **Worker ownership:** Route task-scoped implementation and GitHub actions to the live worker that owns them.
+- **Worker ownership:** Route task-scoped investigation, research, drafting, implementation, and GitHub actions to the live worker that owns them.
 - **Independent review:** Verify completed work and reader-facing artifacts against the user's original requirements before acceptance or publication.
 - **User authority:** Surface decisions about scope, resources, deletion, credentials, license, and settings; follow the merge-approval rule in the user's `AGENTS.md`.
 - **Lifecycle and cleanup:** Reconcile outstanding workers, answer actionable BLOCKED reports, and remove only verified, protocol-owned resources.
