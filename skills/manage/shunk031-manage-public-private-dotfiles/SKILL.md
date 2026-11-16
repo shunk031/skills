@@ -35,6 +35,7 @@ Skill content is not one of those domains any more. It lives in `shunk031/skills
    - Prefer the private repository for credentials, internal infrastructure, private profiles, authentication helpers, internal endpoints, and private launchers.
    - Treat these as defaults, not a substitute for reading the current repository instructions and implementation.
    - Do not copy a setting into both repositories merely to make it available in both contexts. Preserve adapters and symlinks that expose one canonical source.
+   - If a consumer path is a symlink into a source checkout, pulling that source updates the live path without an apply.
 
 4. Make only the required source changes.
 
