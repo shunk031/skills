@@ -36,6 +36,8 @@ Run every chezmoi command that renders templates on the target with the existing
 ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi <command> [options]'
 ```
 
+Before applying named targets, follow `shunk031-manage-public-private-dotfiles`: apply source-managed paths; skip symlinks into source checkouts, which are live after the source is pulled. Record intentionally unmanaged or ignored paths without treating them as errors, and verify each live consumer path, not only its source file.
+
 Inspect each apply plan with `chezmoi status` or a redacted `chezmoi diff`, using the scoped form above. Stop on unexplained destination edits or a confirmation prompt; do not force an overwrite. Then run public apply first:
 
 ```sh
