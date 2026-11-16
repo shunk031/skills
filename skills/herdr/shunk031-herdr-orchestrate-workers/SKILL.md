@@ -25,13 +25,14 @@ This skill adds only the orchestration protocol. When one session oversees multi
 
 ## Publish the root's next due action
 
-Every root orchestrator, whether Claude or Codex and whether or not Inbox is installed, owns the due time for its next action. Publish it on the root's own pane with `herdr pane report-metadata`, using the same stable source ID for every update and the dedicated `due` token with a timezone-qualified RFC3339 timestamp:
+Every root orchestrator, whether Claude or Codex and whether or not Inbox is installed, owns the due time for its next action. Publish it on the root's own pane with `herdr pane report-metadata`, using the same stable source ID for every update and the dedicated `due` token. The patrol accepts only UTC values in the exact form `YYYY-MM-DDTHH:MM:SSZ`; generate that form with `date -u`:
 
 ```bash
-herdr pane report-metadata --source root-due --token 'due=2026-11-16T13:30:00+09:00' "$HERDR_PANE_ID"
+due=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+herdr pane report-metadata --source root-due --token "due=$due" "$HERDR_PANE_ID"
 ```
 
-Update the token with the same command and source ID whenever the next action or its due time changes. Clear it when no due action remains:
+Update the token with the same command and source ID whenever the next action or its due time changes. Do not use offsets, fractional seconds, lowercase markers, or leap seconds; any other nonempty value is reported as an invalid-due finding and does not trigger a reminder. Clear the token when no due action remains:
 
 ```bash
 herdr pane report-metadata --source root-due --clear-token due "$HERDR_PANE_ID"
