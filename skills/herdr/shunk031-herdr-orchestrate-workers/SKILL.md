@@ -23,6 +23,22 @@ This skill adds only the orchestration protocol. When one session oversees multi
 - **User authority:** Surface decisions about scope, resources, deletion, credentials, license, and settings; follow the merge-approval rule in the user's `AGENTS.md`.
 - **Lifecycle and cleanup:** Reconcile outstanding workers, answer actionable BLOCKED reports, and remove only verified, protocol-owned resources.
 
+## Publish the root's next due action
+
+Every root orchestrator, whether Claude or Codex and whether or not Inbox is installed, owns the due time for its next action. Publish it on the root's own pane with `herdr pane report-metadata`, using the same stable source ID for every update and the dedicated `due` token with a timezone-qualified RFC3339 timestamp:
+
+```bash
+herdr pane report-metadata --source root-due --token 'due=2026-11-16T13:30:00+09:00' "$HERDR_PANE_ID"
+```
+
+Update the token with the same command and source ID whenever the next action or its due time changes. Clear it when no due action remains:
+
+```bash
+herdr pane report-metadata --source root-due --clear-token due "$HERDR_PANE_ID"
+```
+
+Use this metadata for due times; do not encode them in freeform inbox text. Keep the existing inbox behavior for reports, questions, and other messages. A due time triggers a later live check by Meta; it does not authorize Meta to infer, move, reassign, or perform the work.
+
 ## Workflow
 
 Read each step's linked reference before performing it.
