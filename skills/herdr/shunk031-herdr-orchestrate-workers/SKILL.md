@@ -40,6 +40,7 @@ Read each step's linked reference before performing it.
 - **DONE, REJECT, first-look review, merge:** [review and PR lifecycle](references/review-and-pr.md).
 - **BLOCKED, STATUS, failed worker, missing report, correction sweep:** [reconciliation](references/reconciliation.md).
 - **Task/question tracking:** Always read [task and question tracking](references/task-and-question-tracking.md) for its waiting-list reporting rule.
+- **Inbox procedures:** Read [Inbox-specific procedures](references/inbox.md) only when the Inbox tools are available.
 - **Anonymous live pane:** [adopt-anonymous-pane](references/adopt-anonymous-pane.md).
 - **Active observation:** Read [active observation](references/active-observation.md) only when the user explicitly requests it.
 - **Health watchers:** Read [health watchers](references/health-watchers.md) when passive alerts would help; starting them is required for dispatched runs expected to last 30 minutes or longer.
