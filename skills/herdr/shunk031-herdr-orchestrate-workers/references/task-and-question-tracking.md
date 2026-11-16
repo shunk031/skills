@@ -11,6 +11,7 @@ Apply the reporting rule below in every user-facing reply. Use the inbox-specifi
 ## User decisions and actions
 
 - End a user-facing reply with a short "Waiting on you" list of open user decisions and actions, one line each stating what the user should decide or do and the recommended option, if any. List an item only when it is new, its content has changed, or it still blocks work, including an expired item, and never one the user has acknowledged or deferred unless it has changed since. Omit the list when no item qualifies.
+- Check each user-facing draft, question, option, and recommendation against accumulated user rulings before showing or relaying it; fix conflicts or name them.
 - Include each blocking user decision or action in the report that raises it or changes it, so the mod's post-turn update adds it to the `Needs you` list.
 - Use questions for choices that block continued work, and tasks only for actions the user can take that block continuing or finishing.
 - For first reports or inbox entries, make each item stand alone: say what to decide or do, why it matters or blocks work, your recommendation, and what happens without an answer.
