@@ -25,9 +25,10 @@ This skill adds only the orchestration protocol. When one session oversees multi
 
 ## Publish the root's next due action
 
-Every root orchestrator, whether Claude or Codex and whether or not Inbox is installed, owns the due time for its next action. Publish it on the root's own pane with `herdr pane report-metadata`, using the same stable source ID for every update and the dedicated `due` token. The patrol accepts only UTC values in the exact form `YYYY-MM-DDTHH:MM:SSZ`; generate that form with `date -u`:
+Every root orchestrator, whether Claude or Codex and whether or not Inbox is installed, owns the due time for its next action. Publish the planned due instant in UTC on the root's own pane with `herdr pane report-metadata`, using the same stable source ID for every update and the dedicated `due` token. The patrol accepts only UTC values in the exact form `YYYY-MM-DDTHH:MM:SSZ`. The command below formats the current instant; it does not schedule a future deadline. For a later action, set `due` to the planned future instant in this same UTC format before publishing:
 
 ```bash
+# Format example only: this is the current instant, not a future deadline.
 due=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 herdr pane report-metadata --source root-due --token "due=$due" "$HERDR_PANE_ID"
 ```
