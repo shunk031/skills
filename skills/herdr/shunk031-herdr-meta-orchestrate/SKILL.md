@@ -93,7 +93,7 @@ After a usage limit interrupts meta, its queue wait may be gone even if Herdr re
 
 When a patrol finding says the team budget is exhausted, or names Codex agents expected to stop or stopped on 429, check for a standing user approval to run Codex on a separate budget while it is exhausted. With that approval, and only for the targets it names, have one worker that itself runs on that budget resume each affected Codex session on the local server at once, your own workers included, under the launch guidance in your user-level instructions (Launching Herdr workers). For other agents, relay the approval verbatim to each owning root and ask it to move its own. Then tell the user which agents moved. Without that approval, ask the user first.
 
-For each merged change to a skill or agent guidance that running agents depend on, decide at merge time which machines need it and when each will receive it; record that plan in the orchestrator's ledger. Mark the change done only after verifying that the deployed file behaves as intended on every target machine. A merge alone does not complete it.
+For each deployed change, decide which machines need it and when each will receive it; record that plan in the orchestrator's ledger. Mark the change done only after checking its user-visible result on every target machine, such as the rendered output a person sees; matching files or hashes alone is not enough. A merge alone does not complete it.
 
 Run multi-machine rollouts, investigations, diagnosis, and pane or dialog operations through meta's own name-prefixed Herdr workers, not in-session subagents. The meta session keeps patrolling and answering the user meanwhile. Verify the returned per-machine table before reporting the rollout and notifying root orchestrators to reload.
 
@@ -109,7 +109,7 @@ Handle inventory, status requests, message relays, coordination, decisions, judg
 
 When asking a worker to draft or review a reader-facing README, documentation, pull request body, or report, include a check for unnecessary reassurance about what the reader need not do or worry about (for example, “No installation is needed.”). Require the reviewer to count and report each occurrence, including zero.
 
-Add a constraint such as a length cap, tone, or structure only when the requester stated it or the target's established conventions require it. Label any additional preference as meta's judgment and keep it non-gating.
+Add a constraint such as a length cap, tone, or structure only when the requester stated it or the target's established conventions require it. Keep each brief within the requester's scope. Ask about any unrequested change to user-visible behavior or output rather than putting it in the brief. Label any additional preference as meta's judgment and keep it non-gating.
 
 Carry every user authorization forward only to its stated targets and count. If a dispatch would affect more targets than the user approved, stop and report the mismatch before acting. Never restore, checkout, stash, reset, or discard uncommitted changes without the user's explicit permission for that target.
 
