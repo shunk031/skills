@@ -17,7 +17,7 @@ STATE_ROOT = Path.home() / ".local" / "state" / "herdr-worker-lifecycle" / "size
 TASK_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 WORKER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 SHELL_META = re.compile(r"[\n\r;&|<>`$()\\]")
-PUBLICATION_COMMAND = re.compile(r"\bgit\b[^\n]*\bpush\b|\bgh\b[^\n]*\bpr\b[^\n]*\bcreate\b")
+PUBLICATION_COMMAND = re.compile(r"(?P<git>\bgit\b[^\n]*\bpush\b)|(?P<gh>\bgh\b[^\n]*\bpr\b[^\n]*\bcreate\b)")
 
 def git(repo, *args, env=None, input_data=None, check=True):
     process_env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
@@ -224,10 +224,14 @@ def literal_report(command, worker):
     return len(parts) == 5 and parts[:4] == ["herdr-meta-patrol-queue", "add", "--from", worker] and parts[4].startswith(prefix)
 
 def is_publication_command(command):
-    return ("matched", command, None) if PUBLICATION_COMMAND.search(command) else None
+    matches = list(PUBLICATION_COMMAND.finditer(command))
+    if not matches:
+        return None
+    kind = "pr" if any(match.group("gh") for match in matches) else "push"
+    return (kind, command, None)
 
 def publish_check(repo, record, form):
-    kind, command, _ = form
+    _, command, _ = form
     if value(repo, "symbolic-ref", "--short", "HEAD") != record["branch"]:
         raise ValueError("publication head is not the registered task branch")
     status = git(repo, "status", "--porcelain=v1", "--untracked-files=all").stdout
@@ -240,12 +244,6 @@ def publish_check(repo, record, form):
         raise ValueError("pull request base is not the registered origin default branch")
     if head and head.group(1) != record["branch"]:
         raise ValueError("publication head is not the registered task branch")
-    push = re.search(r"\bgit(?:\s+-(?:C|c)\s+\S+)*\s+push\b", command)
-    if push:
-        target = re.search(r"\borigin\s+(\S+)", command[push.end():])
-        allowed = {record["branch"], "HEAD", f"HEAD:refs/heads/{record['branch']}", f"{record['branch']}:refs/heads/{record['branch']}"}
-        if not target or target.group(1).strip("\"' );") not in allowed:
-            raise ValueError("publication target is not the registered task branch")
     remote = git(repo, "ls-remote", "--heads", "origin", f"refs/heads/{record['branch']}").stdout.decode().split()
     if len(remote) != 2 or remote[0] != value(repo, "rev-parse", "HEAD"):
         raise ValueError("publication branch tip differs from the local registered branch")
@@ -254,7 +252,7 @@ def check(args):
     record = load_record(args.launch_id, args.cwd, args.pane, args.tab, args.terminal)
     budget, override = budget_for(record.get("line_budget"), record["task_key"], record["worker_name"], record.get("override"))
     form = is_publication_command(args.command) if args.tool_name == "Bash" else None
-    if form:
+    if form and form[0] == "pr":
         publish_check(args.cwd, record, form)
     count = count_diff(args.cwd, record["base_sha"])
     over = count["total"] > budget

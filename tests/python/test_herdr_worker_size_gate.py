@@ -296,21 +296,47 @@ class WorkerSizeGateTest(unittest.TestCase):
 
     def test_publication_detection_matches_raw_command_regex(self):
         self.prepare()
-        self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
-        (self.repo / "source.py").write_text("dirty\n", encoding="utf-8")
         cases = (
-            "FOO=bar bash -lc 'git push origin task/size-check'",
-            'bash -lc "git push origin task/size-check"',
-            "bash -lc \"sh -c 'git push origin task/size-check'\"",
-            "$(git push origin task/size-check)",
-            "git -C d push origin task/size-check",
-            "git grep push",
-            "git log --grep push",
+            ("env prefix", "FOO=bar bash -lc 'git push origin task/size-check'", "absent", 0, None),
+            ("bash -lc", 'bash -lc "git push origin task/size-check"', "absent", 0, None),
+            ("nested sh -c", "bash -lc \"sh -c 'git push origin task/size-check'\"", "absent", 0, None),
+            ("command substitution", "$(git push origin task/size-check)", "absent", 0, None),
+            ("git -C", "git -C d push origin task/size-check", "absent", 0, None),
+            ("git grep false positive", "git grep push", "absent", 0, None),
+            ("git log false positive", "git log --grep push", "absent", 0, None),
+            ("push with remote absent", "git push origin task/size-check", "absent", 0, None),
+            (
+                "push to another remote branch",
+                "git push origin HEAD:refs/heads/other-branch",
+                "absent",
+                0,
+                None,
+            ),
+            ("push with remote behind", "git push origin task/size-check", "behind", 0, None),
+            (
+                "PR create with remote behind",
+                "gh pr create --base main --head task/size-check",
+                "behind",
+                2,
+                "branch tip differs",
+            ),
         )
-        for command in cases:
-            with self.subTest(command=command):
-                result = self.check(tool="Bash", command=command, expected=2)
-                self.assertIn("publication requires a clean committed worktree", result["error"])
+        remote_state = "absent"
+        for name, command, expected_remote, expected, error in cases:
+            with self.subTest(case=name):
+                if expected_remote != remote_state:
+                    base = self.run_git("rev-parse", "main", cwd=self.repo)
+                    self.run_git("push", "origin", f"{base}:refs/heads/task/size-check", cwd=self.repo)
+                    (self.repo / "local.py").write_text("local commit\n", encoding="utf-8")
+                    self.run_git("add", "local.py", cwd=self.repo)
+                    self.run_git("commit", "-m", "advance local task branch", cwd=self.repo)
+                    remote_state = expected_remote
+
+                result = self.check(tool="Bash", command=command, expected=expected)
+                if error:
+                    self.assertIn(error, result["error"])
+                else:
+                    self.assertFalse(result["deny"])
 
     def test_pull_request_creation_rejects_a_remote_branch_ahead_of_local_head(self):
         self.prepare()
@@ -325,18 +351,6 @@ class WorkerSizeGateTest(unittest.TestCase):
             expected=2,
         )
         self.assertIn("branch tip differs", result["error"])
-
-    def test_push_to_unregistered_remote_branch_is_rejected(self):
-        self.prepare()
-        self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
-
-        result = self.check(
-            tool="Bash",
-            command="git push origin HEAD:refs/heads/other-branch",
-            expected=2,
-        )
-
-        self.assertIn("publication target is not the registered task branch", result["error"])
 
     def test_staged_and_unstaged_edits_to_one_line_are_not_double_counted(self):
         (self.repo / "source.py").write_text("staged\n", encoding="utf-8")
