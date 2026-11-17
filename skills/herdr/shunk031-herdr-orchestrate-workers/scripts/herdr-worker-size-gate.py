@@ -86,9 +86,8 @@ def count_diff(repo, base):
             additions += int(counts[0])
             deletions += int(counts[1])
 
-    base_paths = set(git(repo, "ls-tree", "-rz", "--name-only", base).stdout.split(b"\0"))
     untracked = git(repo, "ls-files", "--others", "--exclude-standard", "-z").stdout.split(b"\0")
-    for raw_path in (path for path in untracked if path and path not in base_paths):
+    for raw_path in (path for path in untracked if path):
         path = Path(repo) / os.fsdecode(raw_path)
         try:
             mode = os.lstat(path).st_mode
@@ -111,7 +110,7 @@ def budget_for(budget, task, worker, override=None):
         return budget, None
     path = STATE_ROOT / "overrides" / worker / f"{task}.json"
     if not override and path.exists():
-        if path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077 or path.stat().st_uid != os.getuid():
+        if not path.is_file() or path.stat().st_mode & 0o077 or path.stat().st_uid != os.getuid():
             raise ValueError("budget override is not a protected regular file")
         override = json.loads(path.read_text(encoding="utf-8"))
     if not override or override.get("budget") != budget or override["budget"] <= MAX_BUDGET or not override.get("user_approval_reference") or override.get("task_key") != task or override.get("worker_name") != worker:

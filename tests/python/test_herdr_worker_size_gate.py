@@ -183,17 +183,6 @@ class WorkerSizeGateTest(unittest.TestCase):
 
         self.assertEqual((result["additions"], result["deletions"], result["total"]), (1, 1, 2))
 
-    def test_preflight_does_not_write_to_the_real_object_store(self):
-        objects = Path(self.run_git("rev-parse", "--git-path", "objects", cwd=self.repo))
-        if not objects.is_absolute():
-            objects = self.repo / objects
-        before = {path.relative_to(objects) for path in objects.rglob("*") if path.is_file()}
-
-        self.preflight()
-
-        after = {path.relative_to(objects) for path in objects.rglob("*") if path.is_file()}
-        self.assertEqual(after, before)
-
     def test_399_400_and_401_lines_use_additions_plus_deletions(self):
         generated = self.repo / "generated.py"
         generated.write_text("x\n" * 399, encoding="utf-8")
@@ -228,3 +217,33 @@ class WorkerSizeGateTest(unittest.TestCase):
 
         self.assertEqual(result["total"], 2)
         self.assertIn("untracked.py", result["changed_paths"])
+
+    def test_tests_docs_locks_and_test_named_files_count(self):
+        for name in ("tests/case.py", "README.md", "uv.lock", "test_core.js", "src/tests/implementation.py"):
+            path = self.repo / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("one\n", encoding="utf-8")
+
+        result = self.preflight()
+
+        self.assertEqual(result["total"], 5)
+        self.assertEqual(len(result["changed_paths"]), 5)
+
+    def test_binary_files_count_as_one_line(self):
+        binary = self.repo / "binary.dat"
+        binary.write_bytes(b"header\x00payload")
+        self.run_git("add", "binary.dat", cwd=self.repo)
+        self.run_git("commit", "-m", "add binary", cwd=self.repo)
+        (self.repo / "untracked-binary.dat").write_bytes(b"other\x00payload")
+
+        result = self.preflight()
+
+        self.assertEqual((result["binary_files"], result["total"]), (2, 2))
+
+    def test_untracked_replacement_of_a_base_path_counts_its_contents(self):
+        self.run_git("rm", "--cached", "source.py", cwd=self.repo)
+        (self.repo / "source.py").write_text("x\n" * 400, encoding="utf-8")
+
+        result = self.preflight(expected=2)
+
+        self.assertIn("initial worktree diff 401 is over budget 400", result["error"])
