@@ -33,19 +33,37 @@ class ReviewPrTest(unittest.TestCase):
         self.evidence.write_text("make test passed; CI is pending.\n")
         self.codex_input = self.root / "codex-input"
         self.codex_args = self.root / "codex-args"
+        self.git_calls = self.root / "git-calls"
         self._write_command(
             "git",
             """import os
+import json
 import sys
 
 args = sys.argv[1:]
+if os.environ.get("REVIEW_TEST_GIT_CALLS"):
+    with open(os.environ["REVIEW_TEST_GIT_CALLS"], "a") as output:
+        output.write(json.dumps(args) + "\\n")
 if args == ["rev-parse", "--show-toplevel"]:
     print(os.environ["REVIEW_TEST_REPO"])
 elif args == ["rev-parse", "HEAD"]:
     print(os.environ.get("REVIEW_TEST_LOCAL_HEAD", "head-sha"))
+elif args[:2] == ["rev-parse", "--verify"]:
+    if os.environ.get("REVIEW_TEST_REMOTE_REF_FAIL"):
+        raise SystemExit(1)
+    print("remote-default-sha")
 elif args == ["status", "--porcelain"]:
     if os.environ.get("REVIEW_TEST_DIRTY"):
         print(" M uncommitted.txt")
+elif args == ["symbolic-ref", "--quiet", "--short", "HEAD"]:
+    if not os.environ.get("REVIEW_TEST_DETACHED"):
+        print("topic")
+elif args[:2] == ["fetch", "--no-tags"]:
+    pass
+elif args[:1] == ["merge-base"]:
+    if os.environ.get("REVIEW_TEST_MERGE_BASE_FAIL"):
+        raise SystemExit(1)
+    print("base-sha")
 elif args[:2] == ["diff", "--no-ext-diff"]:
     if "--name-only" in args:
         sys.stdout.write("skills/example/SKILL.md\\0")
@@ -72,7 +90,13 @@ if args[:2] == ["pr", "view"] and "--json" in args:
     else:
         raise SystemExit(2)
 elif args[:3] == ["repo", "view", "--json"]:
-    print(json.dumps({"nameWithOwner": "example/repo"}))
+    fields = args[3]
+    if fields == "nameWithOwner":
+        print(json.dumps({"nameWithOwner": "example/repo"}))
+    elif fields == "nameWithOwner,defaultBranchRef":
+        print(json.dumps({"nameWithOwner": "example/repo", "defaultBranchRef": {"name": "main"}}))
+    else:
+        raise SystemExit(2)
 elif args[:2] == ["api", "repos/example/repo/pulls/7"]:
     if os.environ.get("REVIEW_TEST_FAIL_PR_API"):
         print("GitHub API unavailable", file=sys.stderr)
@@ -114,6 +138,7 @@ print('{"verdict":"ACCEPT","findings":[]}')
                 "REVIEW_TEST_REPO": str(self.repo),
                 "REVIEW_TEST_CODEX_INPUT": str(self.codex_input),
                 "REVIEW_TEST_CODEX_ARGS": str(self.codex_args),
+                "REVIEW_TEST_GIT_CALLS": str(self.git_calls),
                 "CODEX_REVIEW_MODEL": "test-model",
                 "CODEX_REVIEW_EFFORT": "test-effort",
                 "CODEX_REVIEW_PROFILE": "test-profile",
@@ -177,6 +202,79 @@ print('{"verdict":"ACCEPT","findings":[]}')
         self.assertIn("--ephemeral", command)
         self.assertIn("read-only", command)
         self.assertIn("multi_agent", command)
+
+    def test_local_mode_builds_packet_without_pr_or_ci_metadata(self):
+        result = self._run_review(
+            "--local",
+            "--acceptance-criteria",
+            str(self.criteria),
+            "--verification-evidence",
+            str(self.evidence),
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Review packet ready: local example/repo:topic", result.stderr)
+        self.assertIn("base=base-sha head=head-sha", result.stderr)
+        prompt = self.codex_input.read_text()
+        self.assertIn("Review the committed change", prompt)
+        packet = json.loads(prompt.split("Review packet JSON:\n", 1)[1])
+        self.assertNotIn("pull_request", packet)
+        self.assertNotIn("ci_status", packet)
+        self.assertEqual(
+            packet["local_review"],
+            {
+                "repository": "example/repo",
+                "base_ref": "origin/main",
+                "base_sha": "base-sha",
+                "head_ref": "topic",
+                "head_sha": "head-sha",
+            },
+        )
+        self.assertEqual(packet["changed_files"], ["skills/example/SKILL.md"])
+        calls = [json.loads(line) for line in self.git_calls.read_text().splitlines()]
+        self.assertIn(
+            [
+                "fetch",
+                "--no-tags",
+                "origin",
+                "+refs/heads/main:refs/remotes/origin/main",
+            ],
+            calls,
+        )
+        self.assertIn(["merge-base", "head-sha", "refs/remotes/origin/main"], calls)
+        self.assertIn(
+            ["diff", "--no-ext-diff", "--no-color", "base-sha...head-sha"],
+            calls,
+        )
+
+    def test_local_mode_dirty_checkout_stops_before_reviewer_launch(self):
+        self.env["REVIEW_TEST_DIRTY"] = "1"
+        result = self._run_review(
+            "--local", "--acceptance-criteria", str(self.criteria)
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("uncommitted changes", result.stderr)
+        self.assertFalse(self.codex_input.exists())
+
+    def test_local_mode_detached_head_stops_before_reviewer_launch(self):
+        self.env["REVIEW_TEST_DETACHED"] = "1"
+        result = self._run_review(
+            "--local", "--acceptance-criteria", str(self.criteria)
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("not on a local branch", result.stderr)
+        self.assertFalse(self.codex_input.exists())
+
+    def test_local_mode_missing_remote_default_branch_stops_before_reviewer_launch(self):
+        self.env["REVIEW_TEST_REMOTE_REF_FAIL"] = "1"
+        result = self._run_review(
+            "--local", "--acceptance-criteria", str(self.criteria)
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.codex_input.exists())
 
     def test_head_mismatch_stops_before_reviewer_launch(self):
         self.env["REVIEW_TEST_LOCAL_HEAD"] = "different-head"
