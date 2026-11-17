@@ -2,6 +2,7 @@
 """Build a GitHub pull request review packet and run a read-only Codex reviewer."""
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -426,11 +427,73 @@ def run_reviewer(repository_root, packet):
         cwd=repository_root,
         env=environment,
         input=_review_prompt(packet),
+        capture_output=True,
         check=False,
         encoding="utf-8",
         errors="replace",
     )
-    return result.returncode
+    sys.stdout.write(result.stdout)
+    sys.stderr.write(result.stderr)
+    if result.returncode:
+        return result.returncode, None
+    try:
+        response = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        print("Refusing review marker: reviewer returned invalid JSON.", file=sys.stderr)
+        return 2, None
+    verdict = response.get("verdict") if isinstance(response, dict) else None
+    findings = response.get("findings") if isinstance(response, dict) else None
+    if verdict not in ("ACCEPT", "REJECT") or not isinstance(findings, list):
+        print("Refusing review marker: reviewer returned no valid verdict.", file=sys.stderr)
+        return 2, None
+    if any(
+        not isinstance(finding, dict)
+        or finding.get("severity") not in ("blocker", "advisory")
+        or not all(
+            isinstance(finding.get(field), str)
+            for field in ("location", "impact", "evidence")
+        )
+        or type(finding.get("introduced_by_diff")) is not bool
+        for finding in findings
+    ):
+        print("Refusing review marker: reviewer returned malformed findings.", file=sys.stderr)
+        return 2, None
+    if verdict == "ACCEPT" and any(
+        isinstance(finding, dict)
+        and finding.get("severity") == "blocker"
+        and finding.get("introduced_by_diff") is True
+        for finding in findings
+    ):
+        print("Refusing review marker: ACCEPT conflicts with a blocking finding.", file=sys.stderr)
+        return 2, None
+    return 0, verdict
+
+
+def record_local_review(repository_root, review, verdict):
+    repository_path = str(repository_root.resolve())
+    repository_key = hashlib.sha256(repository_path.encode("utf-8")).hexdigest()
+    marker_dir = Path.home() / ".local" / "state" / "review-markers" / repository_key
+    marker_path = marker_dir / f"{review['head_sha']}.json"
+    if verdict == "REJECT":
+        marker_path.unlink(missing_ok=True)
+        return
+
+    marker_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    marker = {
+        "repository": repository_path,
+        "head_sha": review["head_sha"],
+        "head_ref": review["head_ref"],
+        "base_ref": review["base_ref"],
+        "base_sha": review["base_sha"],
+        "verdict": "ACCEPT",
+    }
+    temporary_path = marker_dir / f".{review['head_sha']}.{os.getpid()}.tmp"
+    try:
+        temporary_path.write_text(json.dumps(marker) + "\n", encoding="utf-8")
+        temporary_path.chmod(0o600)
+        os.replace(temporary_path, marker_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def main(argv=None):
@@ -486,7 +549,15 @@ def main(argv=None):
             file=sys.stderr,
             flush=True,
         )
-        return run_reviewer(repository_root, packet)
+        return_code, verdict = run_reviewer(repository_root, packet)
+        if args.local and verdict is not None:
+            try:
+                record_local_review(
+                    repository_root, packet["local_review"], verdict
+                )
+            except OSError as error:
+                raise ReviewError(f"Could not record the local review marker: {error}") from error
+        return return_code
     except ReviewError as error:
         print(f"Refusing review before reviewer launch: {error}", file=sys.stderr)
         return 2

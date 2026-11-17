@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import subprocess
@@ -122,19 +123,25 @@ else:
         self._write_command(
             "codex",
             """import os
+import json
 import sys
 
 with open(os.environ["REVIEW_TEST_CODEX_INPUT"], "w") as output:
     output.write(sys.stdin.read())
 with open(os.environ["REVIEW_TEST_CODEX_ARGS"], "w") as output:
     output.write("\\n".join(sys.argv[1:]))
-print('{"verdict":"ACCEPT","findings":[]}')
+response = os.environ.get(
+    "REVIEW_TEST_RESPONSE",
+    json.dumps({"verdict": os.environ.get("REVIEW_TEST_VERDICT", "ACCEPT"), "findings": []}),
+)
+print(response)
 """,
         )
         self.env = os.environ.copy()
         self.env.update(
             {
                 "PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}",
+                "HOME": str(self.root / "home"),
                 "REVIEW_TEST_REPO": str(self.repo),
                 "REVIEW_TEST_CODEX_INPUT": str(self.codex_input),
                 "REVIEW_TEST_CODEX_ARGS": str(self.codex_args),
@@ -163,6 +170,19 @@ print('{"verdict":"ACCEPT","findings":[]}')
             check=False,
         )
 
+    def _marker_path(self, head_sha="head-sha"):
+        repository_key = hashlib.sha256(
+            str(self.repo.resolve()).encode("utf-8")
+        ).hexdigest()
+        return (
+            Path(self.env["HOME"])
+            / ".local"
+            / "state"
+            / "review-markers"
+            / repository_key
+            / f"{head_sha}.json"
+        )
+
     def test_pr_url_builds_complete_packet_and_runs_read_only_reviewer(self):
         result = self._run_review(
             "https://github.com/example/repo/pull/7",
@@ -173,6 +193,7 @@ print('{"verdict":"ACCEPT","findings":[]}')
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self._marker_path().exists())
         packet = self.codex_input.read_text()
         for expected in (
             "Review packet test",
@@ -215,6 +236,18 @@ print('{"verdict":"ACCEPT","findings":[]}')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Review packet ready: local example/repo:topic", result.stderr)
         self.assertIn("base=base-sha head=head-sha", result.stderr)
+        marker = json.loads(self._marker_path().read_text())
+        self.assertEqual(
+            marker,
+            {
+                "repository": str(self.repo.resolve()),
+                "head_sha": "head-sha",
+                "head_ref": "topic",
+                "base_ref": "origin/main",
+                "base_sha": "base-sha",
+                "verdict": "ACCEPT",
+            },
+        )
         prompt = self.codex_input.read_text()
         self.assertIn("Review the committed change", prompt)
         packet = json.loads(prompt.split("Review packet JSON:\n", 1)[1])
@@ -246,6 +279,33 @@ print('{"verdict":"ACCEPT","findings":[]}')
             ["diff", "--no-ext-diff", "--no-color", "base-sha...head-sha"],
             calls,
         )
+
+    def test_local_reject_removes_marker_for_the_same_head(self):
+        marker_path = self._marker_path()
+        marker_path.parent.mkdir(parents=True)
+        marker_path.write_text('{"verdict":"ACCEPT"}')
+        self.env["REVIEW_TEST_VERDICT"] = "REJECT"
+        result = self._run_review(
+            "--local", "--acceptance-criteria", str(self.criteria)
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(marker_path.exists())
+
+    def test_local_review_without_a_valid_verdict_does_not_mark_head(self):
+        for response in (
+            "not-json",
+            '{"verdict":"ACCEPT","findings":[{"severity":"advisory","location":"x","impact":"x","evidence":"x","introduced_by_diff":"true"}]}',
+            '{"verdict":"ACCEPT","findings":[{"severity":"blocker","introduced_by_diff":true}]}',
+        ):
+            with self.subTest(response=response):
+                self.env["REVIEW_TEST_RESPONSE"] = response
+                result = self._run_review(
+                    "--local", "--acceptance-criteria", str(self.criteria)
+                )
+
+                self.assertEqual(result.returncode, 2)
+                self.assertFalse(self._marker_path().exists())
 
     def test_local_mode_dirty_checkout_stops_before_reviewer_launch(self):
         self.env["REVIEW_TEST_DIRTY"] = "1"
