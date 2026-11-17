@@ -247,3 +247,203 @@ class WorkerSizeGateTest(unittest.TestCase):
         result = self.preflight(expected=2)
 
         self.assertIn("initial worktree diff 401 is over budget 400", result["error"])
+    def test_tests_docs_locks_and_test_named_files_count(self):
+        for name in ("tests/case.py", "README.md", "uv.lock", "test_core.js", "src/tests/implementation.py"):
+            path = self.repo / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("one\n", encoding="utf-8")
+
+        result = self.preflight()
+
+        self.assertEqual(result["total"], 5)
+        self.assertEqual(len(result["changed_paths"]), 5)
+
+    def test_approved_override_is_bound_to_the_worker_and_task(self):
+        override = self.home / ".local/state/herdr-worker-lifecycle/size-gates/overrides/meta-size-test/size-test.json"
+        override.parent.mkdir(parents=True, mode=0o700)
+        override.write_text(json.dumps({"budget": 401, "user_approval_reference": "approval-17", "task_key": "size-test", "worker_name": "meta-size-test"}), encoding="utf-8")
+        override.chmod(0o600)
+        (self.repo / "new.py").write_text("x\n" * 401, encoding="utf-8")
+
+        result = self.preflight(budget=401)
+
+        self.assertEqual(result["total"], 401)
+        self.assertEqual(result["override"]["user_approval_reference"], "approval-17")
+
+    def test_wrong_task_override_is_rejected(self):
+        override = self.home / ".local/state/herdr-worker-lifecycle/size-gates/overrides/meta-size-test/size-test.json"
+        override.parent.mkdir(parents=True, mode=0o700)
+        override.write_text(json.dumps({"budget": 401, "user_approval_reference": "approval-17", "task_key": "other-task", "worker_name": "meta-size-test"}), encoding="utf-8")
+        override.chmod(0o600)
+
+        result = self.preflight(budget=401, expected=2)
+
+        self.assertIn("different task or worker", result["error"])
+
+    def test_stale_worker_identity_fails_closed(self):
+        self.prepare()
+        record = self.home / ".local/state/herdr-worker-lifecycle/size-gates/01234567-89ab-cdef-0123-456789abcdef.json"
+        data = json.loads(record.read_text(encoding="utf-8"))
+        data["worker"]["pane"] = "stale-pane"
+        record.write_text(json.dumps(data), encoding="utf-8")
+        record.chmod(0o600)
+
+        result = self.check(expected=2)
+
+        self.assertIn("pane identity", result["error"])
+
+    def test_timed_out_git_check_fails_closed(self):
+        self.prepare()
+        fake_bin = self.root / "fake-bin"
+        fake_bin.mkdir()
+        fake_git = fake_bin / "git"
+        fake_git.write_text("#!/bin/sh\nsleep 20\n", encoding="utf-8")
+        fake_git.chmod(0o755)
+        self.env["PATH"] = f"{fake_bin}:{self.env['PATH']}"
+
+        result = self.check(expected=2)
+
+        self.assertIn("timed out", result["error"].lower())
+
+    def test_literal_push_and_pull_request_forms_are_checked(self):
+        self.prepare()
+        push = self.check(tool="Bash", command="git push origin task/size-check")
+        pull_request = self.check(tool="Bash", command='gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md')
+
+        self.assertFalse(push["over_budget"])
+        self.assertFalse(pull_request["over_budget"])
+
+    def test_compound_publication_is_rejected(self):
+        self.prepare()
+
+        result = self.check(tool="Bash", command="git push origin task/size-check; touch marker", expected=2)
+
+        self.assertIn("compound", result["error"])
+
+    def test_staged_and_unstaged_edits_to_one_line_are_not_double_counted(self):
+        (self.repo / "source.py").write_text("staged\n", encoding="utf-8")
+        self.run_git("add", "source.py", cwd=self.repo)
+        (self.repo / "source.py").write_text("unstaged\n", encoding="utf-8")
+
+        result = self.preflight()
+
+        self.assertEqual((result["additions"], result["deletions"], result["total"]), (1, 1, 2))
+
+    def test_deletions_and_new_files_all_count(self):
+        (self.repo / "source.py").unlink()
+        for name in ("tests/case.py", "README.md", "uv.lock"):
+            path = self.repo / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("content\n", encoding="utf-8")
+
+        result = self.preflight()
+
+        self.assertEqual((result["additions"], result["deletions"], result["total"]), (3, 1, 4))
+        self.assertIn("README.md", result["changed_paths"])
+        self.assertIn("tests/case.py", result["changed_paths"])
+        self.assertIn("uv.lock", result["changed_paths"])
+
+    def test_binary_files_count_as_one_line(self):
+        binary = self.repo / "binary.dat"
+        binary.write_bytes(b"header\x00payload")
+        self.run_git("add", "binary.dat", cwd=self.repo)
+        self.run_git("commit", "-m", "add binary", cwd=self.repo)
+        (self.repo / "untracked-binary.dat").write_bytes(b"other\x00payload")
+
+        result = self.preflight()
+
+        self.assertEqual((result["binary_files"], result["total"]), (2, 2))
+
+    def test_initial_over_budget_tree_is_rejected_before_record_creation(self):
+        (self.repo / "source.py").write_text("one\ntwo\nthree\n", encoding="utf-8")
+
+        result = self.invoke(
+            "prepare",
+            "--repo",
+            self.repo,
+            "--line-budget",
+            1,
+            "--launch-id",
+            "01234567-89ab-cdef-0123-456789abcdef",
+            "--worker-name",
+            "meta-size-test",
+            "--task-key",
+            "size-test",
+            "--owner-name",
+            "meta",
+            "--owner-pane",
+            "owner-pane",
+            "--owner-terminal",
+            "owner-terminal",
+            "--worker-pane",
+            "worker-pane",
+            "--worker-tab",
+            "worker-tab",
+            "--worker-terminal",
+            "worker-terminal",
+            expected=2,
+        )
+
+        self.assertIn("over budget", result["error"].lower())
+        self.assertFalse(
+            (
+                self.home
+                / ".local"
+                / "state"
+                / "herdr-worker-lifecycle"
+                / "size-gates"
+                / "01234567-89ab-cdef-0123-456789abcdef.json"
+            ).exists()
+        )
+
+    def test_pre_and_post_checks_share_the_same_over_budget_counter(self):
+        self.prepare(budget=1)
+        (self.repo / "source.py").write_text("one\ntwo\nthree\n", encoding="utf-8")
+
+        post = self.check(phase="post", tool="apply_patch")
+        pre = self.check(phase="pre", tool="apply_patch")
+
+        self.assertTrue(post["over_budget"])
+        self.assertTrue(pre["deny"])
+        self.assertEqual(post["total"], pre["total"])
+        self.assertIn("BLOCKED", pre["reason"])
+
+    def test_over_budget_allows_only_literal_worker_report_command(self):
+        self.prepare(budget=1)
+        (self.repo / "source.py").write_text("one\ntwo\nthree\n", encoding="utf-8")
+        report = 'herdr-meta-patrol-queue add --from meta-size-test "BLOCKED meta-size-test: over budget"'
+        injected = report + "; touch marker"
+
+        allowed = self.check(phase="pre", tool="Bash", command=report)
+        denied = self.check(phase="pre", tool="Bash", command=injected)
+
+        self.assertFalse(allowed["deny"])
+        self.assertTrue(denied["deny"])
+
+    def test_unresolved_merge_refuses_count(self):
+        oid = self.run_git("hash-object", "-w", "--stdin", cwd=self.repo, input_data="conflict\n")
+        self.run_git("update-index", "--force-remove", "--", "source.py", cwd=self.repo)
+        self.run_git(
+            "update-index",
+            "--index-info",
+            cwd=self.repo,
+            input_data=f"100644 {oid} 1\tsource.py\n100644 {oid} 2\tsource.py\n",
+        )
+        self.assertIn("source.py", self.run_git("ls-files", "--unmerged", cwd=self.repo))
+        result = self.invoke(
+            "preflight",
+            "--repo",
+            self.repo,
+            "--line-budget",
+            400,
+            "--worker-name",
+            "meta-size-test",
+            "--task-key",
+            "size-test",
+            expected=2,
+        )
+        self.assertIn("merge", result["error"].lower())
+
+
+if __name__ == "__main__":
+    unittest.main()
