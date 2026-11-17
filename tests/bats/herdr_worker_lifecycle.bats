@@ -236,6 +236,18 @@ function add_worker_record() {
     [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
 }
 
+@test "launch falls back when the target root tab is protected" {
+    export HERDR_TEST_ROOT_STATE=idle
+    jq '.result.tabs[1].label = "⛔ Keep"' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp"
+    mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
 @test "collect never closes an agent not launched by this caller pane" {
     add_worker_slot
     add_worker_agent done

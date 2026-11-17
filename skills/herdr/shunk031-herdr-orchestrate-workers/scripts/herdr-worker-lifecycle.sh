@@ -128,7 +128,7 @@ function identify_caller() {
 
 # @description Identify a target workspace's only pane when its idle root shell is in the requested directory.
 function find_idle_root_pane() {
-    local workspace="$1" workspace_tab_count pane_count agent_count process_info pane_json root_cwd
+    local workspace="$1" workspace_tab_count pane_count agent_count process_info pane_json root_cwd root_tab_label
     ROOT_TAB=''
     ROOT_PANE=''
     ROOT_TERMINAL=''
@@ -136,6 +136,8 @@ function find_idle_root_pane() {
     [ "$workspace_tab_count" = '1' ] || return 1
     ROOT_TAB="$(printf '%s\n' "$TABS_JSON" | jq -r --arg workspace "$workspace" '[.result.tabs[] | select(.workspace_id == $workspace)][0].tab_id // empty')"
     [ -n "$ROOT_TAB" ] || return 1
+    root_tab_label="$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$ROOT_TAB" '[.result.tabs[] | select(.tab_id == $tab)][0].label // ""')"
+    case "$root_tab_label" in ⛔*) return 1 ;; esac
     pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$ROOT_TAB" '[.result.panes[] | select(.tab_id == $tab)] | length')"
     [ "$pane_count" = '1' ] || return 1
     pane_json="$(printf '%s\n' "$PANES_JSON" | jq -c --arg tab "$ROOT_TAB" '[.result.panes[] | select(.tab_id == $tab)][0]')"

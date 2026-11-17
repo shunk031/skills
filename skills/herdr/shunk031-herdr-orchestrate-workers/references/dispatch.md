@@ -96,7 +96,7 @@ Before each dispatch, record the worker's current `state_change_seq`. Dispatch w
 
 This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding.
 
-Root reuse requires the target workspace's sole pane to have no attached agent, a shell-only foreground process, and a foreground working directory matching `--cwd`. If any check fails, the helper creates a no-focus tab. The reuse predicate checks only whether this launch includes any `--env KEY=VALUE` options; those options keep the tab path so Herdr applies them to the worker shell. It does not inspect inherited caller environment variables. A created tab uses `--label`; root-pane reuse keeps the existing workspace tab label.
+Reuse requires the workspace's only tab and pane, no attached agent, a shell-only foreground process, and `foreground_cwd` equal to `--cwd`. A tab labeled `⛔...` is ineligible. Any failed check or explicit `--env KEY=VALUE` uses a no-focus tab. The predicate checks only explicit `--env`; inherited caller variables are ignored. Reuse keeps the current label; a new tab uses `--label`.
 
 The lifecycle helper records the launch before returning, so no separate worker-registration command is needed. If launch succeeded but saving its record failed, run its read-only audit command; the audit warns about unrecorded panes without closing them.
 
