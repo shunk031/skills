@@ -108,6 +108,13 @@ exec)
         esac
     done
     client_pid_file="${XDG_STATE_HOME}/colab-gpu-run/${session}/client.pid"
+    # The launcher replaces its own PID with this process's PID after spawning it.
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        if [ -f "${client_pid_file}" ] && [ "$(cat "${client_pid_file}")" = "$$" ]; then
+            break
+        fi
+        sleep 0.01
+    done
     [ -f "${client_pid_file}" ] || exit 95
     [ "$(cat "${client_pid_file}")" = "$$" ] || exit 96
     cp "${driver}" "${COLAB_DRIVER_CAPTURE}"
