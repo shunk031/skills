@@ -39,7 +39,7 @@ Before starting a piece of work, write what is most likely to fail, how you will
 
 Before editing, establish the deliverable's repository-associated workspace with `herdr worktree create`. Before creating it, fetch `origin` and identify the repository's default branch. Pass `--base origin/<default-branch>`; `create` otherwise starts from the current checkout's `HEAD`, which may be stale. For an already-open worktree, run `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
 
-Start implementers and related Herdr workers through the lifecycle helper in a dedicated tab in the deliverable workspace. The helper creates the worker tab and records its returned pane and tab IDs. One-shot reviewers use the direct review process in the review guide and do not get Herdr panes. Keep the orchestrator workspace for the orchestrator only.
+Start implementers and related Herdr workers through the lifecycle helper in the deliverable workspace. The helper records the exact worker pane and tab IDs. One-shot reviewers use the direct review process in the review guide and do not get Herdr panes. Keep the orchestrator workspace for the orchestrator only.
 
 Read the returned deliverable workspace ID. The lifecycle helper creates each worker tab in that workspace:
 
@@ -66,15 +66,17 @@ Start each implementer through the lifecycle helper, using the launch guidance i
 
 <!-- textlint-enable sentence-length -->
 
-Pass the deliverable workspace ID, worktree directory, and worker label to the lifecycle helper:
+Pass the deliverable workspace ID, worktree directory, worker label, and `root_pane.pane_id` returned by `herdr worktree create` to opt into launching in that pane:
 
 ```bash
-~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --workspace <workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --task <task-key> -- <launch-flags>
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --workspace <workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --task <task-key> --root-pane <root-pane-id> -- <launch-flags>
 ```
+
+With `--root-pane`, the helper requires that pane to exist in the given workspace, have no attached agent, and be in a tab that is unfocused and not protected; a failed check returns an error. The helper rejects explicit `--env` options with `--root-pane`, but does not inspect inherited caller environment variables. Omit `--root-pane` to create a fresh no-focus tab.
 
 <!-- textlint-disable sentence-length -->
 
-For a worker that needs environment variables, add one --env KEY=VALUE option per variable to the same lifecycle-helper command. The helper creates the tab with those values before starting the worker.
+For a worker that needs environment variables, add one --env KEY=VALUE option per variable to the same lifecycle-helper command. The helper creates the tab with those values before starting the worker. Do not combine `--root-pane` with `--env`.
 
 <!-- textlint-enable sentence-length -->
 
@@ -95,6 +97,8 @@ Never dispatch the first task while either dialog is visible: read `herdr pane r
 Before each dispatch, record the worker's current `state_change_seq`. Dispatch with `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <worker-name> "$task_prompt"` without `--wait`. Do not treat the CLI `agent_prompted` response as a receipt.
 
 This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding.
+
+The explicit `--root-pane` option selects a pane from the `herdr worktree create` result. The helper checks that it belongs to the requested workspace and has no attached agent; it errors if either check fails or if `--env` is supplied. Without `--root-pane`, launch creates a new no-focus tab and applies `--label` and any `--env` values there.
 
 The lifecycle helper records the launch before returning, so no separate worker-registration command is needed. If launch succeeded but saving its record failed, run its read-only audit command; the audit warns about unrecorded panes without closing them.
 

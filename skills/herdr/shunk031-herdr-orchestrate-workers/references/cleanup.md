@@ -2,6 +2,8 @@
 
 ## Close collected worker panes
 
+When launch reused the workspace's sole root pane, collection may close that workspace's last pane and close the workspace.
+
 Once you have verified a result and will send the worker nothing more, run `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh collect <worker-name>`. The helper closes only a recorded pane this orchestrator launched. It requires a settled agent and fresh safety checks. Before ending any turn in which you collected results, run its read-only `audit` command. This reports settled workers left uncollected and unrecorded live panes without closing them. Closing a pane never removes its worktree or branch.
 
 ### Preview and close worker tabs
