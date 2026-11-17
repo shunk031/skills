@@ -30,10 +30,10 @@ Both pulls must succeed. Inspect each resulting Git status before moving to appl
 
 ## Apply separately
 
-Run every chezmoi command that renders templates through `chezmoi-github-auth` on the target, for both public and private sources. This includes `chezmoi status`, `chezmoi diff`, `chezmoi apply` with or without targets, `chezmoi execute-template`, and `chezmoi init`. The wrapper reads the target's active GitHub CLI credential internally and scopes it to that chezmoi process. Use this form for each command:
+Run supported template-rendering commands through `chezmoi-github-auth` on the target, for both public and private sources. The wrapper allows `apply`, `diff`, `status`, `managed`, and `verify`. It reads the target's active GitHub CLI credential internally and scopes it to that chezmoi process. Use this form:
 
 ```sh
-ssh <target> chezmoi-github-auth --source public -- <command> [options]
+ssh <target> chezmoi-github-auth --source public -- <apply|diff|status|managed|verify> [options]
 ```
 
 Before applying named targets, follow `shunk031-manage-public-private-dotfiles`: apply source-managed paths; skip symlinks into source checkouts, which are live after the source is pulled. Record intentionally unmanaged or ignored paths without treating them as errors, and verify each live consumer path, not only its source file.
