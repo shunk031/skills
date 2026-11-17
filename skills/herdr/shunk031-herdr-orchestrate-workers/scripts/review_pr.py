@@ -446,6 +446,18 @@ def run_reviewer(repository_root, packet):
     if verdict not in ("ACCEPT", "REJECT") or not isinstance(findings, list):
         print("Refusing review marker: reviewer returned no valid verdict.", file=sys.stderr)
         return 2, None
+    if any(
+        not isinstance(finding, dict)
+        or finding.get("severity") not in ("blocker", "advisory")
+        or not all(
+            isinstance(finding.get(field), str)
+            for field in ("location", "impact", "evidence")
+        )
+        or type(finding.get("introduced_by_diff")) is not bool
+        for finding in findings
+    ):
+        print("Refusing review marker: reviewer returned malformed findings.", file=sys.stderr)
+        return 2, None
     if verdict == "ACCEPT" and any(
         isinstance(finding, dict)
         and finding.get("severity") == "blocker"

@@ -295,6 +295,7 @@ print(response)
     def test_local_review_without_a_valid_verdict_does_not_mark_head(self):
         for response in (
             "not-json",
+            '{"verdict":"ACCEPT","findings":[{"severity":"advisory","location":"x","impact":"x","evidence":"x","introduced_by_diff":"true"}]}',
             '{"verdict":"ACCEPT","findings":[{"severity":"blocker","introduced_by_diff":true}]}',
         ):
             with self.subTest(response=response):
