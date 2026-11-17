@@ -17,6 +17,7 @@ STATE_ROOT = Path.home() / ".local" / "state" / "herdr-worker-lifecycle" / "size
 TASK_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 WORKER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 SHELL_META = re.compile(r"[\n\r;&|<>`$()\\]")
+PUBLICATION_CONTROL = re.compile(r"\$\(|`|;|&&|\|\||\||\n|<\(|>\(")
 
 def git(repo, *args, env=None, input_data=None, check=True):
     process_env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
@@ -248,6 +249,8 @@ def is_publication_command(command):
             command = words[2]
             words = shlex.split(command, posix=True)
     except ValueError:
+        return ("unsupported", "", "")
+    if PUBLICATION_CONTROL.search(command) and ("push" in command or "pr create" in command):
         return ("unsupported", "", "")
     executables = [Path(word).name for word in words]
     is_git_push = any(token == "git" and git_would_publish(executables, index) for index, token in enumerate(executables))

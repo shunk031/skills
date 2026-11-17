@@ -298,14 +298,12 @@ class WorkerSizeGateTest(unittest.TestCase):
         self.prepare()
         self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
         cases = (
-            ("git -C /tmp/other-worktree push origin task/size-check", "unsupported"),
-            ("git -c a=b push origin task/size-check", "unsupported"),
+            ("git -C /tmp/other-worktree push origin task/size-check", "unsupported"), ("git -c a=b push origin task/size-check", "unsupported"),
             ("git --unknown-option status", "unsupported"),
-            ("/usr/bin/git push origin task/size-check", None),
-            ('bash -lc "git push origin task/size-check"', None),
-            ("git grep push", None), ("git log --grep push", None),
-            ("git commit -m push", None),
+            ("/usr/bin/git push origin task/size-check", None), ('bash -lc "git push origin task/size-check"', None),
+            ("git grep push", None), ("git log --grep push", None), ("git commit -m push", None),
             ("git push origin task/size-check; touch marker", "unsupported"),
+            *((command, "unsupported") for command in ("$(git push)", "`gh pr create`", "a; git push", "x | git push")),
             ('gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md', None),
             ("sh -c 'gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md'", None),
             ('bash -lc "sh -c \'gh pr create --base other --head other --title title --body-file /tmp/body.md\'"', "publication head is not the registered task branch"),
