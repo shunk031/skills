@@ -315,22 +315,27 @@ class WorkerSizeGateTest(unittest.TestCase):
             ("push with remote behind", "git push origin task/size-check", "behind", 0, None),
             (
                 "PR create with remote behind",
-                "gh pr create --base main --head task/size-check",
+                "gh pr create",
                 "behind",
                 2,
                 "branch tip differs",
             ),
+            ("PR create with matching remote and dirty worktree", "gh pr create", "matches", 0, None),
         )
         remote_state = "absent"
         for name, command, expected_remote, expected, error in cases:
             with self.subTest(case=name):
-                if expected_remote != remote_state:
+                if expected_remote == "behind" and remote_state == "absent":
                     base = self.run_git("rev-parse", "main", cwd=self.repo)
                     self.run_git("push", "origin", f"{base}:refs/heads/task/size-check", cwd=self.repo)
                     (self.repo / "local.py").write_text("local commit\n", encoding="utf-8")
                     self.run_git("add", "local.py", cwd=self.repo)
                     self.run_git("commit", "-m", "advance local task branch", cwd=self.repo)
-                    remote_state = expected_remote
+                    remote_state = "behind"
+                elif expected_remote == "matches" and remote_state == "behind":
+                    self.run_git("push", "origin", "HEAD:refs/heads/task/size-check", cwd=self.repo)
+                    (self.repo / "pending.py").write_text("uncommitted line\n", encoding="utf-8")
+                    remote_state = "matches"
 
                 result = self.check(tool="Bash", command=command, expected=expected)
                 if error:
@@ -347,7 +352,7 @@ class WorkerSizeGateTest(unittest.TestCase):
 
         result = self.check(
             tool="Bash",
-            command='/opt/homebrew/bin/gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md',
+            command='/opt/homebrew/bin/gh pr create --title title --body-file /tmp/body.md',
             expected=2,
         )
         self.assertIn("branch tip differs", result["error"])

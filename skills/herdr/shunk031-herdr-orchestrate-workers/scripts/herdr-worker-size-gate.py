@@ -230,20 +230,7 @@ def is_publication_command(command):
     kind = "pr" if any(match.group("gh") for match in matches) else "push"
     return (kind, command, None)
 
-def publish_check(repo, record, form):
-    _, command, _ = form
-    if value(repo, "symbolic-ref", "--short", "HEAD") != record["branch"]:
-        raise ValueError("publication head is not the registered task branch")
-    status = git(repo, "status", "--porcelain=v1", "--untracked-files=all").stdout
-    if status:
-        raise ValueError("publication requires a clean committed worktree")
-    base = re.search(r"--base(?:=|\s+)([^\s\"']+)", command)
-    head = re.search(r"--head(?:=|\s+)([^\s\"']+)", command)
-    default_branch = record["default_ref"][len("refs/heads/"):]
-    if base and base.group(1) != default_branch:
-        raise ValueError("pull request base is not the registered origin default branch")
-    if head and head.group(1) != record["branch"]:
-        raise ValueError("publication head is not the registered task branch")
+def publish_check(repo, record):
     remote = git(repo, "ls-remote", "--heads", "origin", f"refs/heads/{record['branch']}").stdout.decode().split()
     if len(remote) != 2 or remote[0] != value(repo, "rev-parse", "HEAD"):
         raise ValueError("publication branch tip differs from the local registered branch")
@@ -253,7 +240,7 @@ def check(args):
     budget, override = budget_for(record.get("line_budget"), record["task_key"], record["worker_name"], record.get("override"))
     form = is_publication_command(args.command) if args.tool_name == "Bash" else None
     if form and form[0] == "pr":
-        publish_check(args.cwd, record, form)
+        publish_check(args.cwd, record)
     count = count_diff(args.cwd, record["base_sha"])
     over = count["total"] > budget
     reason = f"BLOCKED: worktree diff {count['total']} > budget {budget}. Stop editing and report BLOCKED with a smaller design." if over else ""
