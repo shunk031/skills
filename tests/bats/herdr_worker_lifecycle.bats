@@ -23,7 +23,7 @@ function setup() {
 {"result":{"tabs":[{"tab_id":"caller-tab","workspace_id":"workspace-1","label":"Orchestrator","focused":true},{"tab_id":"anchor-tab","workspace_id":"workspace-2","label":"Deliverable","focused":false}]}}
 JSON
     cat > "$HERDR_TEST_PANES" << 'JSON'
-{"result":{"panes":[{"pane_id":"caller-pane","tab_id":"caller-tab","terminal_id":"terminal-caller"},{"pane_id":"anchor-pane","tab_id":"anchor-tab","terminal_id":"terminal-anchor"}]}}
+{"result":{"panes":[{"pane_id":"caller-pane","tab_id":"caller-tab","terminal_id":"terminal-caller"},{"pane_id":"anchor-pane","tab_id":"anchor-tab","terminal_id":"terminal-anchor","foreground_cwd":"/tmp/worktree"}]}}
 JSON
     cat > "$HERDR_TEST_AGENTS" << 'JSON'
 {"result":{"agents":[{"name":"meta-tabclean","pane_id":"caller-pane","tab_id":"caller-tab","terminal_id":"terminal-caller","agent_status":"working"}]}}
@@ -148,6 +148,30 @@ function add_worker_record() {
     export HERDR_TEST_ROOT_STATE=idle
     jq '.result.agents += [{name:"other-worker",pane_id:"anchor-pane",tab_id:"anchor-tab",terminal_id:"terminal-anchor",agent_status:"working"}]' "$HERDR_TEST_AGENTS" > "${HERDR_TEST_AGENTS}.tmp"
     mv "${HERDR_TEST_AGENTS}.tmp" "$HERDR_TEST_AGENTS"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "launch falls back when the root shell is in a different working directory" {
+    export HERDR_TEST_ROOT_STATE=idle
+    jq '.result.panes[1].foreground_cwd = "/tmp/other-worktree"' "$HERDR_TEST_PANES" > "${HERDR_TEST_PANES}.tmp"
+    mv "${HERDR_TEST_PANES}.tmp" "$HERDR_TEST_PANES"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "launch falls back when the root shell working directory is unknown" {
+    export HERDR_TEST_ROOT_STATE=idle
+    jq 'del(.result.panes[1].foreground_cwd)' "$HERDR_TEST_PANES" > "${HERDR_TEST_PANES}.tmp"
+    mv "${HERDR_TEST_PANES}.tmp" "$HERDR_TEST_PANES"
 
     run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
 

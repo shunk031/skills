@@ -126,9 +126,9 @@ function identify_caller() {
     [ -n "$CALLER_NAME" ] && [ -n "$CALLER_TERMINAL" ] && [ "$CALLER_TERMINAL" = "$(printf '%s\n' "$pane_json" | jq -r '.terminal_id // empty')" ]
 }
 
-# @description Identify a target workspace's only pane when it is an idle root shell.
+# @description Identify a target workspace's only pane when its idle root shell is in the requested directory.
 function find_idle_root_pane() {
-    local workspace="$1" workspace_tab_count pane_count agent_count process_info pane_json
+    local workspace="$1" workspace_tab_count pane_count agent_count process_info pane_json root_cwd
     ROOT_TAB=''
     ROOT_PANE=''
     ROOT_TERMINAL=''
@@ -142,6 +142,8 @@ function find_idle_root_pane() {
     ROOT_PANE="$(printf '%s\n' "$pane_json" | jq -r '.pane_id // empty')"
     ROOT_TERMINAL="$(printf '%s\n' "$pane_json" | jq -r '.terminal_id // empty')"
     [ -n "$ROOT_PANE" ] && [ -n "$ROOT_TERMINAL" ] || return 1
+    root_cwd="$(printf '%s\n' "$pane_json" | jq -r '.foreground_cwd // empty')"
+    [ -n "$root_cwd" ] && [ "$root_cwd" = "$WORKER_CWD" ] || return 1
     agent_count="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg tab "$ROOT_TAB" --arg pane "$ROOT_PANE" '[.result.agents[] | select(.tab_id == $tab or .pane_id == $pane)] | length')"
     [ "$agent_count" = '0' ] || return 1
     process_info="$(herdr pane process-info --pane "$ROOT_PANE" 2> /dev/null)" || return 1
