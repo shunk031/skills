@@ -333,8 +333,11 @@ function launch_worker() {
     [ "$RECORD_STATE" = 'missing' ] || [ "$RECORD_STATE" = 'valid' ] || fail 'worker registry is malformed or unreadable'
     [ "$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg name "$WORKER_NAME" '[.result.agents[] | select(.name == $name)] | length')" = '0' ] || fail 'worker name is already present in the local agent inventory'
     if [ "$WORKER_ROLE" = 'implementation' ]; then
-        size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" preflight --repo "$WORKER_CWD" --line-budget "$WORKER_LINE_BUDGET" --worker-name "$WORKER_NAME" --task-key "$WORKER_TASK" 2>&1)"
-        [ "$?" -eq 0 ] || fail "size-gate preflight failed; worker was not launched: $size_gate_result"
+        if size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" preflight --repo "$WORKER_CWD" --line-budget "$WORKER_LINE_BUDGET" --worker-name "$WORKER_NAME" --task-key "$WORKER_TASK" 2>&1)"; then
+            :
+        else
+            fail "size-gate preflight failed; worker was not launched: $size_gate_result"
+        fi
         WORKER_SIZE_GATE_LAUNCH_ID="$(python3 -c 'import uuid; print(uuid.uuid4())')" || fail 'could not create a size-gate launch ID'
     fi
     WORKER_LAUNCH_MODE='tab'
@@ -383,8 +386,11 @@ function launch_worker() {
     fi
     [ "$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$WORKER_PANE" --arg tab "$WORKER_TAB" --arg terminal "$created_terminal" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab and .terminal_id == $terminal)] | length')" = '1' ] || fail 'worker pane does not match its recorded tab and terminal identities'
     if [ "$WORKER_ROLE" = 'implementation' ]; then
-        size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" prepare --repo "$WORKER_CWD" --line-budget "$WORKER_LINE_BUDGET" --worker-name "$WORKER_NAME" --task-key "$WORKER_TASK" --launch-id "$WORKER_SIZE_GATE_LAUNCH_ID" --owner-name "$CALLER_NAME" --owner-pane "$HERDR_PANE_ID" --owner-terminal "$CALLER_TERMINAL" --worker-pane "$WORKER_PANE" --worker-tab "$WORKER_TAB" --worker-terminal "$created_terminal" 2>&1)"
-        [ "$?" -eq 0 ] || fail "size-gate prepare failed; worker was not launched: $size_gate_result"
+        if size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" prepare --repo "$WORKER_CWD" --line-budget "$WORKER_LINE_BUDGET" --worker-name "$WORKER_NAME" --task-key "$WORKER_TASK" --launch-id "$WORKER_SIZE_GATE_LAUNCH_ID" --owner-name "$CALLER_NAME" --owner-pane "$HERDR_PANE_ID" --owner-terminal "$CALLER_TERMINAL" --worker-pane "$WORKER_PANE" --worker-tab "$WORKER_TAB" --worker-terminal "$created_terminal" 2>&1)"; then
+            :
+        else
+            fail "size-gate prepare failed; worker was not launched: $size_gate_result"
+        fi
     fi
     herdr agent start "$WORKER_NAME" --kind "$WORKER_KIND" --pane "$WORKER_PANE" -- "${WORKER_ARGS[@]}"
     start_status=$?
@@ -399,8 +405,11 @@ function launch_worker() {
     fi
     identify_caller || fail 'caller identity could not be reproven after worker launch'
     if [ "$WORKER_ROLE" = 'implementation' ]; then
-        size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" finish --launch-id "$WORKER_SIZE_GATE_LAUNCH_ID" --worker-pane "$WORKER_PANE" --worker-tab "$WORKER_TAB" --worker-terminal "$created_terminal" 2>&1)"
-        [ "$?" -eq 0 ] || fail "size-gate finish failed; run audit and inspect the pending size-gate record: $size_gate_result"
+        if size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" finish --launch-id "$WORKER_SIZE_GATE_LAUNCH_ID" --worker-pane "$WORKER_PANE" --worker-tab "$WORKER_TAB" --worker-terminal "$created_terminal" 2>&1)"; then
+            :
+        else
+            fail "size-gate finish failed; run audit and inspect the pending size-gate record: $size_gate_result"
+        fi
     fi
     inspect_records
     record_launch
