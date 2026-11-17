@@ -28,30 +28,28 @@ Before starting write operations, perform the following checks in the working sh
 
    Do not use `gh auth switch` during agent work. It changes the active account for the whole host and can race with concurrent sessions.
 
-3. Retrieve the stored bot token by account name and pass it only to each write command that uses gh or git credentials:
+3. Use `gh-cgd` for GitHub CLI and Git commands that need the bot identity:
 
    ```bash
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh pr create ...
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push
+   gh-cgd gh pr create ...
+   gh-cgd git push
    ```
 
-   Do not export the token into a persistent shell and do not print it. The per-command prefix keeps account selection explicit and avoids changing GitHub CLI's global active account.
+   The wrapper retrieves the credential inside its own process. It passes the value only through the child environment and does not change GitHub CLI's active account.
 
 4. Verify the GitHub identity and push permission for the organization repository. `gh api user` only confirms the logged-in account and cannot verify access to organization resources:
 
    ```bash
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh api user --jq .login
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh api repos/creative-graphic-design/<repo> --jq .permissions.push
+   gh-cgd gh api user --jq .login
+   gh-cgd gh api repos/creative-graphic-design/<repo> --jq .permissions.push
    ```
 
    Do not start write operations unless the first command returns `creative-graphic-design-dev` and the second returns `true`.
 
-5. Set the commit author to the bot for each commit command:
+5. Run commits through `gh-cgd git`; the wrapper sets the bot author for that command:
 
    ```bash
-   git -c user.name=creative-graphic-design-dev \
-       -c user.email=176740601+creative-graphic-design-dev@users.noreply.github.com \
-       commit ...
+   gh-cgd git commit ...
    ```
 
    Do not use `git config user.name/email` in a linked worktree: it writes to the shared `.git/config` and changes the author for the main checkout and concurrent worktrees as well.
@@ -59,10 +57,10 @@ Before starting write operations, perform the following checks in the working sh
 6. Push over HTTPS because SSH does not use the proxy in this environment. Set an explicit push URL:
 
    ```bash
-   git remote set-url --push origin https://github.com/creative-graphic-design/<repo>
+   gh-cgd git remote set-url --push origin https://github.com/creative-graphic-design/<repo>
    ```
 
-The guard stops failed or empty token retrieval from letting GitHub CLI fall back to another credential.
+The wrapper verifies the stored credential belongs to `creative-graphic-design-dev` before running a command. It scopes Git credentials and commit identity to each wrapped Git command.
 
 ## Scope
 
@@ -73,5 +71,5 @@ The guard stops failed or empty token retrieval from letting GitHub CLI fall bac
 
 ## Troubleshooting
 
-- If `gh auth token --user creative-graphic-design-dev` fails or the stored credential is rejected, remove that account with `gh auth logout --hostname github.com --user creative-graphic-design-dev`, then rerun `setup-gh-cgd`. This changes local authentication state and must be done interactively by the user.
+- If `gh-cgd` cannot read the stored bot credential or GitHub rejects it, the user must remove that account and rerun `setup-gh-cgd` interactively. The wrapper refuses authentication-state commands.
 - If the identity check succeeds but repository permission is `false`, grant `creative-graphic-design-dev` access to the target repository before retrying. Reauthentication is unnecessary when only repository membership changes.
