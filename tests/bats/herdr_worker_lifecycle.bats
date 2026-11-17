@@ -8,7 +8,11 @@ function setup() {
     export HERDR_TEST_PANES="${BATS_TEST_TMPDIR}/panes.json"
     export HERDR_TEST_AGENTS="${BATS_TEST_TMPDIR}/agents.json"
     export HERDR_TEST_STARTS="${BATS_TEST_TMPDIR}/starts"
+    export HERDR_TEST_TAB_CREATES="${BATS_TEST_TMPDIR}/tab-creates"
     export HERDR_TEST_CLOSES="${BATS_TEST_TMPDIR}/closes"
+    export HERDR_TEST_CREATE_ARGS="${BATS_TEST_TMPDIR}/create-args"
+    export HERDR_TEST_ROOT_STATE=busy
+    export HERDR_TEST_START_FAILURE=0
     export HERDR_WORKER_LIFECYCLE_STATE_DIR="${BATS_TEST_TMPDIR}/state"
     export HERDR_ENV=1
     export HERDR_PANE_ID=caller-pane
@@ -25,6 +29,8 @@ JSON
 {"result":{"agents":[{"name":"meta-tabclean","pane_id":"caller-pane","tab_id":"caller-tab","terminal_id":"terminal-caller","agent_status":"working"}]}}
 JSON
     : > "$HERDR_TEST_STARTS"
+    : > "$HERDR_TEST_TAB_CREATES"
+    : > "$HERDR_TEST_CREATE_ARGS"
     : > "$HERDR_TEST_CLOSES"
 
     cat > "$TEST_BIN/herdr" << 'HERDR'
@@ -33,6 +39,8 @@ set -eu
 case "$1 $2" in
     "tab list") cat "$HERDR_TEST_TABS" ;;
     "tab create")
+        printf 'create\n' >> "$HERDR_TEST_TAB_CREATES"
+        printf '%s\n' "$@" > "$HERDR_TEST_CREATE_ARGS"
         jq '.result.tabs += [{tab_id:"worker-tab",workspace_id:"workspace-2",label:"Worker",focused:false}]' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp"
         mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS"
         jq '.result.panes += [{pane_id:"worker-pane",tab_id:"worker-tab",terminal_id:"terminal-worker"}]' "$HERDR_TEST_PANES" > "${HERDR_TEST_PANES}.tmp"
@@ -40,12 +48,28 @@ case "$1 $2" in
         printf '{"result":{"tab":{"tab_id":"worker-tab","workspace_id":"workspace-2"},"root_pane":{"pane_id":"worker-pane","tab_id":"worker-tab","terminal_id":"terminal-worker"}}}\n'
         ;;
     "pane list") cat "$HERDR_TEST_PANES" ;;
+    "pane process-info")
+        if [[ "$HERDR_TEST_ROOT_STATE" == idle ]]; then
+            printf '%s\n' '{"result":{"process_info":{"shell_pid":9,"foreground_processes":[{"pid":9,"name":"zsh","argv":["zsh"]}]}}}'
+        elif [[ "$HERDR_TEST_ROOT_STATE" == timeout ]]; then
+            exit 1
+        elif [[ "$HERDR_TEST_ROOT_STATE" == stale ]]; then
+            printf '%s\n' '{"result":{"process_info":{"shell_pid":null,"foreground_processes":[{"pid":9,"name":"zsh","argv":["zsh"]}]}}}'
+        else
+            printf '%s\n' '{"result":{"process_info":{"shell_pid":9,"foreground_processes":[{"pid":9,"name":"zsh","argv":["zsh"]},{"pid":42,"name":"vim","argv":["vim"]}]}}}'
+        fi
+        ;;
     "agent list") cat "$HERDR_TEST_AGENTS" ;;
     "agent start")
         name="$3"
         pane="$7"
+        tab="$(jq -r --arg pane "$pane" '.result.panes[] | select(.pane_id == $pane) | .tab_id' "$HERDR_TEST_PANES")"
+        terminal="$(jq -r --arg pane "$pane" '.result.panes[] | select(.pane_id == $pane) | .terminal_id' "$HERDR_TEST_PANES")"
         printf '%s\t%s\n' "$name" "$pane" >> "$HERDR_TEST_STARTS"
-        jq --arg name "$name" --arg pane "$pane" --arg state "${HERDR_TEST_WORKER_STATE:-done}" '.result.agents += [{name:$name,pane_id:$pane,tab_id:"worker-tab",terminal_id:"terminal-worker",agent_status:$state}]' "$HERDR_TEST_AGENTS" > "${HERDR_TEST_AGENTS}.tmp"
+        if [[ "${HERDR_TEST_START_FAILURE:-0}" == 1 ]]; then
+            exit 124
+        fi
+        jq --arg name "$name" --arg pane "$pane" --arg tab "$tab" --arg terminal "$terminal" --arg state "${HERDR_TEST_WORKER_STATE:-done}" '.result.agents += [{name:$name,pane_id:$pane,tab_id:$tab,terminal_id:$terminal,agent_status:$state}]' "$HERDR_TEST_AGENTS" > "${HERDR_TEST_AGENTS}.tmp"
         mv "${HERDR_TEST_AGENTS}.tmp" "$HERDR_TEST_AGENTS"
         ;;
     "pane read") printf '> \n' ;;
@@ -84,7 +108,7 @@ function add_worker_record() {
 
     [ "$status" -eq 0 ]
     [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
-    [ "$(cat "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "$(printf 'meta-tabclean\tcaller-pane\tterminal-caller\tinspect-pr\tmeta-tabclean-reader\tterminal-worker\tworker-tab\tworker-pane\tstarted')" ]
+    [ "$(cat "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "$(printf 'meta-tabclean\tcaller-pane\tterminal-caller\tinspect-pr\tmeta-tabclean-reader\tterminal-worker\tworker-tab\tworker-pane\tstarted\ttab')" ]
 
     run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader
 
@@ -92,6 +116,100 @@ function add_worker_record() {
     [ "$(cat "$HERDR_TEST_CLOSES")" = "worker-pane" ]
     [[ "$output" == *'owner=meta-tabclean owner-pane=caller-pane task=inspect-pr pane=worker-pane'* ]]
     [ "$(awk -F '\t' '{ print $9 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "collected" ]
+}
+
+@test "launch reuses an idle root shell and collect closes its last workspace pane" {
+    export HERDR_TEST_ROOT_STATE=idle
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tanchor-pane')" ]
+    [ "$(awk -F '\t' '{ print NF ":" $9 ":" $10 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "10:started:root" ]
+
+    run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_CLOSES")" = "anchor-pane" ]
+    [ "$(awk -F '\t' '{ print $9 ":" $10 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "collected:root" ]
+}
+
+@test "launch falls back to a new tab when the root shell has another foreground process" {
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+    [ "$(awk -F '\t' '{ print NF ":" $9 ":" $10 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "10:started:tab" ]
+}
+
+@test "launch falls back when the target root pane already has an agent" {
+    export HERDR_TEST_ROOT_STATE=idle
+    jq '.result.agents += [{name:"other-worker",pane_id:"anchor-pane",tab_id:"anchor-tab",terminal_id:"terminal-anchor",agent_status:"working"}]' "$HERDR_TEST_AGENTS" > "${HERDR_TEST_AGENTS}.tmp"
+    mv "${HERDR_TEST_AGENTS}.tmp" "$HERDR_TEST_AGENTS"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "launch falls back when root process information cannot be read" {
+    export HERDR_TEST_ROOT_STATE=timeout
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "launch falls back when root process information is incomplete" {
+    export HERDR_TEST_ROOT_STATE=stale
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "launch timeout leaves the root pane unrecorded without opening another tab" {
+    export HERDR_TEST_ROOT_STATE=idle
+    export HERDR_TEST_START_FAILURE=1
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'launched worker is not uniquely present in the live agent inventory'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -e "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv" ]
+}
+
+@test "launch creates a tab to apply worker-specific environment variables" {
+    export HERDR_TEST_ROOT_STATE=idle
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr --env WORKER_MODE=isolated -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    grep -Fqx -- "--env" "$HERDR_TEST_CREATE_ARGS"
+    grep -Fqx -- "WORKER_MODE=isolated" "$HERDR_TEST_CREATE_ARGS"
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "launch falls back when the target workspace has another tab" {
+    export HERDR_TEST_ROOT_STATE=idle
+    jq '.result.tabs += [{tab_id:"extra-tab",workspace_id:"workspace-2",label:"Extra",focused:false}]' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp"
+    mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
 }
 
 @test "collect never closes an agent not launched by this caller pane" {

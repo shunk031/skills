@@ -96,6 +96,8 @@ Before each dispatch, record the worker's current `state_change_seq`. Dispatch w
 
 This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding.
 
+The lifecycle helper uses the target workspace's only pane when no agent is attached and Herdr reports the shell as the only foreground process; otherwise it creates a no-focus worker tab. The reuse predicate checks whether this launch includes any `--env KEY=VALUE` options; those options keep the new-tab path so Herdr applies them to the worker shell. It does not inspect inherited caller environment variables. The `--label` value is used when a tab is created; root-pane reuse keeps the existing workspace tab label.
+
 The lifecycle helper records the launch before returning, so no separate worker-registration command is needed. If launch succeeded but saving its record failed, run its read-only audit command; the audit warns about unrecorded panes without closing them.
 
 After each receipt is observed, start one background lifecycle wait for that outstanding worker with `herdr agent wait <worker-name> &`; omit `--until` so Herdr's settled-state defaults apply. When the wait settles, read the worker's deliverable and transcript directly and verify the result; do not use report arrival to detect completion. A blocking `agent wait` is lifecycle waiting, not polling.

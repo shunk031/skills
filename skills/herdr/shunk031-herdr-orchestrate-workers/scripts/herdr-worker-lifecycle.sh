@@ -3,9 +3,10 @@
 # @file skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh
 # @brief Launch, collect, and audit Herdr workers owned by the calling orchestrator.
 # @description
-#   Launch records the caller and exact worker pane. Collect closes only a recorded,
-#   explicitly collected worker whose agent is settled. Audit is read-only.
-# @option launch NAME --kind KIND --workspace ID --cwd PATH --label TEXT --task TASK [--env KEY=VALUE ...] -- ARGS Create a tab, launch, and record a worker.
+#   Launch reuses an idle workspace root shell when safe, or creates a no-focus tab.
+#   Collect closes only a recorded, explicitly collected worker whose agent is settled.
+#   Audit is read-only.
+# @option launch NAME --kind KIND --workspace ID --cwd PATH --label TEXT --task TASK [--env KEY=VALUE ...] -- ARGS Reuse an idle root pane or create a tab, then launch and record a worker.
 # @option collect NAME Mark one recorded worker collected and close its pane if safe.
 # @option audit List unrecorded live agent panes as warnings without closing anything.
 # @option --help Show usage.
@@ -44,8 +45,9 @@ Usage:
   herdr-worker-lifecycle.sh collect <name>
   herdr-worker-lifecycle.sh audit
 
-launch creates a no-focus tab, starts the worker, and records the owner name, owner
-pane, task key, and exact worker terminal, tab, and pane. collect records explicit
+launch reuses a workspace's only idle root shell when safe, or creates a no-focus
+tab, then records the owner name, owner pane, task key, launch mode, and exact worker
+terminal, tab, and pane. collect records explicit
 result collection and closes only that settled worker pane after fresh checks.
 audit is read-only and warns about unrecorded live panes. It never closes a pane.
 Merged PR worktree cleanup stays separate.
@@ -92,6 +94,10 @@ WORKER_LABEL=''
 WORKER_TAB=''
 WORKER_PANE=''
 WORKER_TASK=''
+WORKER_LAUNCH_MODE='tab'
+ROOT_TAB=''
+ROOT_PANE=''
+ROOT_TERMINAL=''
 WORKER_ARGS=()
 WORKER_ENV=()
 WORKER_ENV_COUNT=0
@@ -120,6 +126,33 @@ function identify_caller() {
     [ -n "$CALLER_NAME" ] && [ -n "$CALLER_TERMINAL" ] && [ "$CALLER_TERMINAL" = "$(printf '%s\n' "$pane_json" | jq -r '.terminal_id // empty')" ]
 }
 
+# @description Identify a target workspace's only pane when it is an idle root shell.
+function find_idle_root_pane() {
+    local workspace="$1" workspace_tab_count pane_count agent_count process_info pane_json
+    ROOT_TAB=''
+    ROOT_PANE=''
+    ROOT_TERMINAL=''
+    workspace_tab_count="$(printf '%s\n' "$TABS_JSON" | jq -r --arg workspace "$workspace" '[.result.tabs[] | select(.workspace_id == $workspace)] | length')"
+    [ "$workspace_tab_count" = '1' ] || return 1
+    ROOT_TAB="$(printf '%s\n' "$TABS_JSON" | jq -r --arg workspace "$workspace" '[.result.tabs[] | select(.workspace_id == $workspace)][0].tab_id // empty')"
+    [ -n "$ROOT_TAB" ] || return 1
+    pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$ROOT_TAB" '[.result.panes[] | select(.tab_id == $tab)] | length')"
+    [ "$pane_count" = '1' ] || return 1
+    pane_json="$(printf '%s\n' "$PANES_JSON" | jq -c --arg tab "$ROOT_TAB" '[.result.panes[] | select(.tab_id == $tab)][0]')"
+    ROOT_PANE="$(printf '%s\n' "$pane_json" | jq -r '.pane_id // empty')"
+    ROOT_TERMINAL="$(printf '%s\n' "$pane_json" | jq -r '.terminal_id // empty')"
+    [ -n "$ROOT_PANE" ] && [ -n "$ROOT_TERMINAL" ] || return 1
+    agent_count="$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg tab "$ROOT_TAB" --arg pane "$ROOT_PANE" '[.result.agents[] | select(.tab_id == $tab or .pane_id == $pane)] | length')"
+    [ "$agent_count" = '0' ] || return 1
+    process_info="$(herdr pane process-info --pane "$ROOT_PANE" 2> /dev/null)" || return 1
+    printf '%s\n' "$process_info" | jq -e '
+        .result.process_info as $process_info |
+            ($process_info.shell_pid | type == "number") and
+            ($process_info.foreground_processes | type == "array" and length > 0) and
+            all($process_info.foreground_processes[]; .pid == $process_info.shell_pid)
+    ' > /dev/null 2>&1
+}
+
 # @description Validate the private worker registry before using it.
 function inspect_records() {
     if [ -z "$RECORDS_FILE" ] || [ -L "$RECORDS_FILE" ] || [ ! -e "$RECORDS_FILE" ]; then
@@ -130,7 +163,7 @@ function inspect_records() {
         RECORD_STATE='invalid'
         return 0
     fi
-    if awk -F '\t' 'NF != 9 || $1 == "" || $2 == "" || $3 == "" || $4 == "" || $5 == "" || $6 == "" || $7 == "" || $8 == "" || ($9 != "started" && $9 != "collected") { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE"; then
+    if awk -F '\t' '(NF != 9 && NF != 10) || $1 == "" || $2 == "" || $3 == "" || $4 == "" || $5 == "" || $6 == "" || $7 == "" || $8 == "" || ($9 != "started" && $9 != "collected") || (NF == 10 && $10 != "tab" && $10 != "root") { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE"; then
         RECORD_STATE='valid'
     else
         RECORD_STATE='invalid'
@@ -190,7 +223,7 @@ function record_launch() {
     worker_terminal="$(printf '%s\n' "$worker_json" | jq -r '.terminal_id // empty')"
     worker_tab="$(printf '%s\n' "$worker_json" | jq -r '.tab_id // empty')"
     [ "$(printf '%s\n' "$worker_json" | jq -r '.pane_id // empty')" = "$WORKER_PANE" ] || fail 'launched worker is not in the requested pane'
-    [ "$worker_tab" = "$WORKER_TAB" ] || fail 'launched worker is not in the tab created by this helper'
+    [ "$worker_tab" = "$WORKER_TAB" ] || fail 'launched worker is not in the requested worker tab'
     [ -n "$worker_terminal" ] && [ -n "$worker_tab" ] || fail 'worker terminal or tab identity is unknown'
     [ "$WORKER_PANE" != "$HERDR_PANE_ID" ] && [ "$worker_tab" != "$HERDR_TAB_ID" ] || fail 'worker cannot use the caller pane or tab'
     acquire_lock || fail 'could not acquire the worker-record lock'
@@ -206,7 +239,7 @@ function record_launch() {
     [ "$existing" -le 1 ] || fail 'worker launch record is duplicated'
     if [ "$existing" -eq 0 ]; then
         (umask 077 && : >> "$RECORDS_FILE") || fail 'cannot create worker registry'
-        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tstarted\n' "$CALLER_NAME" "$HERDR_PANE_ID" "$CALLER_TERMINAL" "$WORKER_TASK" "$WORKER_NAME" "$worker_terminal" "$worker_tab" "$WORKER_PANE" >> "$RECORDS_FILE" || fail 'cannot append worker registry'
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tstarted\t%s\n' "$CALLER_NAME" "$HERDR_PANE_ID" "$CALLER_TERMINAL" "$WORKER_TASK" "$WORKER_NAME" "$worker_terminal" "$worker_tab" "$WORKER_PANE" "$WORKER_LAUNCH_MODE" >> "$RECORDS_FILE" || fail 'cannot append worker registry'
     fi
     chmod 600 "$RECORDS_FILE" 2> /dev/null || fail 'cannot secure worker registry'
     release_lock
@@ -278,27 +311,38 @@ function launch_worker() {
     inspect_records
     [ "$RECORD_STATE" = 'missing' ] || [ "$RECORD_STATE" = 'valid' ] || fail 'worker registry is malformed or unreadable'
     [ "$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg name "$WORKER_NAME" '[.result.agents[] | select(.name == $name)] | length')" = '0' ] || fail 'worker name is already present in the local agent inventory'
-    before_tabs="$TABS_JSON"
-    before_panes="$PANES_JSON"
-    tab_create_args=(--workspace "$WORKER_WORKSPACE" --cwd "$WORKER_CWD" --label "$WORKER_LABEL" --no-focus)
-    if [ "$WORKER_ENV_COUNT" -gt 0 ]; then
-        for env_assignment in "${WORKER_ENV[@]}"; do
-            tab_create_args+=(--env "$env_assignment")
-        done
+    WORKER_LAUNCH_MODE='tab'
+    if [ "$WORKER_ENV_COUNT" -eq 0 ] && find_idle_root_pane "$WORKER_WORKSPACE"; then
+        WORKER_TAB="$ROOT_TAB"
+        WORKER_PANE="$ROOT_PANE"
+        created_terminal="$ROOT_TERMINAL"
+        WORKER_LAUNCH_MODE='root'
+    else
+        before_tabs="$TABS_JSON"
+        before_panes="$PANES_JSON"
+        tab_create_args=(--workspace "$WORKER_WORKSPACE" --cwd "$WORKER_CWD" --label "$WORKER_LABEL" --no-focus)
+        if [ "$WORKER_ENV_COUNT" -gt 0 ]; then
+            for env_assignment in "${WORKER_ENV[@]}"; do
+                tab_create_args+=(--env "$env_assignment")
+            done
+        fi
+        tab_create_json="$(herdr tab create "${tab_create_args[@]}")" || fail 'Herdr could not create the worker tab'
+        created_tab="$(printf '%s\n' "$tab_create_json" | jq -r '.result.tab.tab_id // empty')"
+        created_pane="$(printf '%s\n' "$tab_create_json" | jq -r '.result.root_pane.pane_id // empty')"
+        created_terminal="$(printf '%s\n' "$tab_create_json" | jq -r '.result.root_pane.terminal_id // empty')"
+        [ -n "$created_tab" ] && [ -n "$created_pane" ] && [ -n "$created_terminal" ] || fail 'worker tab creation response did not include exact tab and pane identities'
+        [ "$(printf '%s\n' "$before_tabs" | jq -r --arg tab "$created_tab" '[.result.tabs[] | select(.tab_id == $tab)] | length')" = '0' ] || fail 'tab creation returned a tab that already existed'
+        [ "$(printf '%s\n' "$before_panes" | jq -r --arg pane "$created_pane" '[.result.panes[] | select(.pane_id == $pane)] | length')" = '0' ] || fail 'tab creation returned a pane that already existed'
+        WORKER_TAB="$created_tab"
+        WORKER_PANE="$created_pane"
+        load_inventory || fail 'could not verify the newly created worker tab'
+        identify_caller || fail 'caller identity could not be reproven after tab creation'
     fi
-    tab_create_json="$(herdr tab create "${tab_create_args[@]}")" || fail 'Herdr could not create the worker tab'
-    created_tab="$(printf '%s\n' "$tab_create_json" | jq -r '.result.tab.tab_id // empty')"
-    created_pane="$(printf '%s\n' "$tab_create_json" | jq -r '.result.root_pane.pane_id // empty')"
-    created_terminal="$(printf '%s\n' "$tab_create_json" | jq -r '.result.root_pane.terminal_id // empty')"
-    [ -n "$created_tab" ] && [ -n "$created_pane" ] && [ -n "$created_terminal" ] || fail 'worker tab creation response did not include exact tab and pane identities'
-    [ "$(printf '%s\n' "$before_tabs" | jq -r --arg tab "$created_tab" '[.result.tabs[] | select(.tab_id == $tab)] | length')" = '0' ] || fail 'tab creation returned a tab that already existed'
-    [ "$(printf '%s\n' "$before_panes" | jq -r --arg pane "$created_pane" '[.result.panes[] | select(.pane_id == $pane)] | length')" = '0' ] || fail 'tab creation returned a pane that already existed'
-    WORKER_TAB="$created_tab"
-    WORKER_PANE="$created_pane"
-    load_inventory || fail 'could not verify the newly created worker tab'
-    identify_caller || fail 'caller identity could not be reproven after tab creation'
-    [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$WORKER_TAB" --arg workspace "$WORKER_WORKSPACE" '[.result.tabs[] | select(.tab_id == $tab and .workspace_id == $workspace and .focused == false)] | length')" = '1' ] || fail 'new worker tab is missing, focused, or in another workspace'
-    [ "$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$WORKER_PANE" --arg tab "$WORKER_TAB" --arg terminal "$created_terminal" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab and .terminal_id == $terminal)] | length')" = '1' ] || fail 'new worker pane does not match the tab creation response'
+    [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$WORKER_TAB" --arg workspace "$WORKER_WORKSPACE" '[.result.tabs[] | select(.tab_id == $tab and .workspace_id == $workspace)] | length')" = '1' ] || fail 'worker tab is missing or in another workspace'
+    if [ "$WORKER_LAUNCH_MODE" = 'tab' ]; then
+        [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$WORKER_TAB" '[.result.tabs[] | select(.tab_id == $tab and .focused == false)] | length')" = '1' ] || fail 'new worker tab is focused or its focus state is unknown'
+    fi
+    [ "$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$WORKER_PANE" --arg tab "$WORKER_TAB" --arg terminal "$created_terminal" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab and .terminal_id == $terminal)] | length')" = '1' ] || fail 'worker pane does not match its recorded tab and terminal identities'
     herdr agent start "$WORKER_NAME" --kind "$WORKER_KIND" --pane "$WORKER_PANE" -- "${WORKER_ARGS[@]}"
     start_status=$?
     if ! load_inventory; then
@@ -322,12 +366,12 @@ function worker_record_state() {
         printf 'missing\n'
         return 0
     fi
-    awk -F '\t' -v worker="$1" -v terminal="$2" -v tab="$3" -v pane="$4" 'NF == 9 && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { count++; state = $9; task = $4 } END { if (count == 1) print state "\t" task; else if (count > 1) print "duplicate\t"; else print "missing\t" }' "$RECORDS_FILE"
+    awk -F '\t' -v worker="$1" -v terminal="$2" -v tab="$3" -v pane="$4" '(NF == 9 || NF == 10) && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { count++; state = $9; task = $4 } END { if (count == 1) print state "\t" task; else if (count > 1) print "duplicate\t"; else print "missing\t" }' "$RECORDS_FILE"
 }
 
 # @description Mark a caller-owned settled worker collected and close only its pane.
 function collect_worker() {
-    local worker_json worker_terminal worker_tab worker_pane worker_state records tab_json pane_json tab_label focused workspace_id pane_count workspace_tab_count input_text input_state matches task_key tmp_file
+    local worker_json worker_terminal worker_tab worker_pane worker_state launch_mode records tab_json pane_json tab_label focused workspace_id pane_count workspace_tab_count input_text input_state matches task_key tmp_file
     [ "$#" -eq 1 ] || fail 'collect requires exactly one worker name' 2
     WORKER_NAME="$1"
     load_inventory || fail 'could not read local Herdr inventories'
@@ -343,9 +387,10 @@ function collect_worker() {
     worker_state="$(printf '%s\n' "$worker_json" | jq -r '.agent_status // "unknown"')"
     [ -n "$worker_terminal" ] && [ -n "$worker_tab" ] && [ -n "$worker_pane" ] || fail 'worker pane identity is unknown'
     [ "$worker_pane" != "$HERDR_PANE_ID" ] && [ "$worker_tab" != "$HERDR_TAB_ID" ] || fail 'cannot collect the caller pane or tab'
-    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" 'NF == 9 && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane && ($9 == "started" || $9 == "collected") { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane && ($9 == "started" || $9 == "collected") { count++ } END { print count + 0 }' "$RECORDS_FILE")"
     [ "$records" = '1' ] || fail 'worker does not have one exact launch record for this caller pane and task'
-    task_key="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" 'NF == 9 && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { print $4; exit }' "$RECORDS_FILE")"
+    task_key="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { print $4; exit }' "$RECORDS_FILE")"
+    launch_mode="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { count++; mode = (NF == 10 ? $10 : "tab") } END { if (count == 1) print mode }' "$RECORDS_FILE")"
     case "$worker_state" in
     done | idle) ;;
     *) fail "worker is $worker_state; only done or idle workers can be collected" ;;
@@ -364,7 +409,7 @@ function collect_worker() {
     [ -n "$pane_json" ] && [ "$pane_json" != 'null' ] || fail 'worker pane is missing from the pane inventory'
     pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$worker_tab" '[.result.panes[] | select(.tab_id == $tab)] | length')"
     workspace_tab_count="$(printf '%s\n' "$TABS_JSON" | jq -r --arg ws "$workspace_id" '[.result.tabs[] | select(.workspace_id == $ws)] | length')"
-    if [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ]; then
+    if [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ] && [ "$launch_mode" != 'root' ]; then
         fail 'closing this worker pane would close the workspace'
     fi
     input_text="$(herdr pane read "$worker_pane" --source visible --format ansi 2> /dev/null)" || fail 'worker visible input could not be read'
@@ -374,11 +419,11 @@ function collect_worker() {
     acquire_lock || fail 'could not acquire the worker-record lock'
     inspect_records
     [ "$RECORD_STATE" = 'valid' ] || fail 'worker registry changed or became malformed'
-    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" 'NF == 9 && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { count++ } END { print count + 0 }' "$RECORDS_FILE")"
     [ "$records" = '1' ] || fail 'worker launch record changed before collection'
     tmp_file="${RECORDS_FILE}.$$.tmp"
     (umask 077 && : > "$tmp_file") || fail 'cannot prepare worker registry update'
-    awk -F '\t' -v OFS='\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '{ if (NF == 9 && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane) $9 = "collected"; print }' "$RECORDS_FILE" > "$tmp_file" || fail 'cannot mark worker collected'
+    awk -F '\t' -v OFS='\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '{ if ((NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane) $9 = "collected"; print }' "$RECORDS_FILE" > "$tmp_file" || fail 'cannot mark worker collected'
     chmod 600 "$tmp_file" 2> /dev/null || fail 'cannot secure worker registry update'
     mv -f "$tmp_file" "$RECORDS_FILE" || fail 'cannot save collected worker record'
     # Refresh while holding the registry lock so concurrent helper invocations cannot close twice.
@@ -401,7 +446,7 @@ function collect_worker() {
     [ -n "$pane_json" ] && [ "$pane_json" != 'null' ] || fail 'worker pane identity changed after collection was recorded'
     pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$worker_tab" '[.result.panes[] | select(.tab_id == $tab)] | length')"
     workspace_tab_count="$(printf '%s\n' "$TABS_JSON" | jq -r --arg ws "$workspace_id" '[.result.tabs[] | select(.workspace_id == $ws)] | length')"
-    if [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ]; then
+    if [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ] && [ "$launch_mode" != 'root' ]; then
         fail 'worker pane became the last pane in the last workspace tab'
     fi
     input_text="$(herdr pane read "$worker_pane" --source visible --format ansi 2> /dev/null)" || fail 'worker visible input could not be reread before close'
