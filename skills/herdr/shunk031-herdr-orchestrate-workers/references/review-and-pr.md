@@ -15,10 +15,13 @@ For a document written in someone's name, style, tone, or resemblance alone is a
 Run every one-shot review — independent review, initial first-look review, and DONE verification — in a new, read-only review context using the launch guidance in your user-level instructions. When a one-shot review runs as an in-session subagent, wait in the foreground with a bounded timeout or return a result/STATUS to the parent. Never end a turn waiting on a background command. For PR code reviews, run the packet runner from the clean checkout under review:
 
 ```bash
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/review_pr.py --local --acceptance-criteria <file> [--verification-evidence <file>]
 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/review_pr.py <PR-number-or-URL> --acceptance-criteria <file> [--verification-evidence <file>]
 ```
 
-The caller supplies the required criteria file. Use the optional evidence file for local test and check results; the packet keeps it separate from criteria. If omitted, the packet states that no separate verification evidence was supplied. The runner reads these with the PR title and body, base and head SHAs, `git diff`, changed files, and CI status. It refuses to launch if any specified input is unreadable or the worktree is dirty. It also stops when local `HEAD` differs from the live PR head. A preflight failure consumes no review round. Never type a SHA into the review command or prompt.
+The caller supplies the required criteria file. Use the optional evidence file for local test and check results; the packet keeps it separate from criteria. If omitted, the packet states that no separate verification evidence was supplied. Local mode requires a clean committed branch, fetches the remote default branch, and reviews the diff from its merge base with local `HEAD`; it has no PR metadata or CI fields. PR mode reads the PR title and body, base and head SHAs, `git diff`, changed files, and CI status. Both modes refuse to launch if a specified input is unreadable or the worktree is dirty, and PR mode also stops when local `HEAD` differs from the live PR head. A preflight failure consumes no review round. Never type a SHA into the review command or prompt.
+
+Before the first push in any repository, obtain an `ACCEPT` for the exact local commit. After creating the PR, the same `ACCEPT` covers the live-head review gate only if the PR head SHA matches the reviewed commit; otherwise run PR mode on the exact live head. Merge only after an `ACCEPT` covers that head and all required checks pass.
 
 The reviewer returns one JSON object with a verdict and structured findings. Each finding has a severity, location, concrete impact, evidence, and an `introduced_by_diff` value. A blocker must identify its location, impact, evidence, and show that the diff introduced it. The reviewer considers only concrete defects introduced by the diff and materially false factual claims in the PR body. Style, nits, duplicates, unsupported findings, pre-existing problems, and PR-body wording are advisory and never block. PR-body review is limited to factual consistency with the diff and verification evidence.
 
@@ -40,7 +43,7 @@ The same checklist applies to the one-shot independent review permitted while me
 
 <!-- textlint-disable sentence-length -->
 
-An actionable `REJECT` from an independent reviewer is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <owner> "$answer"` path; use the [step-5 receipt contract in `dispatch.md`](dispatch.md#dispatch-and-receipt), record the exact rejected head, `re-review pending`, and the review round in the task's ledger row, and after the owner publishes a corrected head, or in a public repository commits it locally before pushing, have a fresh reviewer review that exact head.
+An actionable `REJECT` from an independent reviewer is non-terminal: before reporting or waiting, verify the live task/PR owner, consolidate the findings, and route them immediately to that owner with the existing quoted `~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh <owner> "$answer"` path; use the [step-5 receipt contract in `dispatch.md`](dispatch.md#dispatch-and-receipt), record the exact rejected head, `re-review pending`, and the review round in the task's ledger row, and after the owner publishes a corrected head or commits the corrected local branch, have a fresh reviewer review that exact commit before it is pushed or merged.
 
 <!-- textlint-enable sentence-length -->
 
