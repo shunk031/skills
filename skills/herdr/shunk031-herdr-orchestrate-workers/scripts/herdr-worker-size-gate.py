@@ -17,6 +17,7 @@ STATE_ROOT = Path.home() / ".local" / "state" / "herdr-worker-lifecycle" / "size
 TASK_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 WORKER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 SHELL_META = re.compile(r"[\n\r;&|<>`$()\\]")
+PUBLICATION_COMMAND = re.compile(r"(?P<git>\bgit\b[^\n]*\bpush\b)|(?P<gh>\bgh\b[^\n]*\bpr\b[^\n]*\bcreate\b)")
 
 def git(repo, *args, env=None, input_data=None, check=True):
     process_env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
@@ -127,20 +128,151 @@ def preflight(args):
     if info["total"] > budget: raise ValueError(f"initial worktree diff {info['total']} is over budget {budget}")
     return info
 
+def atomic_json(path, data):
+    home = Path.home()
+    managed_dirs = (STATE_ROOT.parent, path.parent)
+    for parent in (home / ".local", home / ".local" / "state", *managed_dirs):
+        if parent.is_symlink():
+            raise ValueError("size-gate state path must not contain symlinks")
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    for directory in managed_dirs:
+        if directory.is_symlink() or not directory.is_dir():
+            raise ValueError("size-gate state directory must be a real directory")
+        os.chmod(directory, 0o700)
+    fd, temp = tempfile.mkstemp(prefix=".size-gate-", dir=path.parent)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(data, stream, sort_keys=True)
+            stream.write("\n")
+        os.replace(temp, path)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+
+def prepare(args):
+    path = record_path(args.launch_id)
+    if path.exists() or path.is_symlink():
+        raise ValueError("size-gate launch ID already exists")
+    result = preflight(args)
+    record = {
+        "schema": SCHEMA,
+        "launch_id": args.launch_id,
+        "task_key": args.task_key,
+        "worker_name": args.worker_name,
+        "owner": {"name": args.owner_name, "pane": args.owner_pane, "terminal": args.owner_terminal},
+        "worker": {"pane": args.worker_pane, "tab": args.worker_tab, "terminal": args.worker_terminal},
+        "status": "pending",
+        **{key: result[key] for key in ("worktree", "common_dir", "branch", "default_ref", "default_tip", "base_sha")},
+        "line_budget": result["line_budget"],
+        "override": result["override"],
+    }
+    atomic_json(path, record)
+    return {"launch_id": args.launch_id, "record_path": str(path), "total": result["total"], "line_budget": result["line_budget"]}
+
+def finish(args):
+    path = record_path(args.launch_id)
+    if path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077:
+        raise ValueError("pending size-gate record is missing or not protected")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if tuple(record.get("worker", {}).get(key) for key in ("pane", "tab", "terminal")) != (args.worker_pane, args.worker_tab, args.worker_terminal):
+        raise ValueError("live worker identity does not match its pending size-gate record")
+    if record.get("status") != "pending": raise ValueError("only a pending size-gate record can be finalized")
+    record["status"] = "started"
+    atomic_json(path, record)
+    return {"launch_id": args.launch_id, "status": record["status"]}
+
+def load_record(launch_id, cwd, pane, tab, terminal):
+    path = record_path(launch_id)
+    if any(parent.is_symlink() for parent in (Path.home() / ".local", Path.home() / ".local" / "state", STATE_ROOT.parent, STATE_ROOT)):
+        raise ValueError("worker size-gate state path must not contain symlinks")
+    if path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077 or path.stat().st_uid != os.getuid():
+        raise ValueError("worker size-gate record is missing or not protected")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if record.get("schema") != SCHEMA or record.get("launch_id") != launch_id or record.get("status") not in {"pending", "started"}:
+        raise ValueError("worker size-gate record is malformed")
+    if Path(cwd).resolve() != Path(record["worktree"]).resolve():
+        raise ValueError("worker cwd does not match its registered worktree")
+    identity = record.get("worker", {})
+    if identity.get("pane") != pane or identity.get("tab") != tab:
+        raise ValueError("worker pane identity does not match its registered launch")
+    if identity.get("terminal") != terminal:
+        raise ValueError("worker terminal identity does not match its registered launch")
+    if value(cwd, "rev-parse", "--show-toplevel") != record["worktree"]:
+        raise ValueError("Git worktree root changed after worker launch")
+    common = Path(value(cwd, "rev-parse", "--git-common-dir"))
+    common = (Path(cwd).resolve() / common).resolve() if not common.is_absolute() else common.resolve()
+    if common != Path(record["common_dir"]).resolve():
+        raise ValueError("Git common directory changed after worker launch")
+    if value(cwd, "symbolic-ref", "--short", "HEAD") != record["branch"]:
+        raise ValueError("task branch changed; ask meta to rebind the worker baseline")
+    bases = value(cwd, "merge-base", "--all", "HEAD", record["default_tip"]).splitlines()
+    if bases != [record["base_sha"]]:
+        raise ValueError("task ancestry changed; ask meta to rebind the worker baseline")
+    if git(cwd, "cat-file", "-e", f"{record['base_sha']}^{{commit}}", check=False).returncode:
+        raise ValueError("recorded base commit is unavailable")
+    return record
+
+def literal_report(command, worker):
+    if SHELL_META.search(command):
+        return False
+    try:
+        parts = shlex.split(command, posix=True)
+    except ValueError:
+        return False
+    prefix = (f"STATUS {worker}:", f"BLOCKED {worker}:", f"DONE {worker}:")
+    return len(parts) == 5 and parts[:4] == ["herdr-meta-patrol-queue", "add", "--from", worker] and parts[4].startswith(prefix)
+
+def is_publication_command(command):
+    matches = list(PUBLICATION_COMMAND.finditer(command))
+    if not matches:
+        return None
+    kind = "pr" if any(match.group("gh") for match in matches) else "push"
+    return (kind, command, None)
+
+def publish_check(repo, record):
+    remote = git(repo, "ls-remote", "--heads", "origin", f"refs/heads/{record['branch']}").stdout.decode().split()
+    if len(remote) != 2 or remote[0] != value(repo, "rev-parse", "HEAD"):
+        raise ValueError("publication branch tip differs from the local registered branch")
+
+def check(args):
+    record = load_record(args.launch_id, args.cwd, args.pane, args.tab, args.terminal)
+    budget, override = budget_for(record.get("line_budget"), record["task_key"], record["worker_name"], record.get("override"))
+    form = is_publication_command(args.command) if args.tool_name == "Bash" else None
+    if form and form[0] == "pr":
+        publish_check(args.cwd, record)
+    count = count_diff(args.cwd, record["base_sha"])
+    over = count["total"] > budget
+    reason = f"BLOCKED: worktree diff {count['total']} > budget {budget}. Stop editing and report BLOCKED with a smaller design." if over else ""
+    deny = args.phase == "pre" and over and not (args.tool_name == "Bash" and literal_report(args.command, record["worker_name"]))
+    return {**count, "line_budget": budget, "over_budget": over, "deny": deny, "reason": reason}
+
 def parser():
     root = argparse.ArgumentParser()
     commands = root.add_subparsers(dest="command_name", required=True)
-    cmd = commands.add_parser("preflight")
-    cmd.add_argument("--repo", required=True)
-    cmd.add_argument("--line-budget", required=True, type=int)
-    cmd.add_argument("--worker-name", required=True)
-    cmd.add_argument("--task-key", required=True)
+    for name in ("preflight", "prepare"):
+        cmd = commands.add_parser(name)
+        cmd.add_argument("--repo", required=True)
+        cmd.add_argument("--line-budget", required=True, type=int)
+        cmd.add_argument("--worker-name", required=True)
+        cmd.add_argument("--task-key", required=True)
+        if name == "prepare":
+            for option in ("launch-id", "owner-name", "owner-pane", "owner-terminal", "worker-pane", "worker-tab", "worker-terminal"):
+                cmd.add_argument(f"--{option}", required=True)
+    cmd = commands.add_parser("finish")
+    for option in ("launch-id", "worker-pane", "worker-tab", "worker-terminal"):
+        cmd.add_argument(f"--{option}", required=True)
+    cmd = commands.add_parser("check")
+    for option in ("launch-id", "cwd", "pane", "tab", "terminal", "phase", "tool-name"):
+        cmd.add_argument(f"--{option}", required=True)
+    cmd.add_argument("--command", default="")
     return root
 
 def main():
     args = parser().parse_args()
     try:
-        print(json.dumps(preflight(args), sort_keys=True))
+        result = preflight(args) if args.command_name == "preflight" else prepare(args) if args.command_name == "prepare" else finish(args) if args.command_name == "finish" else check(args)
+        print(json.dumps(result, sort_keys=True))
     except (ValueError, OSError, KeyError, TypeError, AttributeError, subprocess.TimeoutExpired) as error:
         print(json.dumps({"error": str(error), "deny": True}), file=sys.stdout)
         return 2
