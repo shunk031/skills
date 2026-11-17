@@ -18,51 +18,49 @@ Before starting write operations, perform the following checks in the working sh
 
 1. For repository writes, confirm that `git remote get-url origin` points to `github.com/creative-graphic-design`.
 
-   If it does not, this skill does not apply; use normal git identity and authentication. New-machine `setup-gh-cgd` bootstrap is exempt.
+   If it does not, this skill does not apply; use normal git identity and authentication.
 
-2. Ensure that GitHub CLI has the bot account in its system credential store. On a new machine, run the interactive setup command once and authenticate in the browser as `creative-graphic-design-dev`:
-
-   ```bash
-   setup-gh-cgd
-   ```
-
-   Do not use `gh auth switch` during agent work. It changes the active account for the whole host and can race with concurrent sessions.
-
-3. Retrieve the stored bot token by account name and pass it only to each write command that uses gh or git credentials:
+2. Ensure that GitHub CLI has the bot account in its dedicated configuration directory. The user performs this interactive login once on each machine and authenticates in the browser as `creative-graphic-design-dev`:
 
    ```bash
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh pr create ...
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push
+   GH_CONFIG_DIR=$HOME/.config/gh-cgd gh auth login
    ```
 
-   Do not export the token into a persistent shell and do not print it. The per-command prefix keeps account selection explicit and avoids changing GitHub CLI's global active account.
+   Agents must not run this login command. Do not use `gh auth switch`; it changes the account for the selected configuration directory and can race with concurrent sessions.
+
+3. Prefix GitHub CLI commands with the dedicated config directory:
+
+   ```bash
+   GH_CONFIG_DIR="$HOME/.config/gh-cgd" gh pr create ...
+   ```
+
+   `gh` reads the bot credential from this directory. The credential stays in GitHub CLI's credential store and is not placed in command text or an environment variable.
 
 4. Verify the GitHub identity and push permission for the organization repository. `gh api user` only confirms the logged-in account and cannot verify access to organization resources:
 
    ```bash
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh api user --jq .login
-   bot_token="$(gh auth token --hostname github.com --user creative-graphic-design-dev)" && test -n "$bot_token" && GH_TOKEN="$bot_token" gh api repos/creative-graphic-design/<repo> --jq .permissions.push
+   GH_CONFIG_DIR="$HOME/.config/gh-cgd" gh api user --jq .login
+   GH_CONFIG_DIR="$HOME/.config/gh-cgd" gh api repos/creative-graphic-design/<repo> --jq .permissions.push
    ```
 
    Do not start write operations unless the first command returns `creative-graphic-design-dev` and the second returns `true`.
 
-5. Set the commit author to the bot for each commit command:
+5. Set the bot author for each commit without changing shared Git configuration:
 
    ```bash
-   git -c user.name=creative-graphic-design-dev \
-       -c user.email=176740601+creative-graphic-design-dev@users.noreply.github.com \
-       commit ...
+   git -c user.name=creative-graphic-design-dev -c user.email=176740601+creative-graphic-design-dev@users.noreply.github.com commit ...
    ```
 
-   Do not use `git config user.name/email` in a linked worktree: it writes to the shared `.git/config` and changes the author for the main checkout and concurrent worktrees as well.
+   Do not use `git config user.name/email` in a linked worktree. It writes shared configuration and changes the author for other worktrees too.
 
-6. Push over HTTPS because SSH does not use the proxy in this environment. Set an explicit push URL:
+6. Push over HTTPS because SSH does not use the proxy in this environment. Set an explicit push URL, then use GitHub CLI's credential helper under the dedicated directory:
 
    ```bash
    git remote set-url --push origin https://github.com/creative-graphic-design/<repo>
+   GH_CONFIG_DIR="$HOME/.config/gh-cgd" git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push
    ```
 
-The guard stops failed or empty token retrieval from letting GitHub CLI fall back to another credential.
+The identity and permission checks above verify the account before writes. The Git credential helper reads from the same dedicated configuration directory.
 
 ## Scope
 
@@ -73,5 +71,6 @@ The guard stops failed or empty token retrieval from letting GitHub CLI fall bac
 
 ## Troubleshooting
 
-- If `gh auth token --user creative-graphic-design-dev` fails or the stored credential is rejected, remove that account with `gh auth logout --hostname github.com --user creative-graphic-design-dev`, then rerun `setup-gh-cgd`. This changes local authentication state and must be done interactively by the user.
+- If the dedicated GitHub CLI credential is unavailable or GitHub rejects it, the user must log in again.
+  Run `GH_CONFIG_DIR=$HOME/.config/gh-cgd gh auth login` interactively and authenticate as `creative-graphic-design-dev`.
 - If the identity check succeeds but repository permission is `false`, grant `creative-graphic-design-dev` access to the target repository before retrying. Reauthentication is unnecessary when only repository membership changes.

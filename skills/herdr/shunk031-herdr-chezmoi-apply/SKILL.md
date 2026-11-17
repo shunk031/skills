@@ -30,35 +30,35 @@ Both pulls must succeed. Inspect each resulting Git status before moving to appl
 
 ## Apply separately
 
-Run every chezmoi command that renders templates on the target with the existing GitHub CLI token scoped to that invocation, for both public and private sources. This includes `chezmoi status`, `chezmoi diff`, `chezmoi apply` with or without targets, `chezmoi execute-template`, and `chezmoi init`. Use this form for each command:
+Run supported template-rendering commands through `chezmoi-github-auth` on the target, for both public and private sources. The wrapper allows `apply`, `diff`, `status`, `managed`, and `verify`. It reads the target's active GitHub CLI credential internally and scopes it to that chezmoi process. Use this form:
 
 ```sh
-ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi <command> [options]'
+ssh <target> chezmoi-github-auth --source public -- <apply|diff|status|managed|verify> [options]
 ```
 
 Before applying named targets, follow `shunk031-manage-public-private-dotfiles`: apply source-managed paths; skip symlinks into source checkouts, which are live after the source is pulled. Record intentionally unmanaged or ignored paths without treating them as errors, and verify each live consumer path, not only its source file.
 
-Inspect each apply plan with `chezmoi status` or a redacted `chezmoi diff`, using the scoped form above. Stop on unexplained destination edits or a confirmation prompt; do not force an overwrite. Then run public apply first:
+Inspect each apply plan with `chezmoi-github-auth --source public -- status` or a redacted `chezmoi-github-auth --source public -- diff`. Stop on unexplained destination edits or a confirmation prompt; do not force an overwrite. Then run public apply first:
 
 ```sh
-ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi apply'
+ssh <target> chezmoi-github-auth --source public -- apply
 ```
 
-Only after public apply succeeds, run private apply. `chezmoi-private` may be an alias unavailable over non-interactive SSH; resolve its configured source/config and use the explicit equivalent. With the conventional paths:
+Only after public apply succeeds, run private apply through the wrapper:
 
 ```sh
-ssh <target> 'gh_token="$(gh auth token)" && test -n "$gh_token" && GITHUB_TOKEN="$gh_token" chezmoi --source "$HOME/.local/share/chezmoi-private" --config "$HOME/.config/chezmoi-private/chezmoi.yaml" apply'
+ssh <target> chezmoi-github-auth --source private -- apply
 ```
 
-For `Local`, run the command sequence directly in the local shell. Token lookup runs in the target's shell, and the token is available only to that chezmoi invocation; do not copy tokens between machines, switch accounts, or print credential values. If `gh auth token` fails or returns an empty value on the target, stop and report the failure; do not log in or switch accounts.
+For `Local`, call `chezmoi-github-auth` directly with the selected source and command. Token lookup runs inside the wrapper on the target, and the token is available only to its chezmoi process; do not copy tokens between machines, switch accounts, or print credential values. If the wrapper is unavailable or cannot read the active credential, stop and report the failure; do not fall back to an inline token command, log in, or switch accounts.
 
 ## Diagnose a stopped apply
 
-Identify the failing command before retrying. If a template-rendering command reports an anonymous GitHub API 403 rate limit, rerun it once with the token-scoped form above instead of waiting for the rate limit to reset. If token lookup fails or the token-scoped retry still fails, stop and report the failure. Do not change the external template.
+Identify the failing command before retrying. If a template-rendering command reports an anonymous GitHub API 403 rate limit, rerun it once through `chezmoi-github-auth` instead of waiting for the rate limit to reset. If the wrapper cannot read the active credential or the retry still fails, stop and report the failure. Do not change the external template.
 
 If `mise install` fails to download a pinned tool with a connection reset, test the reported URL directly and through the target's available proxy. When only the proxy works, scope `HTTP_PROXY` and `HTTPS_PROXY` to the failed `mise install`, then retry apply after the tool is installed. Keep the pinned tool and its installer.
 
-If apply stops producing output during skill reconciliation, inspect its child process before interrupting it. When `skills update` is stuck cloning a private `git@github.com:` URL and SSH is unreachable, verify HTTPS access to that repository with an already authorized `gh` account. For the retry, scope that account's `GH_TOKEN` and a Git URL rewrite to the apply invocation with `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf`, and `GIT_CONFIG_VALUE_0=git@github.com:`. Do not change global Git configuration or choose a different account without user direction; stop if HTTPS access is unavailable.
+If apply stops producing output during skill reconciliation, inspect its child process before interrupting it. When `skills update` is stuck cloning a private `git@github.com:` URL and SSH is unreachable, verify HTTPS access to that repository with the already active `gh` account. For the retry, run `chezmoi-github-auth --source private --rewrite-github-ssh -- apply`; the wrapper scopes the active credential and the Git URL rewrite to that apply invocation. Do not change global Git configuration or choose a different account without user direction; stop if HTTPS access is unavailable.
 
 ## Report
 
