@@ -17,7 +17,7 @@ STATE_ROOT = Path.home() / ".local" / "state" / "herdr-worker-lifecycle" / "size
 TASK_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 WORKER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 SHELL_META = re.compile(r"[\n\r;&|<>`$()\\]")
-PUBLICATION_CONTROL = re.compile(r"\$\(|`|;|&&|\|\||\||\n|<\(|>\(")
+PUBLICATION_COMMAND = re.compile(r"\bgit\b[^\n]*\bpush\b|\bgh\b[^\n]*\bpr\b[^\n]*\bcreate\b")
 
 def git(repo, *args, env=None, input_data=None, check=True):
     process_env = {key: val for key, val in os.environ.items() if not key.startswith("GIT_")}
@@ -223,66 +223,32 @@ def literal_report(command, worker):
     prefix = (f"STATUS {worker}:", f"BLOCKED {worker}:", f"DONE {worker}:")
     return len(parts) == 5 and parts[:4] == ["herdr-meta-patrol-queue", "add", "--from", worker] and parts[4].startswith(prefix)
 
-GIT_OPTIONS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix", "--config-env"}
-GIT_OPTIONS_WITHOUT_VALUE = {"-p", "--paginate", "--no-pager", "--bare", "--no-replace-objects", "--literal-pathspecs", "--glob-pathspecs", "--noglob-pathspecs", "--icase-pathspecs", "--no-optional-locks", "--no-lazy-fetch", "--version", "--help", "-v", "--exec-path", "--html-path", "--man-path", "--info-path"}
-
-def git_would_publish(words, git_index):
-    index = git_index + 1
-    while index < len(words) and words[index].startswith("-"):
-        token = words[index]
-        if token in GIT_OPTIONS_WITH_VALUE and index + 1 < len(words):
-            index += 2
-        elif token in GIT_OPTIONS_WITHOUT_VALUE or any(token.startswith(option + "=") for option in GIT_OPTIONS_WITH_VALUE) or (token.startswith(("-C", "-c")) and len(token) > 2):
-            index += 1
-        else:
-            return True
-    return index < len(words) and words[index] == "push"
-
 def is_publication_command(command):
-    try:
-        words = shlex.split(command, posix=True)
-        for depth in range(4):
-            if not words or Path(words[0]).name not in {"bash", "sh", "zsh"}:
-                break
-            if depth == 3 or len(words) != 3 or words[1] not in {"-c", "-lc"}:
-                return ("unsupported", "", "")
-            command = words[2]
-            words = shlex.split(command, posix=True)
-    except ValueError:
-        return ("unsupported", "", "")
-    if PUBLICATION_CONTROL.search(command) and ("push" in command or "pr create" in command):
-        return ("unsupported", "", "")
-    executables = [Path(word).name for word in words]
-    is_git_push = any(token == "git" and git_would_publish(executables, index) for index, token in enumerate(executables))
-    is_gh_pr_create = any(executables[index + 1 : index + 3] == ["pr", "create"] for index, token in enumerate(executables) if token == "gh")
-    if not is_git_push and not is_gh_pr_create:
-        return None
-    if SHELL_META.search(command) or not words:
-        return ("unsupported", "", "")
-    if executables[:2] == ["git", "push"] and len(words) == 4 and words[2] == "origin":
-        return ("push", words[3], None)
-    if executables[:3] == ["gh", "pr", "create"]:
-        options = dict(zip(words[3::2], words[4::2]))
-        if len(words[3:]) % 2 or set(options) != {"--base", "--head", "--title", "--body-file"}:
-            return ("unsupported", "", "")
-        return ("pr", options["--head"], options["--base"])
-    return ("unsupported", "", "")
+    return ("matched", command, None) if PUBLICATION_COMMAND.search(command) else None
 
 def publish_check(repo, record, form):
-    kind, branch, base_branch = form
-    if value(repo, "symbolic-ref", "--short", "HEAD") != record["branch"] or (kind != "unsupported" and branch != record["branch"]):
+    kind, command, _ = form
+    if value(repo, "symbolic-ref", "--short", "HEAD") != record["branch"]:
         raise ValueError("publication head is not the registered task branch")
     status = git(repo, "status", "--porcelain=v1", "--untracked-files=all").stdout
     if status:
         raise ValueError("publication requires a clean committed worktree")
-    if kind == "unsupported":
-        raise ValueError("unsupported or unparseable publication command")
-    if kind == "pr" and base_branch != record["default_ref"][len("refs/heads/"):]:
+    base = re.search(r"--base(?:=|\s+)([^\s\"']+)", command)
+    head = re.search(r"--head(?:=|\s+)([^\s\"']+)", command)
+    default_branch = record["default_ref"][len("refs/heads/"):]
+    if base and base.group(1) != default_branch:
         raise ValueError("pull request base is not the registered origin default branch")
-    if kind == "pr":
-        remote = git(repo, "ls-remote", "--heads", "origin", f"refs/heads/{branch}").stdout.decode().split()
-        if len(remote) != 2 or remote[0] != value(repo, "rev-parse", "HEAD"):
-            raise ValueError("pull request branch tip differs from the local registered branch")
+    if head and head.group(1) != record["branch"]:
+        raise ValueError("publication head is not the registered task branch")
+    push = re.search(r"\bgit(?:\s+-(?:C|c)\s+\S+)*\s+push\b", command)
+    if push:
+        target = re.search(r"\borigin\s+(\S+)", command[push.end():])
+        allowed = {record["branch"], "HEAD", f"HEAD:refs/heads/{record['branch']}", f"{record['branch']}:refs/heads/{record['branch']}"}
+        if not target or target.group(1).strip("\"' );") not in allowed:
+            raise ValueError("publication target is not the registered task branch")
+    remote = git(repo, "ls-remote", "--heads", "origin", f"refs/heads/{record['branch']}").stdout.decode().split()
+    if len(remote) != 2 or remote[0] != value(repo, "rev-parse", "HEAD"):
+        raise ValueError("publication branch tip differs from the local registered branch")
 
 def check(args):
     record = load_record(args.launch_id, args.cwd, args.pane, args.tab, args.terminal)

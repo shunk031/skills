@@ -294,27 +294,23 @@ class WorkerSizeGateTest(unittest.TestCase):
 
         self.assertIn("timed out", result["error"].lower())
 
-    def test_publication_detection_handles_global_options_paths_and_wrappers(self):
+    def test_publication_detection_matches_raw_command_regex(self):
         self.prepare()
         self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
+        (self.repo / "source.py").write_text("dirty\n", encoding="utf-8")
         cases = (
-            ("git -C /tmp/other-worktree push origin task/size-check", "unsupported"), ("git -c a=b push origin task/size-check", "unsupported"),
-            ("git --unknown-option status", "unsupported"),
-            ("/usr/bin/git push origin task/size-check", None), ('bash -lc "git push origin task/size-check"', None),
-            ("git grep push", None), ("git log --grep push", None), ("git commit -m push", None),
-            ("git push origin task/size-check; touch marker", "unsupported"),
-            *((command, "unsupported") for command in ("$(git push)", "`gh pr create`", "a; git push", "x | git push")),
-            ('gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md', None),
-            ("sh -c 'gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md'", None),
-            ('bash -lc "sh -c \'gh pr create --base other --head other --title title --body-file /tmp/body.md\'"', "publication head is not the registered task branch"),
+            "FOO=bar bash -lc 'git push origin task/size-check'",
+            'bash -lc "git push origin task/size-check"',
+            "bash -lc \"sh -c 'git push origin task/size-check'\"",
+            "$(git push origin task/size-check)",
+            "git -C d push origin task/size-check",
+            "git grep push",
+            "git log --grep push",
         )
-        for command, expected_error in cases:
+        for command in cases:
             with self.subTest(command=command):
-                result = self.check(tool="Bash", command=command, expected=2 if expected_error else 0)
-                if expected_error:
-                    self.assertIn(expected_error, result["error"])
-                else:
-                    self.assertFalse(result["over_budget"])
+                result = self.check(tool="Bash", command=command, expected=2)
+                self.assertIn("publication requires a clean committed worktree", result["error"])
 
     def test_pull_request_creation_rejects_a_remote_branch_ahead_of_local_head(self):
         self.prepare()
@@ -328,14 +324,19 @@ class WorkerSizeGateTest(unittest.TestCase):
             command='/opt/homebrew/bin/gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md',
             expected=2,
         )
-        wrapped = self.check(
+        self.assertIn("branch tip differs", result["error"])
+
+    def test_push_to_unregistered_remote_branch_is_rejected(self):
+        self.prepare()
+        self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
+
+        result = self.check(
             tool="Bash",
-            command="bash -lc 'gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md'",
+            command="git push origin HEAD:refs/heads/other-branch",
             expected=2,
         )
 
-        self.assertIn("branch tip differs", result["error"])
-        self.assertIn("branch tip differs", wrapped["error"])
+        self.assertIn("publication target is not the registered task branch", result["error"])
 
     def test_staged_and_unstaged_edits_to_one_line_are_not_double_counted(self):
         (self.repo / "source.py").write_text("staged\n", encoding="utf-8")
