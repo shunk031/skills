@@ -11,13 +11,15 @@ function setup() {
     export HERDR_TEST_TAB_CREATES="${BATS_TEST_TMPDIR}/tab-creates"
     export HERDR_TEST_CLOSES="${BATS_TEST_TMPDIR}/closes"
     export HERDR_TEST_CREATE_ARGS="${BATS_TEST_TMPDIR}/create-args"
+    export HERDR_TEST_WORKTREE="${BATS_TEST_TMPDIR}/implementation-worktree"
     export HERDR_TEST_START_FAILURE=0
     export HERDR_WORKER_LIFECYCLE_STATE_DIR="${BATS_TEST_TMPDIR}/state"
+    export HOME="${BATS_TEST_TMPDIR}/home"
     export HERDR_ENV=1
     export HERDR_PANE_ID=caller-pane
     export HERDR_TAB_ID=caller-tab
 
-    mkdir -p "$TEST_BIN"
+    mkdir -p "$TEST_BIN" "$HOME"
     cat > "$HERDR_TEST_TABS" << 'JSON'
 {"result":{"tabs":[{"tab_id":"caller-tab","workspace_id":"workspace-1","label":"Orchestrator","focused":true},{"tab_id":"anchor-tab","workspace_id":"workspace-2","label":"Deliverable","focused":false}]}}
 JSON
@@ -89,6 +91,21 @@ function add_worker_record() {
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$owner" caller-pane terminal-caller inspect-pr meta-tabclean-reader terminal-worker worker-tab worker-pane "$state" \
         > "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv"
+}
+
+function create_size_gate_repo() {
+    mkdir -p "$HERDR_TEST_WORKTREE"
+    git -C "$HERDR_TEST_WORKTREE" init -q
+    git -C "$HERDR_TEST_WORKTREE" checkout -qb main
+    git -C "$HERDR_TEST_WORKTREE" config user.name "Lifecycle Test"
+    git -C "$HERDR_TEST_WORKTREE" config user.email "lifecycle-test@example.invalid"
+    printf 'baseline\n' > "$HERDR_TEST_WORKTREE/README.md"
+    git -C "$HERDR_TEST_WORKTREE" add README.md
+    git -C "$HERDR_TEST_WORKTREE" commit -qm baseline
+    git init --bare -q "${HERDR_TEST_WORKTREE}.remote"
+    git -C "$HERDR_TEST_WORKTREE" remote add origin "${HERDR_TEST_WORKTREE}.remote"
+    git -C "$HERDR_TEST_WORKTREE" push -q origin main
+    git --git-dir="${HERDR_TEST_WORKTREE}.remote" symbolic-ref HEAD refs/heads/main
 }
 
 @test "launch records owner and task and collect closes only its settled pane" {
@@ -209,6 +226,42 @@ function add_worker_record() {
     grep -Fqx -- "--env" "$HERDR_TEST_CREATE_ARGS"
     grep -Fqx -- "WORKER_MODE=isolated" "$HERDR_TEST_CREATE_ARGS"
     [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "implementation launch requires a budget and bypasses root-pane reuse with its gate environment" {
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_WORKTREE" --label "Worker" --task size-test --role implementation --root-pane anchor-pane -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'implementation launches require --line-budget'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+
+    create_size_gate_repo
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_WORKTREE" --label "Worker" --task size-test --role implementation --line-budget 400 --root-pane anchor-pane -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    grep -Fqx -- "--env" "$HERDR_TEST_CREATE_ARGS"
+    launch_id="$(sed -n 's/^HERDR_WORKER_SIZE_GATE_LAUNCH_ID=//p' "$HERDR_TEST_CREATE_ARGS")"
+    [[ "$launch_id" =~ ^[a-f0-9-]{36}$ ]]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+    [ "$(awk -F '\t' '{ print $9 ":" $10 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "started:tab" ]
+    gate_record="$(find "$HOME/.local/state/herdr-worker-lifecycle/size-gates" -name '*.json' -print -quit)"
+    [ -n "$gate_record" ]
+    jq -e --arg launch_id "$launch_id" '.launch_id == $launch_id and .status == "started" and .worker.pane == "worker-pane" and .worker.tab == "worker-tab" and .worker.terminal == "terminal-worker"' "$gate_record" > /dev/null
+}
+
+@test "implementation launch timeout leaves a pending size-gate record" {
+    create_size_gate_repo
+    export HERDR_TEST_START_FAILURE=124
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_WORKTREE" --label "Worker" --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -eq 124 ]
+    [[ "$output" == *'pending size-gate record remains'* ]]
+    [ ! -e "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv" ]
+    gate_record="$(find "$HOME/.local/state/herdr-worker-lifecycle/size-gates" -name '*.json' -print -quit)"
+    [ -n "$gate_record" ]
+    jq -e '.status == "pending" and .worker.pane == "worker-pane" and .worker.tab == "worker-tab" and .worker.terminal == "terminal-worker"' "$gate_record" > /dev/null
 }
 
 @test "collect never closes an agent not launched by this caller pane" {

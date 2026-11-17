@@ -3,10 +3,10 @@
 # @file skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh
 # @brief Launch, collect, and audit Herdr workers owned by the calling orchestrator.
 # @description
-#   Launch uses an explicit root pane when requested, or creates a no-focus tab.
+#   Ordinary launches can reuse an explicit root pane; implementation launches create a fresh tab with a size-gate ID.
 #   Collect closes only a recorded, explicitly collected worker whose agent is settled.
 #   Audit is read-only.
-# @option launch NAME --kind KIND --workspace ID --cwd PATH --label TEXT --task TASK [--root-pane PANE] [--env KEY=VALUE ...] -- ARGS Launch in the requested root pane or a new tab, then record the worker.
+# @option launch NAME --kind KIND --workspace ID --cwd PATH --label TEXT --task TASK [--role implementation --line-budget LINES] [--root-pane PANE] [--env KEY=VALUE ...] -- ARGS Launch in the requested root pane or a new tab, then record the worker.
 # @option collect NAME Mark one recorded worker collected and close its pane if safe.
 # @option audit List unrecorded live agent panes as warnings without closing anything.
 # @option --help Show usage.
@@ -41,13 +41,14 @@ fi
 function usage() {
     cat << 'USAGE'
 Usage:
-  herdr-worker-lifecycle.sh launch <name> --kind <kind> --workspace <workspace-id> --cwd <path> --label <label> --task <task-key> [--root-pane <pane-id>] [--env KEY=VALUE ...] -- <agent-args...>
+  herdr-worker-lifecycle.sh launch <name> --kind <kind> --workspace <workspace-id> --cwd <path> --label <label> --task <task-key> [--role implementation --line-budget <lines>] [--root-pane <pane-id>] [--env KEY=VALUE ...] -- <agent-args...>
   herdr-worker-lifecycle.sh collect <name>
   herdr-worker-lifecycle.sh audit
 
-launch uses the supplied root pane when requested, or creates a no-focus tab, then
-records the owner name, owner pane, task key, launch mode, and exact worker terminal,
-tab, and pane. collect records explicit
+Implementation launches require --line-budget and create a fresh tab with a size-gate
+launch ID in its environment. Other launches use the supplied root pane when requested,
+or create a no-focus tab, then record the owner name, owner pane, task key, launch mode,
+and exact worker terminal, tab, and pane. collect records explicit
 result collection and closes only that settled worker pane after fresh checks.
 audit is read-only and warns about unrecorded live panes. It never closes a pane.
 Merged PR worktree cleanup stays separate.
@@ -94,8 +95,11 @@ WORKER_LABEL=''
 WORKER_TAB=''
 WORKER_PANE=''
 WORKER_TASK=''
+WORKER_ROLE=''
+WORKER_LINE_BUDGET=''
 WORKER_LAUNCH_MODE='tab'
 WORKER_ROOT_PANE=''
+WORKER_SIZE_GATE_LAUNCH_ID=''
 WORKER_ARGS=()
 WORKER_ENV=()
 WORKER_ENV_COUNT=0
@@ -239,7 +243,7 @@ function record_launch() {
 
 # @description Parse the launch form and start a worker through this recorder.
 function launch_worker() {
-    local start_status tab_create_json created_tab created_pane created_terminal caller_tab caller_workspace before_tabs before_panes env_assignment root_pane_json root_tab_json
+    local start_status tab_create_json created_tab created_pane created_terminal caller_tab caller_workspace before_tabs before_panes env_assignment root_pane_json root_tab_json size_gate_result
     local -a tab_create_args
     tab_create_args=()
     [ "$#" -ge 1 ] || fail 'launch requires a worker name' 2
@@ -273,6 +277,16 @@ function launch_worker() {
             WORKER_TASK="$2"
             shift 2
             ;;
+        --role)
+            [ "$#" -ge 2 ] || fail '--role requires a value' 2
+            WORKER_ROLE="$2"
+            shift 2
+            ;;
+        --line-budget)
+            [ "$#" -ge 2 ] || fail '--line-budget requires a value' 2
+            WORKER_LINE_BUDGET="$2"
+            shift 2
+            ;;
         --root-pane)
             [ "$#" -ge 2 ] && [ -n "$2" ] || fail '--root-pane requires a pane ID' 2
             WORKER_ROOT_PANE="$2"
@@ -293,6 +307,18 @@ function launch_worker() {
         esac
     done
     [ -n "$WORKER_KIND" ] && [ -n "$WORKER_WORKSPACE" ] && [ -n "$WORKER_CWD" ] && [ -n "$WORKER_LABEL" ] && [ -n "$WORKER_TASK" ] || fail 'launch requires --kind, --workspace, --cwd, --label, and --task' 2
+    if [ "$WORKER_ROLE" = 'implementation' ]; then
+        [ -n "$WORKER_LINE_BUDGET" ] || fail 'implementation launches require --line-budget' 2
+        if [ "$WORKER_ENV_COUNT" -gt 0 ]; then
+            for env_assignment in "${WORKER_ENV[@]}"; do
+                case "$env_assignment" in
+                HERDR_WORKER_SIZE_GATE_LAUNCH_ID=*) fail 'the size-gate launch ID is managed by the lifecycle helper' 2 ;;
+                esac
+            done
+        fi
+    elif [ -n "$WORKER_LINE_BUDGET" ]; then
+        fail '--line-budget requires --role implementation' 2
+    fi
     case "$WORKER_LABEL" in ⛔*) fail 'worker tab label cannot start with ⛔' 2 ;; esac
     valid_task_key "$WORKER_TASK" || fail 'task key must use letters, digits, dot, underscore, or hyphen' 2
     [ "$#" -gt 0 ] || fail 'launch requires agent arguments after --' 2
@@ -306,8 +332,16 @@ function launch_worker() {
     inspect_records
     [ "$RECORD_STATE" = 'missing' ] || [ "$RECORD_STATE" = 'valid' ] || fail 'worker registry is malformed or unreadable'
     [ "$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg name "$WORKER_NAME" '[.result.agents[] | select(.name == $name)] | length')" = '0' ] || fail 'worker name is already present in the local agent inventory'
+    if [ "$WORKER_ROLE" = 'implementation' ]; then
+        if size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" preflight --repo "$WORKER_CWD" --line-budget "$WORKER_LINE_BUDGET" --worker-name "$WORKER_NAME" --task-key "$WORKER_TASK" 2>&1)"; then
+            :
+        else
+            fail "size-gate preflight failed; worker was not launched: $size_gate_result"
+        fi
+        WORKER_SIZE_GATE_LAUNCH_ID="$(python3 -c 'import uuid; print(uuid.uuid4())')" || fail 'could not create a size-gate launch ID'
+    fi
     WORKER_LAUNCH_MODE='tab'
-    if [ -n "$WORKER_ROOT_PANE" ]; then
+    if [ -n "$WORKER_ROOT_PANE" ] && [ "$WORKER_ROLE" != 'implementation' ]; then
         [ "$WORKER_ENV_COUNT" -eq 0 ] || fail '--root-pane cannot be combined with --env'
         [ "$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$WORKER_ROOT_PANE" '[.result.panes[] | select(.pane_id == $pane)] | length')" = '1' ] || fail 'requested root pane is missing or ambiguous'
         root_pane_json="$(printf '%s\n' "$PANES_JSON" | jq -c --arg pane "$WORKER_ROOT_PANE" '[.result.panes[] | select(.pane_id == $pane)][0]')"
@@ -331,6 +365,9 @@ function launch_worker() {
                 tab_create_args+=(--env "$env_assignment")
             done
         fi
+        if [ "$WORKER_ROLE" = 'implementation' ]; then
+            tab_create_args+=(--env "HERDR_WORKER_SIZE_GATE_LAUNCH_ID=$WORKER_SIZE_GATE_LAUNCH_ID")
+        fi
         tab_create_json="$(herdr tab create "${tab_create_args[@]}")" || fail 'Herdr could not create the worker tab'
         created_tab="$(printf '%s\n' "$tab_create_json" | jq -r '.result.tab.tab_id // empty')"
         created_pane="$(printf '%s\n' "$tab_create_json" | jq -r '.result.root_pane.pane_id // empty')"
@@ -348,15 +385,32 @@ function launch_worker() {
         [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$WORKER_TAB" '[.result.tabs[] | select(.tab_id == $tab and .focused == false)] | length')" = '1' ] || fail 'new worker tab is focused or its focus state is unknown'
     fi
     [ "$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$WORKER_PANE" --arg tab "$WORKER_TAB" --arg terminal "$created_terminal" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab and .terminal_id == $terminal)] | length')" = '1' ] || fail 'worker pane does not match its recorded tab and terminal identities'
+    if [ "$WORKER_ROLE" = 'implementation' ]; then
+        if size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" prepare --repo "$WORKER_CWD" --line-budget "$WORKER_LINE_BUDGET" --worker-name "$WORKER_NAME" --task-key "$WORKER_TASK" --launch-id "$WORKER_SIZE_GATE_LAUNCH_ID" --owner-name "$CALLER_NAME" --owner-pane "$HERDR_PANE_ID" --owner-terminal "$CALLER_TERMINAL" --worker-pane "$WORKER_PANE" --worker-tab "$WORKER_TAB" --worker-terminal "$created_terminal" 2>&1)"; then
+            :
+        else
+            fail "size-gate prepare failed; worker was not launched: $size_gate_result"
+        fi
+    fi
     herdr agent start "$WORKER_NAME" --kind "$WORKER_KIND" --pane "$WORKER_PANE" -- "${WORKER_ARGS[@]}"
     start_status=$?
     if [ "$start_status" -ne 0 ]; then
+        if [ "$WORKER_ROLE" = 'implementation' ]; then
+            fail "herdr agent start returned status $start_status; the pending size-gate record remains, run audit for an unrecorded-pane warning" "$start_status"
+        fi
         fail "herdr agent start returned status $start_status; no launch record was written, run audit for an unrecorded-pane warning" "$start_status"
     fi
     if ! load_inventory; then
         fail 'worker start returned but the resulting Herdr inventory could not be read; run audit for an unrecorded-pane warning'
     fi
     identify_caller || fail 'caller identity could not be reproven after worker launch'
+    if [ "$WORKER_ROLE" = 'implementation' ]; then
+        if size_gate_result="$(python3 "$SCRIPT_DIR/herdr-worker-size-gate.py" finish --launch-id "$WORKER_SIZE_GATE_LAUNCH_ID" --worker-pane "$WORKER_PANE" --worker-tab "$WORKER_TAB" --worker-terminal "$created_terminal" 2>&1)"; then
+            :
+        else
+            fail "size-gate finish failed; run audit and inspect the pending size-gate record: $size_gate_result"
+        fi
+    fi
     inspect_records
     record_launch
 }
