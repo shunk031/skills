@@ -476,6 +476,18 @@ def record_local_review(repository_root, review, verdict):
     marker_path = marker_dir / f"{review['head_sha']}.json"
     if verdict == "REJECT":
         marker_path.unlink(missing_ok=True)
+        for previous_path in marker_dir.glob("*.json"):
+            try:
+                previous = json.loads(previous_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if (
+                isinstance(previous, dict)
+                and previous.get("repository") == repository_path
+                and previous.get("head_ref") == review["head_ref"]
+                and previous.get("verdict") == "ACCEPT"
+            ):
+                previous_path.unlink(missing_ok=True)
         return
 
     marker_dir.mkdir(parents=True, exist_ok=True, mode=0o700)

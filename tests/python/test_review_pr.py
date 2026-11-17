@@ -292,6 +292,30 @@ print(response)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(marker_path.exists())
 
+    def test_local_reject_removes_prior_accepts_for_same_branch(self):
+        prior_marker = self._marker_path("prior-head-sha")
+        other_branch_marker = self._marker_path("other-branch-head-sha")
+        prior_marker.parent.mkdir(parents=True)
+        prior_marker.write_text(json.dumps({
+            "repository": str(self.repo.resolve()),
+            "head_ref": "topic",
+            "verdict": "ACCEPT",
+        }))
+        other_branch_marker.write_text(json.dumps({
+            "repository": str(self.repo.resolve()),
+            "head_ref": "other-topic",
+            "verdict": "ACCEPT",
+        }))
+        self.env["REVIEW_TEST_VERDICT"] = "REJECT"
+        result = self._run_review(
+            "--local", "--acceptance-criteria", str(self.criteria)
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self._marker_path().exists())
+        self.assertFalse(prior_marker.exists())
+        self.assertTrue(other_branch_marker.exists())
+
     def test_local_review_without_a_valid_verdict_does_not_mark_head(self):
         for response in (
             "not-json",
