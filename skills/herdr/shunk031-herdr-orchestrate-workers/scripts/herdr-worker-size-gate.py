@@ -181,7 +181,7 @@ def finish(args):
     atomic_json(path, record)
     return {"launch_id": args.launch_id, "status": record["status"]}
 
-def load_record(launch_id, cwd, pane, tab):
+def load_record(launch_id, cwd, pane, tab, terminal):
     path = record_path(launch_id)
     if any(parent.is_symlink() for parent in (Path.home() / ".local", Path.home() / ".local" / "state", STATE_ROOT.parent, STATE_ROOT)):
         raise ValueError("worker size-gate state path must not contain symlinks")
@@ -195,6 +195,8 @@ def load_record(launch_id, cwd, pane, tab):
     identity = record.get("worker", {})
     if identity.get("pane") != pane or identity.get("tab") != tab:
         raise ValueError("worker pane identity does not match its registered launch")
+    if identity.get("terminal") != terminal:
+        raise ValueError("worker terminal identity does not match its registered launch")
     if value(cwd, "rev-parse", "--show-toplevel") != record["worktree"]:
         raise ValueError("Git worktree root changed after worker launch")
     common = Path(value(cwd, "rev-parse", "--git-common-dir"))
@@ -220,40 +222,70 @@ def literal_report(command, worker):
     prefix = (f"STATUS {worker}:", f"BLOCKED {worker}:", f"DONE {worker}:")
     return len(parts) == 5 and parts[:4] == ["herdr-meta-patrol-queue", "add", "--from", worker] and parts[4].startswith(prefix)
 
-def publication(command):
+GIT_OPTIONS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix", "--config-env"}
+GIT_OPTIONS_WITHOUT_VALUE = {"-p", "--paginate", "--no-pager", "--bare", "--no-replace-objects", "--literal-pathspecs", "--glob-pathspecs", "--noglob-pathspecs", "--icase-pathspecs", "--no-optional-locks", "--no-lazy-fetch", "--version", "--help", "-v", "--exec-path", "--html-path", "--man-path", "--info-path"}
+
+def git_would_publish(words, git_index):
+    index = git_index + 1
+    while index < len(words) and words[index].startswith("-"):
+        token = words[index]
+        if token in GIT_OPTIONS_WITH_VALUE and index + 1 < len(words):
+            index += 2
+        elif token in GIT_OPTIONS_WITHOUT_VALUE or any(token.startswith(option + "=") for option in GIT_OPTIONS_WITH_VALUE) or (token.startswith(("-C", "-c")) and len(token) > 2):
+            index += 1
+        else:
+            return True
+    return index < len(words) and words[index] == "push"
+
+def is_publication_command(command):
     try:
         words = shlex.split(command, posix=True)
     except ValueError:
-        words = []
-    is_git_push = "git" in words and "push" in words
-    is_gh_pr_create = "gh" in words and any(words[index : index + 2] == ["pr", "create"] for index in range(len(words) - 1))
+        return ("unsupported", "", "")
+    if words and Path(words[0]).name in {"bash", "sh"}:
+        if len(words) != 3 or words[1] not in {"-c", "-lc"}:
+            return ("unsupported", "", "")
+        command = words[2]
+        try:
+            words = shlex.split(command, posix=True)
+        except ValueError:
+            return ("unsupported", "", "")
+    executables = [Path(word).name for word in words]
+    is_git_push = any(token == "git" and git_would_publish(executables, index) for index, token in enumerate(executables))
+    is_gh_pr_create = any(executables[index + 1 : index + 3] == ["pr", "create"] for index, token in enumerate(executables) if token == "gh")
     if not is_git_push and not is_gh_pr_create:
         return None
     if SHELL_META.search(command) or not words:
-        raise ValueError("compound or indirect publication command is not supported; use literal git push or gh pr create")
-    if words[:2] == ["git", "push"] and len(words) == 4 and words[2] == "origin":
+        return ("unsupported", "", "")
+    if executables[:2] == ["git", "push"] and len(words) == 4 and words[2] == "origin":
         return ("push", words[3], None)
-    if words[:3] == ["gh", "pr", "create"]:
+    if executables[:3] == ["gh", "pr", "create"]:
         options = dict(zip(words[3::2], words[4::2]))
         if len(words[3:]) % 2 or set(options) != {"--base", "--head", "--title", "--body-file"}:
-            raise ValueError("unsupported gh pr create form; provide --base, --head, --title, and --body-file")
+            return ("unsupported", "", "")
         return ("pr", options["--head"], options["--base"])
-    raise ValueError("unsupported publication form; use literal git push origin <task-branch> or gh pr create with explicit --base and --head")
+    return ("unsupported", "", "")
 
 def publish_check(repo, record, form):
     kind, branch, base_branch = form
-    if branch != record["branch"] or value(repo, "symbolic-ref", "--short", "HEAD") != record["branch"]:
+    if value(repo, "symbolic-ref", "--short", "HEAD") != record["branch"] or (kind != "unsupported" and branch != record["branch"]):
         raise ValueError("publication head is not the registered task branch")
     status = git(repo, "status", "--porcelain=v1", "--untracked-files=all").stdout
     if status:
         raise ValueError("publication requires a clean committed worktree")
+    if kind == "unsupported":
+        raise ValueError("unsupported or unparseable publication command")
     if kind == "pr" and base_branch != record["default_ref"][len("refs/heads/"):]:
         raise ValueError("pull request base is not the registered origin default branch")
+    if kind == "pr":
+        remote = git(repo, "ls-remote", "--heads", "origin", f"refs/heads/{branch}").stdout.decode().split()
+        if len(remote) != 2 or remote[0] != value(repo, "rev-parse", "HEAD"):
+            raise ValueError("pull request branch tip differs from the local registered branch")
 
 def check(args):
-    record = load_record(args.launch_id, args.cwd, args.pane, args.tab)
+    record = load_record(args.launch_id, args.cwd, args.pane, args.tab, args.terminal)
     budget, override = budget_for(record.get("line_budget"), record["task_key"], record["worker_name"], record.get("override"))
-    form = publication(args.command) if args.tool_name == "Bash" else None
+    form = is_publication_command(args.command) if args.tool_name == "Bash" else None
     if form:
         publish_check(args.cwd, record, form)
     count = count_diff(args.cwd, record["base_sha"])
@@ -278,7 +310,7 @@ def parser():
     for option in ("launch-id", "worker-pane", "worker-tab", "worker-terminal"):
         cmd.add_argument(f"--{option}", required=True)
     cmd = commands.add_parser("check")
-    for option in ("launch-id", "cwd", "pane", "tab", "phase", "tool-name"):
+    for option in ("launch-id", "cwd", "pane", "tab", "terminal", "phase", "tool-name"):
         cmd.add_argument(f"--{option}", required=True)
     cmd.add_argument("--command", default="")
     return root

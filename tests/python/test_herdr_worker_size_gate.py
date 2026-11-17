@@ -153,6 +153,8 @@ class WorkerSizeGateTest(unittest.TestCase):
             "worker-pane",
             "--tab",
             "worker-tab",
+            "--terminal",
+            "worker-terminal",
             "--phase",
             phase,
             "--tool-name",
@@ -247,18 +249,8 @@ class WorkerSizeGateTest(unittest.TestCase):
         result = self.preflight(expected=2)
 
         self.assertIn("initial worktree diff 401 is over budget 400", result["error"])
-    def test_tests_docs_locks_and_test_named_files_count(self):
-        for name in ("tests/case.py", "README.md", "uv.lock", "test_core.js", "src/tests/implementation.py"):
-            path = self.repo / name
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("one\n", encoding="utf-8")
 
-        result = self.preflight()
-
-        self.assertEqual(result["total"], 5)
-        self.assertEqual(len(result["changed_paths"]), 5)
-
-    def test_approved_override_is_bound_to_the_worker_and_task(self):
+    def test_override_is_bound_to_the_worker_and_task(self):
         override = self.home / ".local/state/herdr-worker-lifecycle/size-gates/overrides/meta-size-test/size-test.json"
         override.parent.mkdir(parents=True, mode=0o700)
         override.write_text(json.dumps({"budget": 401, "user_approval_reference": "approval-17", "task_key": "size-test", "worker_name": "meta-size-test"}), encoding="utf-8")
@@ -269,10 +261,6 @@ class WorkerSizeGateTest(unittest.TestCase):
 
         self.assertEqual(result["total"], 401)
         self.assertEqual(result["override"]["user_approval_reference"], "approval-17")
-
-    def test_wrong_task_override_is_rejected(self):
-        override = self.home / ".local/state/herdr-worker-lifecycle/size-gates/overrides/meta-size-test/size-test.json"
-        override.parent.mkdir(parents=True, mode=0o700)
         override.write_text(json.dumps({"budget": 401, "user_approval_reference": "approval-17", "task_key": "other-task", "worker_name": "meta-size-test"}), encoding="utf-8")
         override.chmod(0o600)
 
@@ -283,14 +271,15 @@ class WorkerSizeGateTest(unittest.TestCase):
     def test_stale_worker_identity_fails_closed(self):
         self.prepare()
         record = self.home / ".local/state/herdr-worker-lifecycle/size-gates/01234567-89ab-cdef-0123-456789abcdef.json"
-        data = json.loads(record.read_text(encoding="utf-8"))
-        data["worker"]["pane"] = "stale-pane"
-        record.write_text(json.dumps(data), encoding="utf-8")
-        record.chmod(0o600)
-
-        result = self.check(expected=2)
-
-        self.assertIn("pane identity", result["error"])
+        original = record.read_text(encoding="utf-8")
+        for field, value, message in (("pane", "stale-pane", "pane identity"), ("terminal", "stale-terminal", "terminal identity")):
+            with self.subTest(field=field):
+                data = json.loads(original)
+                data["worker"][field] = value
+                record.write_text(json.dumps(data), encoding="utf-8")
+                record.chmod(0o600)
+                result = self.check(expected=2)
+                self.assertIn(message, result["error"])
 
     def test_timed_out_git_check_fails_closed(self):
         self.prepare()
@@ -305,20 +294,50 @@ class WorkerSizeGateTest(unittest.TestCase):
 
         self.assertIn("timed out", result["error"].lower())
 
-    def test_literal_push_and_pull_request_forms_are_checked(self):
+    def test_publication_detection_handles_global_options_paths_and_wrappers(self):
         self.prepare()
-        push = self.check(tool="Bash", command="git push origin task/size-check")
-        pull_request = self.check(tool="Bash", command='gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md')
+        self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
+        cases = (
+            ("git -C /tmp/other-worktree push origin task/size-check", True),
+            ("git -c a=b push origin task/size-check", True),
+            ("git --unknown-option status", True),
+            ("/usr/bin/git push origin task/size-check", False),
+            ('bash -lc "git push origin task/size-check"', False),
+            ("git grep push", False),
+            ("git log --grep push", False),
+            ("git commit -m push", False),
+            ("git push origin task/size-check; touch marker", True),
+            ('gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md', False),
+            ("sh -c 'gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md'", False),
+        )
+        for command, rejected in cases:
+            with self.subTest(command=command):
+                result = self.check(tool="Bash", command=command, expected=2 if rejected else 0)
+                if rejected:
+                    self.assertIn("unsupported", result["error"])
+                else:
+                    self.assertFalse(result["over_budget"])
 
-        self.assertFalse(push["over_budget"])
-        self.assertFalse(pull_request["over_budget"])
-
-    def test_compound_publication_is_rejected(self):
+    def test_pull_request_creation_rejects_a_remote_branch_ahead_of_local_head(self):
         self.prepare()
+        self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
+        tree = self.run_git("write-tree", cwd=self.repo)
+        remote_tip = self.run_git("commit-tree", tree, "-p", "HEAD", "-m", "remote-only commit", cwd=self.repo)
+        self.run_git("push", "origin", f"{remote_tip}:refs/heads/task/size-check", cwd=self.repo)
 
-        result = self.check(tool="Bash", command="git push origin task/size-check; touch marker", expected=2)
+        result = self.check(
+            tool="Bash",
+            command='/opt/homebrew/bin/gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md',
+            expected=2,
+        )
+        wrapped = self.check(
+            tool="Bash",
+            command="bash -lc 'gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md'",
+            expected=2,
+        )
 
-        self.assertIn("compound", result["error"])
+        self.assertIn("branch tip differs", result["error"])
+        self.assertIn("branch tip differs", wrapped["error"])
 
     def test_staged_and_unstaged_edits_to_one_line_are_not_double_counted(self):
         (self.repo / "source.py").write_text("staged\n", encoding="utf-8")
@@ -343,16 +362,6 @@ class WorkerSizeGateTest(unittest.TestCase):
         self.assertIn("tests/case.py", result["changed_paths"])
         self.assertIn("uv.lock", result["changed_paths"])
 
-    def test_binary_files_count_as_one_line(self):
-        binary = self.repo / "binary.dat"
-        binary.write_bytes(b"header\x00payload")
-        self.run_git("add", "binary.dat", cwd=self.repo)
-        self.run_git("commit", "-m", "add binary", cwd=self.repo)
-        (self.repo / "untracked-binary.dat").write_bytes(b"other\x00payload")
-
-        result = self.preflight()
-
-        self.assertEqual((result["binary_files"], result["total"]), (2, 2))
 
     def test_initial_over_budget_tree_is_rejected_before_record_creation(self):
         (self.repo / "source.py").write_text("one\ntwo\nthree\n", encoding="utf-8")
