@@ -131,7 +131,10 @@ function check_collectable_tab() {
     TAB_SAFETY_REASON=''
     tab_label="$(printf '%s\n' "$tab_json" | jq -r '.label // ""')"
     case "$tab_label" in
-    ⛔*) TAB_SAFETY_REASON='label starts with ⛔'; return 1 ;;
+    ⛔*)
+        TAB_SAFETY_REASON='label starts with ⛔'
+        return 1
+        ;;
     esac
     focused="$(printf '%s\n' "$tab_json" | jq -r 'if .focused == true then "true" elif .focused == false then "false" else "unknown" end')"
     if [ "$focused" != 'false' ]; then
