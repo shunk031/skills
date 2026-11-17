@@ -240,16 +240,15 @@ def git_would_publish(words, git_index):
 def is_publication_command(command):
     try:
         words = shlex.split(command, posix=True)
+        for depth in range(4):
+            if not words or Path(words[0]).name not in {"bash", "sh", "zsh"}:
+                break
+            if depth == 3 or len(words) != 3 or words[1] not in {"-c", "-lc"}:
+                return ("unsupported", "", "")
+            command = words[2]
+            words = shlex.split(command, posix=True)
     except ValueError:
         return ("unsupported", "", "")
-    if words and Path(words[0]).name in {"bash", "sh"}:
-        if len(words) != 3 or words[1] not in {"-c", "-lc"}:
-            return ("unsupported", "", "")
-        command = words[2]
-        try:
-            words = shlex.split(command, posix=True)
-        except ValueError:
-            return ("unsupported", "", "")
     executables = [Path(word).name for word in words]
     is_git_push = any(token == "git" and git_would_publish(executables, index) for index, token in enumerate(executables))
     is_gh_pr_create = any(executables[index + 1 : index + 3] == ["pr", "create"] for index, token in enumerate(executables) if token == "gh")

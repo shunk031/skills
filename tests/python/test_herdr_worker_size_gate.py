@@ -298,23 +298,23 @@ class WorkerSizeGateTest(unittest.TestCase):
         self.prepare()
         self.run_git("push", "-u", "origin", "task/size-check", cwd=self.repo)
         cases = (
-            ("git -C /tmp/other-worktree push origin task/size-check", True),
-            ("git -c a=b push origin task/size-check", True),
-            ("git --unknown-option status", True),
-            ("/usr/bin/git push origin task/size-check", False),
-            ('bash -lc "git push origin task/size-check"', False),
-            ("git grep push", False),
-            ("git log --grep push", False),
-            ("git commit -m push", False),
-            ("git push origin task/size-check; touch marker", True),
-            ('gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md', False),
-            ("sh -c 'gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md'", False),
+            ("git -C /tmp/other-worktree push origin task/size-check", "unsupported"),
+            ("git -c a=b push origin task/size-check", "unsupported"),
+            ("git --unknown-option status", "unsupported"),
+            ("/usr/bin/git push origin task/size-check", None),
+            ('bash -lc "git push origin task/size-check"', None),
+            ("git grep push", None), ("git log --grep push", None),
+            ("git commit -m push", None),
+            ("git push origin task/size-check; touch marker", "unsupported"),
+            ('gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md', None),
+            ("sh -c 'gh pr create --base main --head task/size-check --title title --body-file /tmp/body.md'", None),
+            ('bash -lc "sh -c \'gh pr create --base other --head other --title title --body-file /tmp/body.md\'"', "publication head is not the registered task branch"),
         )
-        for command, rejected in cases:
+        for command, expected_error in cases:
             with self.subTest(command=command):
-                result = self.check(tool="Bash", command=command, expected=2 if rejected else 0)
-                if rejected:
-                    self.assertIn("unsupported", result["error"])
+                result = self.check(tool="Bash", command=command, expected=2 if expected_error else 0)
+                if expected_error:
+                    self.assertIn(expected_error, result["error"])
                 else:
                     self.assertFalse(result["over_budget"])
 
