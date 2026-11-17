@@ -20,7 +20,9 @@ If your dispatch says your report target reads the meta patrol queue, send every
 
 Report with the `DONE` form above when complete and the `BLOCKED` form when you cannot proceed. Send one `STATUS <worker-name>: <HH:MM> <current stage>; ETA <time>` when the dispatch's target time passes; if none is set, send one after 15 minutes of work. Send further reports only when the dispatch explicitly asks for them. Keep each STATUS to one or two lines, take the time from `date +%H:%M`, and send it through the same guarded helper, or the queue command above, without waiting for a reply. Do not retry an undelivered STATUS; the delivery deadline above does not apply to it.
 
-Keep each pull request's core code change at or under 400 lines: additions plus deletions from `git diff --shortstat` against the base, excluding tests, documentation, lock files, and generated files. If the design you are about to implement is expected to exceed this, or the diff exceeds it before push, stop without pushing and send `BLOCKED <worker-name>:` with a split plan or a simpler design.
+Implementation work uses a launch budget of 400 changed lines by default. Count additions plus deletions against the merge-base with the base branch, including staged, unstaged, and untracked files; tests count, and each binary file counts as one line. The budget applies to the total worktree change, with no path exclusions. A larger budget needs an approved override.
+
+The gate is designed to catch accidental over-building by cooperative workers. Deliberate evasion, including moving code to avoid counting or planting symlinked overrides, is out of scope; do not add path exclusions or symlink-specific override handling. The size gate runs checks when the raw command matches `\bgit\b[^\n]*\bpush\b` or `\bgh\b[^\n]*\bpr\b[^\n]*\bcreate\b`. The push gate uses the same patterns. It exempts `git push` only when the first Git subcommand is `grep`, `log`, `show`, `diff`, `status`, `commit`, `rev-parse`, `ls-files`, or `blame`. Skip `-C`/`-c` and their values when finding that subcommand. Shell-grammar edge cases beyond these regexes are out of scope.
 
 ## Meta usage-limit hold
 

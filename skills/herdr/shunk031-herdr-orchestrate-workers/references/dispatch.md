@@ -72,11 +72,11 @@ Pass the deliverable workspace ID, worktree directory, worker label, and `root_p
 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --workspace <workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --task <task-key> --root-pane <root-pane-id> -- <launch-flags>
 ```
 
-With `--root-pane`, the helper requires that pane to exist in the given workspace, have no attached agent, and be in a tab that is unfocused and not protected; a failed check returns an error. The helper rejects explicit `--env` options with `--root-pane`, but does not inspect inherited caller environment variables. Omit `--root-pane` to create a fresh no-focus tab.
+With `--root-pane`, the helper requires that pane to exist in the given workspace, have no attached agent, and be in a tab that is unfocused and not protected; a failed check returns an error. Ordinary launches reject explicit `--env` options with `--root-pane`, but do not inspect inherited caller environment variables. Implementation launches always create a fresh no-focus tab, even when `--root-pane` is supplied, so the size-gate launch ID is available before the worker starts.
 
 <!-- textlint-disable sentence-length -->
 
-For a worker that needs environment variables, add one --env KEY=VALUE option per variable to the same lifecycle-helper command. The helper creates the tab with those values before starting the worker. Do not combine `--root-pane` with `--env`.
+For a worker that needs environment variables, add one --env KEY=VALUE option per variable to the same lifecycle-helper command. The helper creates the tab with those values before starting the worker. For implementation workers, pass `--role implementation --line-budget 400`; a larger budget requires its approved override. The helper checks the worktree before creating the tab, records the launch after creating it, and finalizes the record after the worker starts.
 
 <!-- textlint-enable sentence-length -->
 
@@ -98,7 +98,7 @@ Before each dispatch, record the worker's current `state_change_seq`. Dispatch w
 
 This is the single receipt contract for dispatches and formal handoffs: make one bounded observation with `herdr agent get <worker-name>` and `herdr agent read <worker-name>` (or its transcript), and accept it only when the lifecycle has a newer `state_change_seq` and the read contains a readable task receipt. Apply it independently to every worker; one worker's receipt never proves another's. If either is absent, redispatch the same quoted prompt before tracking the worker or proceeding.
 
-The explicit `--root-pane` option selects a pane from the `herdr worktree create` result. The helper checks that it belongs to the requested workspace and has no attached agent; it errors if either check fails or if `--env` is supplied. Without `--root-pane`, launch creates a new no-focus tab and applies `--label` and any `--env` values there.
+For ordinary launches, the explicit `--root-pane` option selects a pane from the `herdr worktree create` result. The helper checks that it belongs to the requested workspace and has no attached agent; it errors if either check fails or if `--env` is supplied. Implementation launches require `--line-budget`, check the initial worktree size, and always create a fresh no-focus tab with `HERDR_WORKER_SIZE_GATE_LAUNCH_ID` in its environment. This also applies when `--root-pane` is supplied. If agent startup times out or fails, the helper reports the pending gate record and recommends `audit`; the record remains available for fail-closed checks.
 
 The lifecycle helper records the launch before returning, so no separate worker-registration command is needed. If launch succeeded but saving its record failed, run its read-only audit command; the audit warns about unrecorded panes without closing them.
 
