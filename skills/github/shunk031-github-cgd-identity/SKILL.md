@@ -53,12 +53,13 @@ Before starting write operations, perform the following checks in the working sh
 
    Do not use `git config user.name/email` in a linked worktree. It writes shared configuration and changes the author for other worktrees too.
 
-6. Push over HTTPS because SSH does not use the proxy in this environment. Set an explicit push URL, then use GitHub CLI's credential helper under the dedicated directory:
+6. Push over HTTPS because SSH does not use the proxy in this environment. If `origin` has no HTTPS push URL, set one once with `git remote set-url --push origin https://github.com/creative-graphic-design/<repo>`. Then push through the named remote and set the upstream, using GitHub CLI's credential helper under the dedicated directory:
 
    ```bash
-   git remote set-url --push origin https://github.com/creative-graphic-design/<repo>
-   GH_CONFIG_DIR="$HOME/.config/gh-cgd" git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push
+   GH_CONFIG_DIR="$HOME/.config/gh-cgd" git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push --set-upstream origin HEAD
    ```
+
+   After this push succeeds, `gh pr create` uses the current branch as its head, so it runs without `--head`.
 
 The identity and permission checks above verify the account before writes. The Git credential helper reads from the same dedicated configuration directory.
 
