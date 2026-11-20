@@ -66,7 +66,7 @@ Start each implementer through the lifecycle helper, using the launch guidance i
 
 <!-- textlint-enable sentence-length -->
 
-Pass the deliverable workspace ID, worktree directory, worker label, and `root_pane.pane_id` returned by `herdr worktree create` to opt into launching in that pane:
+Use `--new-workspace` for worker-only workspaces; otherwise pass the deliverable workspace ID, worktree directory, worker label, and `root_pane.pane_id` from `herdr worktree create` to reuse it:
 
 ```bash
 ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --workspace <workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --task <task-key> --root-pane <root-pane-id> -- <launch-flags>
@@ -108,7 +108,7 @@ After verifying a worker result, collect it through the same helper when you wil
 
     ~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh collect <worker-name>
 
-Collection closes only a recorded pane started through this helper when its agent is `done` or `idle` and current pane, tab, workspace, and visible-input checks pass. A failed check leaves it open. Run `audit` before ending any turn in which you collected results; it reports settled workers left uncollected, unrecorded live panes, and collected panes still open without closing anything.
+Collection closes an owned workspace only when its exact launch record matches and the collected worker is its sole pane; otherwise it reports why and leaves it open. `--workspace` and `--root-pane` launches remain unowned. Run `audit` before ending any turn in which you collected results; it reports settled workers left uncollected, unrecorded live panes, and collected panes still open without closing anything.
 
 By default, follow the [worker protocol's progress-report cadence](worker-protocol.md#progress-reports). Name any additional reports the task needs explicitly in the dispatch; do not request routine stage updates. Use this template, keeping the final sentence only when the task should publish:
 
