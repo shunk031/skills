@@ -71,6 +71,16 @@ class WorkerSizeGateTest(unittest.TestCase):
         )
         return result.stdout.strip()
 
+    def extend_base(self, contents):
+        self.run_git("switch", "main", cwd=self.repo)
+        (self.repo / "source.py").write_text(contents, encoding="utf-8")
+        self.run_git("add", "source.py", cwd=self.repo)
+        self.run_git("commit", "-m", "extend base fixture", cwd=self.repo)
+        self.run_git("push", "origin", "main", cwd=self.repo)
+        self.run_git("fetch", "origin", cwd=self.repo)
+        self.run_git("switch", "task/size-check", cwd=self.repo)
+        self.run_git("merge", "--ff-only", "main", cwd=self.repo)
+
     def invoke(self, *args, cwd=None, expected=0):
         result = subprocess.run(
             [sys.executable, str(SCRIPT), *map(str, args)],
@@ -195,13 +205,24 @@ class WorkerSizeGateTest(unittest.TestCase):
         result = self.preflight(expected=2)
         self.assertIn("over budget 400", result["error"])
 
-    def test_200_additions_and_201_deletions_are_not_netted(self):
+    def test_mixed_diff_budgets_additions_without_deletions(self):
         (self.repo / "source.py").unlink()
         (self.repo / "new.py").write_text("x\n" * 200, encoding="utf-8")
 
         result = self.preflight()
 
-        self.assertEqual((result["additions"], result["deletions"], result["total"]), (200, 1, 201))
+        self.assertEqual((result["additions"], result["deletions"], result["total"], result["budgeted"]), (200, 1, 201, 200))
+
+    def test_deletions_over_budget_pass_preflight_and_push_gate(self):
+        self.extend_base("one\ntwo\nthree\n")
+        (self.repo / "source.py").unlink()
+
+        result = self.preflight(budget=1)
+        self.assertEqual((result["deletions"], result["budgeted"]), (3, 0))
+        self.prepare(budget=1)
+        result = self.check()
+        self.assertFalse(result["over_budget"])
+        self.assertFalse(result["deny"])
 
     def test_odd_filename_is_counted_without_path_splitting(self):
         name = "line\nbreak\tname.py"
@@ -240,11 +261,11 @@ class WorkerSizeGateTest(unittest.TestCase):
 
         result = self.preflight()
 
-        self.assertEqual((result["binary_files"], result["total"]), (2, 2))
+        self.assertEqual((result["binary_files"], result["total"], result["budgeted"]), (2, 2, 2))
 
     def test_untracked_replacement_of_a_base_path_counts_its_contents(self):
         self.run_git("rm", "--cached", "source.py", cwd=self.repo)
-        (self.repo / "source.py").write_text("x\n" * 400, encoding="utf-8")
+        (self.repo / "source.py").write_text("x\n" * 401, encoding="utf-8")
 
         result = self.preflight(expected=2)
 

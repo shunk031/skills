@@ -102,7 +102,7 @@ def count_diff(repo, base):
             additions += lines
         changed_paths.add(os.fsdecode(raw_path))
 
-    return {"additions": additions, "deletions": deletions, "binary_files": binary_files, "total": additions + deletions + binary_files, "changed_paths": sorted(changed_paths)}
+    return {"additions": additions, "deletions": deletions, "binary_files": binary_files, "budgeted": additions + binary_files, "total": additions + deletions + binary_files, "changed_paths": sorted(changed_paths)}
 
 def budget_for(budget, task, worker, override=None):
     if not isinstance(budget, int) or budget <= 0:
@@ -125,7 +125,7 @@ def preflight(args):
     info = repo_info(Path(args.repo))
     info.update(count_diff(info["worktree"], info["base_sha"]))
     info.update(line_budget=budget, override=override)
-    if info["total"] > budget: raise ValueError(f"initial worktree diff {info['total']} is over budget {budget}")
+    if info["budgeted"] > budget: raise ValueError(f"initial worktree diff {info['budgeted']} is over budget {budget}")
     return info
 
 def atomic_json(path, data):
@@ -168,7 +168,7 @@ def prepare(args):
         "override": result["override"],
     }
     atomic_json(path, record)
-    return {"launch_id": args.launch_id, "record_path": str(path), "total": result["total"], "line_budget": result["line_budget"]}
+    return {"launch_id": args.launch_id, "record_path": str(path), "total": result["total"], "budgeted": result["budgeted"], "line_budget": result["line_budget"]}
 
 def finish(args):
     path = record_path(args.launch_id)
@@ -242,8 +242,8 @@ def check(args):
     if form and form[0] == "pr":
         publish_check(args.cwd, record)
     count = count_diff(args.cwd, record["base_sha"])
-    over = count["total"] > budget
-    reason = f"BLOCKED: worktree diff {count['total']} > budget {budget}. Stop editing and report BLOCKED with a smaller design." if over else ""
+    over = count["budgeted"] > budget
+    reason = f"BLOCKED: worktree diff {count['budgeted']} > budget {budget}. Stop editing and report BLOCKED with a smaller design." if over else ""
     deny = args.phase == "pre" and over and not (args.tool_name == "Bash" and literal_report(args.command, record["worker_name"]))
     return {**count, "line_budget": budget, "over_budget": over, "deny": deny, "reason": reason}
 
