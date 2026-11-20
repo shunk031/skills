@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-readonly PROMPT_HELPER_PATH="./skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh"
+readonly PROMPT_HELPER_PATH="${PROMPT_HELPER_PATH:-./skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-agent-prompt-if-input-empty.sh}"
 
 function setup() {
     STUB_STATE="$BATS_TEST_TMPDIR/prompt-stub"
@@ -17,7 +17,7 @@ command_name="$1 $2"
 shift 2
 case "$command_name" in
     "agent get")
-        printf '%s\n' '{"result":{"agent":{"pane_id":"w1:p1"}}}'
+        printf '{"result":{"agent":{"name":"%s","pane_id":"w1:p1"}}}\n' "${PROMPT_STUB_AGENT_NAME:-$1}"
         ;;
     "pane read")
         [[ "$1" == w1:p1 && "$2" == --source && "$3" == visible && "$4" == --format && "$5" == ansi && "$#" == 5 ]] || exit 1
@@ -46,6 +46,19 @@ EOF
     chmod +x "$STUB_STATE/bin/herdr" "$STUB_STATE/bin/sleep"
     PATH="$STUB_STATE/bin:$PATH"
     export PATH
+}
+
+@test "[common] refuses Meta even when targeted by pane ID" {
+    export PROMPT_STUB_AGENT_NAME=meta
+    printf '❯ \033[2mDraft suggestion\033[0m\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" w1:p1 "report"
+
+    [ "$status" -eq 1 ]
+    [ "$output" = "meta is reached via herdr-meta-patrol-queue add" ]
+    [ "$(wc -l < "$STUB_STATE/reads" | tr -d '[:space:]')" = 0 ]
+    [ "$(wc -l < "$STUB_STATE/sleeps" | tr -d '[:space:]')" = 0 ]
+    [ ! -f "$STUB_STATE/prompt_target" ]
 }
 
 @test "[common] dimmed Codex and Claude prompt suggestions count as empty" {
