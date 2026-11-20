@@ -10,6 +10,26 @@
         "Each dispatch states the 400-line core-code budget.",
         "Each dispatch states that the worker stops without pushing and reports BLOCKED when the budget would be exceeded."
       ]
+    },
+    {
+      "id": 2,
+      "prompt": "A Codex worker will write a public evidence note and PR body in the maintainer's voice. The note allows at most 18 words per sentence and 100 words total; the PR body allows at most 300 words total. Write the dispatch. Do not execute commands.",
+      "expected_output": "The dispatch gives each destination's known limits, asks for one fact per sentence and bullets where the format allows, and requires the worker to read the maintainer's real writing samples before matching their typical length.",
+      "expectations": [
+        "States the evidence note's sentence and whole-text limits and the PR body's whole-text limit.",
+        "Asks for one fact per sentence and bullets where the format allows.",
+        "Requires reading the maintainer's real writing samples before matching their typical length."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "A Codex worker must update an existing 12,000-character report for a destination with a 10,000-character limit. Two new status changes need to be reflected. Write the dispatch. Do not execute commands.",
+      "expected_output": "The dispatch asks the worker to rewrite the affected part so the complete report stays within 10,000 characters, instead of appending new lines.",
+      "expectations": [
+        "Asks the worker to rewrite the affected part of the existing report.",
+        "Requires the complete report to stay within the 10,000-character limit.",
+        "Does not tell the worker to append new lines for the updates."
+      ]
     }
   ]
 }
