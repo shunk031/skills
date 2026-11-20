@@ -17,7 +17,9 @@ command_name="$1 $2"
 shift 2
 case "$command_name" in
     "agent get")
-        printf '{"result":{"agent":{"name":"%s","pane_id":"w1:p1"}}}\n' "${PROMPT_STUB_AGENT_NAME:-$1}"
+        agent_name="${PROMPT_STUB_AGENT_NAME:-worker}"
+        [[ "$1" == meta ]] && agent_name=meta
+        printf '{"result":{"agent":{"name":"%s","pane_id":"w1:p1"}}}\n' "$agent_name"
         ;;
     "pane read")
         [[ "$1" == w1:p1 && "$2" == --source && "$3" == visible && "$4" == --format && "$5" == ansi && "$#" == 5 ]] || exit 1
@@ -59,6 +61,24 @@ EOF
     [ "$(wc -l < "$STUB_STATE/reads" | tr -d '[:space:]')" = 0 ]
     [ "$(wc -l < "$STUB_STATE/sleeps" | tr -d '[:space:]')" = 0 ]
     [ ! -f "$STUB_STATE/prompt_target" ]
+}
+
+@test "[common] refuses Meta when targeted by agent name" {
+    printf '❯ \033[2mDraft suggestion\033[0m\n' > "$STUB_STATE/snapshot"
+
+    run "$PROMPT_HELPER_PATH" meta "report"
+
+    [ "$status" -eq 1 ]
+    [ "$output" = "meta is reached via herdr-meta-patrol-queue add" ]
+    [ "$(wc -l < "$STUB_STATE/reads" | tr -d '[:space:]')" = 0 ]
+    [ ! -f "$STUB_STATE/prompt_target" ]
+
+    printf '› \033[2mAsk Codex to do anything\033[0m\n' > "$STUB_STATE/snapshot"
+    run "$PROMPT_HELPER_PATH" worker "report"
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$STUB_STATE/prompt_target")" = worker ]
+    [ "$(cat "$STUB_STATE/prompt_message")" = report ]
 }
 
 @test "[common] dimmed Codex and Claude prompt suggestions count as empty" {
