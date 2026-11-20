@@ -50,7 +50,16 @@ function visible_input_state() {
 }
 
 while ((attempt <= max_retries)); do
-    if agent_info="$(herdr agent get "$target" 2> /dev/null)" &&
+    agent_info=""
+    if agent_info="$(herdr agent get "$target" 2> /dev/null)"; then
+        agent_name="$(jq -er '.result.agent.name | strings' <<< "$agent_info" 2> /dev/null || true)"
+        if [[ "$agent_name" == meta ]]; then
+            printf '%s\n' 'meta is reached via herdr-meta-patrol-queue add' >&2
+            exit 1
+        fi
+    fi
+
+    if [[ -n "$agent_info" ]] &&
         pane_id="$(jq -er '.result.agent.pane_id | strings' <<< "$agent_info" 2> /dev/null)" &&
         snapshot="$(herdr pane read "$pane_id" --source visible --format ansi 2> /dev/null)"; then
         input_state="$(visible_input_state "$snapshot")"
