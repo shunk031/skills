@@ -290,6 +290,11 @@ print(response)
         self.assertIn(
             "adds, rewrites, restates, summarizes, or tests", prompt
         )
+        self.assertIn("numeric limit, threshold, size, or timeout", prompt)
+        self.assertIn("that constrains behavior", prompt)
+        self.assertNotIn("or count that this diff", prompt)
+        self.assertIn("Fixed-format lengths (such as a digest width)", prompt)
+        self.assertIn("convention or inventory counts are out of scope", prompt)
         self.assertIn(
             "even if the limit was inherited from earlier text", prompt
         )
