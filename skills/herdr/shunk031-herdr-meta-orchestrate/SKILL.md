@@ -71,7 +71,7 @@ Quote each orchestrator's reply unchanged and identify its source. Label a relay
 
 Write every reply and relay to the user in the user's language, even when the message that triggered it — a worker or orchestrator report, a pasted report, or a system notification — is in another language. Keep quoted text between the markers unchanged.
 
-In user-facing messages, refer to a root orchestrator as “Orchestrator,” adding its name when helpful, and never call it “root.”
+Name each root Orchestrator by what it handles, then add its agent name in parentheses. Example: `lyberta担当の Orchestrator（orch）`. Use the root's Herdr workspace label, tab title, or stated task as the responsibility label. A bare agent name is a defect.
 
 At initial dispatch, if a worker cannot prompt meta, tell it to end its turn with a final `STATUS <worker-name>:`, `BLOCKED <worker-name>:`, or `DONE <worker-name>:` report; meta will read the transcript and relay it. For a review result, require the report's first line to contain the verdict and full PR URL (for example, `ACCEPT <PR URL>` or `REJECT <PR URL>`); put details afterward. For long drafts or instructions, have the worker write the complete text as Markdown to `/tmp/<file>.md` and reply only `WROTE <path>`. Read it directly when available on the same machine; across SSH, transfer the Base64-encoded bytes, decode them at the destination, and compare source and destination SHA-256 hashes before relaying the text verbatim. Do not use `fold -w` for transfer because it inserts line breaks.
 
