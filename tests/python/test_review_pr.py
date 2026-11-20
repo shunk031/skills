@@ -280,6 +280,25 @@ print(response)
             calls,
         )
 
+    def test_prompt_sources_inherited_numeric_limits_restated_by_diff(self):
+        result = self._run_review(
+            "--local", "--acceptance-criteria", str(self.criteria)
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        prompt = self.codex_input.read_text()
+        self.assertIn(
+            "adds, rewrites, restates, summarizes, or tests", prompt
+        )
+        self.assertIn(
+            "even if the limit was inherited from earlier text", prompt
+        )
+        self.assertIn(
+            "a measurement, an upstream document, or a recorded decision", prompt
+        )
+        self.assertIn("in the same or adjacent line", prompt)
+        self.assertIn("a limit with no source is a blocking finding", prompt)
+
     def test_local_reject_removes_marker_for_the_same_head(self):
         marker_path = self._marker_path()
         marker_path.parent.mkdir(parents=True)
