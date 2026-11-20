@@ -6,8 +6,8 @@
 #   Ordinary launches can reuse an explicit root pane; implementation launches create a fresh tab with a size-gate ID.
 #   Collect closes only a recorded, explicitly collected worker whose agent is settled.
 #   Audit is read-only.
-# @option launch NAME --kind KIND --workspace ID --cwd PATH --label TEXT --task TASK [--role implementation --line-budget LINES] [--root-pane PANE] [--env KEY=VALUE ...] -- ARGS Launch in the requested root pane or a new tab, then record the worker.
-# @option collect NAME Mark one recorded worker collected and close its pane if safe.
+# @option launch NAME --kind KIND (--workspace ID | --new-workspace) --cwd PATH --label TEXT --task TASK [--role implementation --line-budget LINES] [--root-pane PANE] [--env KEY=VALUE ...] -- ARGS Launch and record the worker.
+# @option collect NAME Mark one recorded worker collected and close its pane or owned workspace if safe.
 # @option audit List unrecorded live agent panes as warnings without closing anything.
 # @option --help Show usage.
 # @example
@@ -41,15 +41,13 @@ fi
 function usage() {
     cat << 'USAGE'
 Usage:
-  herdr-worker-lifecycle.sh launch <name> --kind <kind> --workspace <workspace-id> --cwd <path> --label <label> --task <task-key> [--role implementation --line-budget <lines>] [--root-pane <pane-id>] [--env KEY=VALUE ...] -- <agent-args...>
+  herdr-worker-lifecycle.sh launch <name> --kind <kind> (--workspace <workspace-id> | --new-workspace) --cwd <path> --label <label> --task <task-key> [--role implementation --line-budget <lines>] [--root-pane <pane-id>] [--env KEY=VALUE ...] -- <agent-args...>
   herdr-worker-lifecycle.sh collect <name>
   herdr-worker-lifecycle.sh audit
 
-Implementation launches require --line-budget and create a fresh tab with a size-gate
-launch ID in its environment. Other launches use the supplied root pane when requested,
-or create a no-focus tab, then record the owner name, owner pane, task key, launch mode,
-and exact worker terminal, tab, and pane. collect records explicit
-result collection and closes only that settled worker pane after fresh checks.
+--new-workspace creates and records an owned workspace; --workspace reuses one without
+ownership. Collection closes owned workspaces only when the exact launch record matches
+and the collected worker is the sole pane; otherwise it reports why and leaves it open.
 audit is read-only and warns about unrecorded live panes. It never closes a pane.
 Merged PR worktree cleanup stays separate.
 USAGE
@@ -90,6 +88,7 @@ CALLER_TERMINAL=''
 WORKER_NAME=''
 WORKER_KIND=''
 WORKER_WORKSPACE=''
+WORKER_NEW_WORKSPACE=0
 WORKER_CWD=''
 WORKER_LABEL=''
 WORKER_TAB=''
@@ -114,6 +113,17 @@ function load_inventory() {
     printf '%s\n' "$TABS_JSON" | jq -e '.result.tabs | type == "array"' > /dev/null 2>&1 || return 1
     printf '%s\n' "$PANES_JSON" | jq -e '.result.panes | type == "array"' > /dev/null 2>&1 || return 1
     printf '%s\n' "$AGENTS_JSON" | jq -e '.result.agents | type == "array"' > /dev/null 2>&1 || return 1
+}
+
+# @description Confirm an owned workspace contains exactly the recorded worker pane.
+function owned_workspace_has_only_worker_pane() {
+    local workspace="$1" tab="$2" pane="$3" terminal="$4" tab_ids pane_count worker_count
+    tab_ids="$(printf '%s\n' "$TABS_JSON" | jq -ce --arg ws "$workspace" --argjson panes "$PANES_JSON" 'if all(.result.tabs[]; . as $tab | ($tab | type == "object") and ($tab.workspace_id | type == "string" and length > 0)) and all(.result.tabs[] | select(.workspace_id == $ws); . as $tab | ($tab.pane_count | type == "number" and . >= 0 and floor == .) and ([$panes.result.panes[] | select(.tab_id == $tab.tab_id)] | length == $tab.pane_count)) then [.result.tabs[] | select(.workspace_id == $ws) | .tab_id] else empty end')" || return 1
+    printf '%s\n' "$tab_ids" | jq -e 'length > 0 and all(.[]; type == "string" and length > 0) and length == (unique | length)' > /dev/null || return 1
+    printf '%s\n' "$PANES_JSON" | jq -e --argjson tabs "$TABS_JSON" '.result.panes | all(.[]; . as $p | ($p | type == "object") and ($p.pane_id | type == "string" and length > 0) and ($p.tab_id | type == "string" and length > 0) and ($p.terminal_id | type == "string" and length > 0) and ([$tabs.result.tabs[] | select(.tab_id == $p.tab_id)] | length == 1))' > /dev/null || return 1
+    pane_count="$(jq -nr --argjson panes "$PANES_JSON" --argjson tabs "$tab_ids" '[ $panes.result.panes[] | select(.tab_id as $id | $tabs | index($id)) ] | length')"
+    worker_count="$(jq -nr --argjson panes "$PANES_JSON" --argjson tabs "$tab_ids" --arg tab "$tab" --arg pane "$pane" --arg terminal "$terminal" '[ $panes.result.panes[] | select(.tab_id as $id | $tabs | index($id)) | select(.pane_id == $pane and .tab_id == $tab and .terminal_id == $terminal) ] | length')"
+    [ "$pane_count" = '1' ] && [ "$worker_count" = '1' ]
 }
 
 # @description Identify the caller from the inherited Herdr pane and terminal IDs.
@@ -157,7 +167,7 @@ function inspect_records() {
         RECORD_STATE='invalid'
         return 0
     fi
-    if awk -F '\t' '(NF != 9 && NF != 10) || $1 == "" || $2 == "" || $3 == "" || $4 == "" || $5 == "" || $6 == "" || $7 == "" || $8 == "" || ($9 != "started" && $9 != "collected") || (NF == 10 && $10 != "tab" && $10 != "root") { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE"; then
+    if awk -F '\t' '(NF != 9 && NF != 10) || $1 == "" || $2 == "" || $3 == "" || $4 == "" || $5 == "" || $6 == "" || $7 == "" || $8 == "" || ($9 != "started" && $9 != "collected") || (NF == 10 && $10 != "tab" && $10 != "root" && $10 !~ /^owned:[^[:space:]]+$/) { bad = 1 } END { exit bad ? 1 : 0 }' "$RECORDS_FILE"; then
         RECORD_STATE='valid'
     else
         RECORD_STATE='invalid'
@@ -262,6 +272,10 @@ function launch_worker() {
             WORKER_WORKSPACE="$2"
             shift 2
             ;;
+        --new-workspace)
+            WORKER_NEW_WORKSPACE=1
+            shift
+            ;;
         --cwd)
             [ "$#" -ge 2 ] || fail '--cwd requires a value' 2
             WORKER_CWD="$2"
@@ -306,7 +320,12 @@ function launch_worker() {
         *) fail "unknown launch option: $1" 2 ;;
         esac
     done
-    [ -n "$WORKER_KIND" ] && [ -n "$WORKER_WORKSPACE" ] && [ -n "$WORKER_CWD" ] && [ -n "$WORKER_LABEL" ] && [ -n "$WORKER_TASK" ] || fail 'launch requires --kind, --workspace, --cwd, --label, and --task' 2
+    [ -n "$WORKER_KIND" ] && [ -n "$WORKER_CWD" ] && [ -n "$WORKER_LABEL" ] && [ -n "$WORKER_TASK" ] || fail 'launch requires --kind, --cwd, --label, and --task' 2
+    if [ "$WORKER_NEW_WORKSPACE" -eq 1 ]; then
+        [ -z "$WORKER_WORKSPACE" ] && [ -z "$WORKER_ROOT_PANE" ] || fail '--new-workspace cannot be combined with --workspace or --root-pane' 2
+    else
+        [ -n "$WORKER_WORKSPACE" ] || fail 'launch requires --workspace or --new-workspace' 2
+    fi
     if [ "$WORKER_ROLE" = 'implementation' ]; then
         [ -n "$WORKER_LINE_BUDGET" ] || fail 'implementation launches require --line-budget' 2
         if [ "$WORKER_ENV_COUNT" -gt 0 ]; then
@@ -327,8 +346,10 @@ function launch_worker() {
     caller_tab="$(printf '%s\n' "$TABS_JSON" | jq -c --arg tab "$HERDR_TAB_ID" '[.result.tabs[] | select(.tab_id == $tab)][0]')"
     caller_workspace="$(printf '%s\n' "$caller_tab" | jq -r '.workspace_id // empty')"
     [ -n "$caller_workspace" ] || fail 'caller workspace could not be identified'
-    [ "$WORKER_WORKSPACE" != "$caller_workspace" ] || fail 'worker tab cannot be created in the caller workspace'
-    [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg workspace "$WORKER_WORKSPACE" '[.result.tabs[] | select(.workspace_id == $workspace)] | length')" -gt 0 ] || fail 'target workspace is not present in the local tab inventory'
+    if [ "$WORKER_NEW_WORKSPACE" -eq 0 ]; then
+        [ "$WORKER_WORKSPACE" != "$caller_workspace" ] || fail 'worker tab cannot be created in the caller workspace'
+        [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg workspace "$WORKER_WORKSPACE" '[.result.tabs[] | select(.workspace_id == $workspace)] | length')" -gt 0 ] || fail 'target workspace is not present in the local tab inventory'
+    fi
     inspect_records
     [ "$RECORD_STATE" = 'missing' ] || [ "$RECORD_STATE" = 'valid' ] || fail 'worker registry is malformed or unreadable'
     [ "$(printf '%s\n' "$AGENTS_JSON" | jq -r --arg name "$WORKER_NAME" '[.result.agents[] | select(.name == $name)] | length')" = '0' ] || fail 'worker name is already present in the local agent inventory'
@@ -341,7 +362,20 @@ function launch_worker() {
         WORKER_SIZE_GATE_LAUNCH_ID="$(python3 -c 'import uuid; print(uuid.uuid4())')" || fail 'could not create a size-gate launch ID'
     fi
     WORKER_LAUNCH_MODE='tab'
-    if [ -n "$WORKER_ROOT_PANE" ] && [ "$WORKER_ROLE" != 'implementation' ]; then
+    if [ "$WORKER_NEW_WORKSPACE" -eq 1 ]; then
+        tab_create_args=(--cwd "$WORKER_CWD" --label "$WORKER_LABEL" --no-focus)
+        if [ "$WORKER_ENV_COUNT" -gt 0 ]; then for env_assignment in "${WORKER_ENV[@]}"; do tab_create_args+=(--env "$env_assignment"); done; fi
+        if [ "$WORKER_ROLE" = 'implementation' ]; then tab_create_args+=(--env "HERDR_WORKER_SIZE_GATE_LAUNCH_ID=$WORKER_SIZE_GATE_LAUNCH_ID"); fi
+        workspace_create_json="$(herdr workspace create "${tab_create_args[@]}")" || fail 'Herdr could not create the owned worker workspace'
+        WORKER_WORKSPACE="$(printf '%s\n' "$workspace_create_json" | jq -r '.result.workspace.workspace_id // empty')"
+        WORKER_TAB="$(printf '%s\n' "$workspace_create_json" | jq -r '.result.tab.tab_id // empty')"
+        WORKER_PANE="$(printf '%s\n' "$workspace_create_json" | jq -r '.result.root_pane.pane_id // empty')"
+        created_terminal="$(printf '%s\n' "$workspace_create_json" | jq -r '.result.root_pane.terminal_id // empty')"
+        [ -n "$WORKER_WORKSPACE" ] && [ -n "$WORKER_TAB" ] && [ -n "$WORKER_PANE" ] && [ -n "$created_terminal" ] || fail 'workspace creation response did not include exact IDs; workspace left open'
+        WORKER_LAUNCH_MODE="owned:$WORKER_WORKSPACE"
+        load_inventory || fail 'could not verify the new workspace; workspace left open'
+        identify_caller || fail 'caller identity could not be reproven after workspace creation; workspace left open'
+    elif [ -n "$WORKER_ROOT_PANE" ] && [ "$WORKER_ROLE" != 'implementation' ]; then
         [ "$WORKER_ENV_COUNT" -eq 0 ] || fail '--root-pane cannot be combined with --env'
         [ "$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$WORKER_ROOT_PANE" '[.result.panes[] | select(.pane_id == $pane)] | length')" = '1' ] || fail 'requested root pane is missing or ambiguous'
         root_pane_json="$(printf '%s\n' "$PANES_JSON" | jq -c --arg pane "$WORKER_ROOT_PANE" '[.result.panes[] | select(.pane_id == $pane)][0]')"
@@ -381,7 +415,7 @@ function launch_worker() {
         identify_caller || fail 'caller identity could not be reproven after tab creation'
     fi
     [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$WORKER_TAB" --arg workspace "$WORKER_WORKSPACE" '[.result.tabs[] | select(.tab_id == $tab and .workspace_id == $workspace)] | length')" = '1' ] || fail 'worker tab is missing or in another workspace'
-    if [ "$WORKER_LAUNCH_MODE" = 'tab' ]; then
+    if [ "$WORKER_LAUNCH_MODE" != 'root' ]; then
         [ "$(printf '%s\n' "$TABS_JSON" | jq -r --arg tab "$WORKER_TAB" '[.result.tabs[] | select(.tab_id == $tab and .focused == false)] | length')" = '1' ] || fail 'new worker tab is focused or its focus state is unknown'
     fi
     [ "$(printf '%s\n' "$PANES_JSON" | jq -r --arg pane "$WORKER_PANE" --arg tab "$WORKER_TAB" --arg terminal "$created_terminal" '[.result.panes[] | select(.pane_id == $pane and .tab_id == $tab and .terminal_id == $terminal)] | length')" = '1' ] || fail 'worker pane does not match its recorded tab and terminal identities'
@@ -430,7 +464,7 @@ function worker_record_state() {
 
 # @description Mark a caller-owned settled worker collected and close only its pane.
 function collect_worker() {
-    local worker_json worker_terminal worker_tab worker_pane worker_state launch_mode records tab_json pane_json workspace_id pane_count workspace_tab_count input_text input_state matches task_key tmp_file
+    local worker_json worker_terminal worker_tab worker_pane worker_state launch_mode recorded_workspace='' records tab_json pane_json workspace_id pane_count workspace_tab_count input_text input_state matches task_key tmp_file
     [ "$#" -eq 1 ] || fail 'collect requires exactly one worker name' 2
     WORKER_NAME="$1"
     load_inventory || fail 'could not read local Herdr inventories'
@@ -446,10 +480,14 @@ function collect_worker() {
     worker_state="$(printf '%s\n' "$worker_json" | jq -r '.agent_status // "unknown"')"
     [ -n "$worker_terminal" ] && [ -n "$worker_tab" ] && [ -n "$worker_pane" ] || fail 'worker pane identity is unknown'
     [ "$worker_pane" != "$HERDR_PANE_ID" ] && [ "$worker_tab" != "$HERDR_TAB_ID" ] || fail 'cannot collect the caller pane or tab'
-    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane && ($9 == "started" || $9 == "collected") { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { identity_count++; if ($1 == owner && $2 == owner_pane && $3 == owner_terminal && ($9 == "started" || $9 == "collected")) owner_count++ } END { print (identity_count == 1 && owner_count == 1) + 0 }' "$RECORDS_FILE")"
     [ "$records" = '1' ] || fail 'worker does not have one exact launch record for this caller pane and task'
     task_key="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { print $4; exit }' "$RECORDS_FILE")"
     launch_mode="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { count++; mode = (NF == 10 ? $10 : "tab") } END { if (count == 1) print mode }' "$RECORDS_FILE")"
+    if [[ "$launch_mode" == owned:* ]]; then
+        recorded_workspace="${launch_mode#owned:}"
+        launch_mode=owned
+    fi
     case "$worker_state" in
     done | idle) ;;
     *) fail "worker is $worker_state; only done or idle workers can be collected" ;;
@@ -463,7 +501,10 @@ function collect_worker() {
     [ -n "$pane_json" ] && [ "$pane_json" != 'null' ] || fail 'worker pane is missing from the pane inventory'
     pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$worker_tab" '[.result.panes[] | select(.tab_id == $tab)] | length')"
     workspace_tab_count="$(printf '%s\n' "$TABS_JSON" | jq -r --arg ws "$workspace_id" '[.result.tabs[] | select(.workspace_id == $ws)] | length')"
-    if [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ] && [ "$launch_mode" != 'root' ]; then
+    if [ "$launch_mode" = 'owned' ]; then
+        [ "$recorded_workspace" = "$workspace_id" ] || fail 'owned workspace ID does not match its launch record; leaving it open'
+        owned_workspace_has_only_worker_pane "$workspace_id" "$worker_tab" "$worker_pane" "$worker_terminal" || fail 'owned workspace has another or unknown pane; leaving it open'
+    elif [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ]; then
         fail 'closing this worker pane would close the workspace'
     fi
     input_text="$(herdr pane read "$worker_pane" --source visible --format ansi 2> /dev/null)" || fail 'worker visible input could not be read'
@@ -473,7 +514,7 @@ function collect_worker() {
     acquire_lock || fail 'could not acquire the worker-record lock'
     inspect_records
     [ "$RECORD_STATE" = 'valid' ] || fail 'worker registry changed or became malformed'
-    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" '(NF == 9 || NF == 10) && $1 == owner && $2 == owner_pane && $3 == owner_terminal && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { count++ } END { print count + 0 }' "$RECORDS_FILE")"
+    records="$(awk -F '\t' -v owner="$CALLER_NAME" -v owner_pane="$HERDR_PANE_ID" -v owner_terminal="$CALLER_TERMINAL" -v worker="$WORKER_NAME" -v terminal="$worker_terminal" -v tab="$worker_tab" -v pane="$worker_pane" -v mode="$launch_mode" -v ws="$recorded_workspace" '(NF == 9 || NF == 10) && $5 == worker && $6 == terminal && $7 == tab && $8 == pane { identity_count++; if ($1 == owner && $2 == owner_pane && $3 == owner_terminal && ((mode == "owned" && NF == 10 && $10 == "owned:" ws) || (mode == "root" && NF == 10 && $10 == "root") || (mode == "tab" && (NF == 9 || (NF == 10 && $10 == "tab"))))) owner_count++ } END { print (identity_count == 1 && owner_count == 1) + 0 }' "$RECORDS_FILE")"
     [ "$records" = '1' ] || fail 'worker launch record changed before collection'
     tmp_file="${RECORDS_FILE}.$$.tmp"
     (umask 077 && : > "$tmp_file") || fail 'cannot prepare worker registry update'
@@ -497,16 +538,23 @@ function collect_worker() {
     [ -n "$pane_json" ] && [ "$pane_json" != 'null' ] || fail 'worker pane identity changed after collection was recorded'
     pane_count="$(printf '%s\n' "$PANES_JSON" | jq -r --arg tab "$worker_tab" '[.result.panes[] | select(.tab_id == $tab)] | length')"
     workspace_tab_count="$(printf '%s\n' "$TABS_JSON" | jq -r --arg ws "$workspace_id" '[.result.tabs[] | select(.workspace_id == $ws)] | length')"
-    if [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ] && [ "$launch_mode" != 'root' ]; then
+    if [ "$launch_mode" = 'owned' ]; then
+        [ "$recorded_workspace" = "$workspace_id" ] || fail 'owned workspace ID changed after collection; leaving it open'
+        owned_workspace_has_only_worker_pane "$workspace_id" "$worker_tab" "$worker_pane" "$worker_terminal" || fail 'owned workspace has another or unknown pane; leaving it open'
+    elif [ "$pane_count" -eq 1 ] && [ "$workspace_tab_count" -le 1 ]; then
         fail 'worker pane became the last pane in the last workspace tab'
     fi
     input_text="$(herdr pane read "$worker_pane" --source visible --format ansi 2> /dev/null)" || fail 'worker visible input could not be reread before close'
     input_state="$(printf '%s\n' "$input_text" | LC_ALL=C awk -f "$INPUT_STATE_AWK")"
     [ "$input_state" = 'empty' ] || fail "worker visible input became $input_state; its collected record remains open"
-    herdr pane close "$worker_pane" || fail 'Herdr could not close the collected worker pane; its record remains for audit'
+    if [ "$launch_mode" = 'owned' ]; then
+        herdr workspace close "$recorded_workspace" || fail 'Herdr could not close the owned workspace; it remains open for audit'
+    else
+        herdr pane close "$worker_pane" || fail 'Herdr could not close the collected worker pane; its record remains for audit'
+    fi
     release_lock
     trap - EXIT INT TERM
-    printf 'closed worker=%s owner=%s owner-pane=%s task=%s pane=%s\n' "$WORKER_NAME" "$CALLER_NAME" "$HERDR_PANE_ID" "$task_key" "$worker_pane"
+    printf 'closed worker=%s owner=%s owner-pane=%s task=%s pane=%s workspace=%s\n' "$WORKER_NAME" "$CALLER_NAME" "$HERDR_PANE_ID" "$task_key" "$worker_pane" "$recorded_workspace"
 }
 
 # @description Print warnings for live named agent panes without an exact launch record.

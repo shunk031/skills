@@ -39,6 +39,11 @@ JSON
 set -eu
 case "$1 $2" in
     "tab list") cat "$HERDR_TEST_TABS" ;;
+    "workspace create")
+        jq '.result.tabs += [{tab_id:"owned-tab",workspace_id:"owned-workspace",label:"Worker",focused:false,pane_count:1}]' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp" && mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS"
+        jq '.result.panes += [{pane_id:"owned-pane",tab_id:"owned-tab",terminal_id:"terminal-owned"}]' "$HERDR_TEST_PANES" > "${HERDR_TEST_PANES}.tmp" && mv "${HERDR_TEST_PANES}.tmp" "$HERDR_TEST_PANES"
+        printf '{"result":{"workspace":{"workspace_id":"owned-workspace"},"tab":{"tab_id":"owned-tab"},"root_pane":{"pane_id":"owned-pane","tab_id":"owned-tab","terminal_id":"terminal-owned"}}}\n'
+        ;;
     "tab create")
         printf 'create\n' >> "$HERDR_TEST_TAB_CREATES"
         printf '%s\n' "$@" > "$HERDR_TEST_CREATE_ARGS"
@@ -49,6 +54,7 @@ case "$1 $2" in
         printf '{"result":{"tab":{"tab_id":"worker-tab","workspace_id":"workspace-2"},"root_pane":{"pane_id":"worker-pane","tab_id":"worker-tab","terminal_id":"terminal-worker"}}}\n'
         ;;
     "pane list") cat "$HERDR_TEST_PANES" ;;
+    "workspace close") printf 'workspace:%s\n' "$3" >> "$HERDR_TEST_CLOSES" ;;
     "agent list") cat "$HERDR_TEST_AGENTS" ;;
     "agent start")
         name="$3"
@@ -123,7 +129,19 @@ function create_size_gate_repo() {
     [ "$(awk -F '\t' '{ print $9 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "collected" ]
 }
 
-@test "launch uses an explicit root pane and collect closes its last workspace pane" {
+@test "new-workspace launch records ownership and collection closes only its exact sole pane" {
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --new-workspace --cwd /tmp/worktree --label Worker --task inspect-pr -- -m gpt-6-luna && [ "$status" -eq 0 ] && [ "$(awk -F '\t' '{ print $10 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "owned:owned-workspace" ] && run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader && [ "$status" -eq 0 ] && [ "$(cat "$HERDR_TEST_CLOSES")" = "workspace:owned-workspace" ]
+}
+
+@test "collect leaves mismatched and duplicate owned workspace records open" {
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --new-workspace --cwd /tmp/worktree --label Worker --task inspect-pr -- -m gpt-6-luna && [ "$status" -eq 0 ] && awk -F '\t' -v OFS='\t' '{$10="owned:other-workspace"; print}' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv" > "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv.tmp" && mv "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv.tmp" "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv" && run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader && [ "$status" -ne 0 ] && [[ "$output" == *'owned workspace ID does not match its launch record; leaving it open'* ]] && awk -F '\t' -v OFS='\t' 'NR == 1 { $10="owned:owned-workspace"; print; $1="other-owner"; $2="other-pane"; $3="other-terminal"; print }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv" > "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv.tmp" && mv "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv.tmp" "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv" && run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader && [ "$status" -ne 0 ] && [[ "$output" == *'worker does not have one exact launch record'* ]] && [ ! -s "$HERDR_TEST_CLOSES" ]
+}
+
+@test "collect leaves an owned workspace open for incomplete pane inventory or another pane" {
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --new-workspace --cwd /tmp/worktree --label Worker --task inspect-pr -- -m gpt-6-luna && [ "$status" -eq 0 ] && jq '.result.tabs |= map(if .tab_id == "owned-tab" then .pane_count = 2 else . end)' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp" && mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS" && run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader && [ "$status" -ne 0 ] && [[ "$output" == *'owned workspace has another or unknown pane; leaving it open'* ]] && [ ! -s "$HERDR_TEST_CLOSES" ] && jq '.result.tabs |= map(if .tab_id == "owned-tab" then .pane_count = 1 else . end)' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp" && mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS" && jq '.result.panes += [{pane_id:"sibling-pane",tab_id:"owned-tab",terminal_id:"terminal-sibling"}]' "$HERDR_TEST_PANES" > "${HERDR_TEST_PANES}.tmp" && mv "${HERDR_TEST_PANES}.tmp" "$HERDR_TEST_PANES" && jq '.result.tabs |= map(if .tab_id == "owned-tab" then .pane_count = 2 else . end)' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp" && mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS" && run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader && [ "$status" -ne 0 ] && [[ "$output" == *'owned workspace has another or unknown pane; leaving it open'* ]] && [ ! -s "$HERDR_TEST_CLOSES" ]
+}
+@test "collect leaves an owned workspace open when a tab has no workspace ID" { run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --new-workspace --cwd /tmp/worktree --label Worker --task inspect-pr -- -m gpt-6-luna && [ "$status" -eq 0 ] && jq '.result.tabs += [{tab_id:"unknown-tab",label:"Unknown",focused:false}]' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp" && mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS" && jq '.result.panes += [{pane_id:"unknown-pane",tab_id:"unknown-tab",terminal_id:"terminal-unknown"}]' "$HERDR_TEST_PANES" > "${HERDR_TEST_PANES}.tmp" && mv "${HERDR_TEST_PANES}.tmp" "$HERDR_TEST_PANES" && run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader && [ "$status" -ne 0 ] && [[ "$output" == *'owned workspace has another or unknown pane; leaving it open'* ]] && [ ! -s "$HERDR_TEST_CLOSES" ]; }
+@test "collect keeps an unowned root-pane workspace open when it is the last pane" {
     run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd /tmp/worktree --label "Worker" --task inspect-pr --root-pane anchor-pane -- -m gpt-6-luna
 
     [ "$status" -eq 0 ]
@@ -133,9 +151,8 @@ function create_size_gate_repo() {
 
     run "$LIFECYCLE_SCRIPT" collect meta-tabclean-reader
 
-    [ "$status" -eq 0 ]
-    [ "$(cat "$HERDR_TEST_CLOSES")" = "anchor-pane" ]
-    [ "$(awk -F '\t' '{ print $9 ":" $10 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "collected:root" ]
+    [ "$status" -ne 0 ] && [[ "$output" == *'closing this worker pane would close the workspace'* ]] && [ ! -s "$HERDR_TEST_CLOSES" ]
+    [ "$(awk -F '\t' '{ print $9 ":" $10 }' "$HERDR_WORKER_LIFECYCLE_STATE_DIR/workers.tsv")" = "started:root" ]
 }
 
 @test "launch errors when an explicitly selected root pane is in a focused tab" {
