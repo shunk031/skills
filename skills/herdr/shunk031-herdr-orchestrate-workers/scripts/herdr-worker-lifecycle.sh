@@ -226,11 +226,13 @@ function validate_implementation_worktree() {
     [ -n "$WORKER_WORKSPACE" ] || fail "implementation launches require a Herdr worktree workspace; use $advice"
     repo_root="$(git -C "$WORKER_CWD" rev-parse --show-toplevel 2> /dev/null)" || fail "could not verify implementation --cwd as a linked Git worktree; use $advice"
     repo_root="$(cd "$repo_root" 2> /dev/null && pwd -P)" || fail "could not resolve implementation worktree path; use $advice"
-    worker_cwd="$(cd "$WORKER_CWD" 2> /dev/null && pwd -P)" || fail "could not resolve implementation --cwd; use $advice"
-    [ "$worker_cwd" = "$repo_root" ] || fail "implementation --cwd must be the linked Git worktree root; use $advice"
     git_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-dir 2> /dev/null)" || fail "could not inspect implementation Git directory; use $advice"
     common_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir 2> /dev/null)" || fail "could not inspect implementation Git common directory; use $advice"
+    git_dir="$(cd "$git_dir" 2> /dev/null && pwd -P)" || fail "could not resolve implementation Git directory; use $advice"
+    common_dir="$(cd "$common_dir" 2> /dev/null && pwd -P)" || fail "could not resolve implementation Git common directory; use $advice"
     [ "$git_dir" != "$common_dir" ] || fail "implementation --cwd is the main working tree; use $advice"
+    worker_cwd="$(cd "$WORKER_CWD" 2> /dev/null && pwd -P)" || fail "could not resolve implementation --cwd; use $advice"
+    [ "$worker_cwd" = "$repo_root" ] || fail "implementation --cwd must be the linked Git worktree root; use $advice"
     git_worktrees="$(git -C "$repo_root" worktree list --porcelain 2> /dev/null)" || fail "could not verify implementation Git worktree membership; use $advice"
     if ! printf '%s\n' "$git_worktrees" | awk -v expected="$repo_root" '
         substr($0, 1, 9) == "worktree " {
