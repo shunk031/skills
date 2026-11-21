@@ -30,13 +30,13 @@ Every root orchestrator, whether Claude or Codex and whether or not Inbox is ins
 ```bash
 # Format example only: this is the current instant, not a future deadline.
 due=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-herdr pane report-metadata --source root-due --token "due=$due" "$HERDR_PANE_ID"
+herdr pane report-metadata "$HERDR_PANE_ID" --source root-due --token "due=$due"
 ```
 
 Update the token with the same command and source ID whenever the next action or its due time changes. Do not use offsets, fractional seconds, lowercase markers, or leap seconds; any other nonempty value is reported as an invalid-due finding and does not trigger a reminder. Clear the token when no due action remains:
 
 ```bash
-herdr pane report-metadata --source root-due --clear-token due "$HERDR_PANE_ID"
+herdr pane report-metadata "$HERDR_PANE_ID" --source root-due --clear-token due
 ```
 
 Use this metadata for due times; do not encode them in freeform inbox text. Keep the existing inbox behavior for reports, questions, and other messages. A due time triggers a later live check by Meta; it does not authorize Meta to infer, move, reassign, or perform the work.
