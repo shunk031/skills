@@ -39,6 +39,8 @@ Before starting a piece of work, write what is most likely to fail, how you will
 
 Before editing, establish the deliverable's repository-associated workspace with `herdr worktree create`. Before creating it, fetch `origin` and identify the repository's default branch. Pass `--base origin/<default-branch>`; `create` otherwise starts from the current checkout's `HEAD`, which may be stale. For an already-open worktree, run `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
 
+The lifecycle helper enforces that implementation launches use the open Herdr workspace for their linked Git worktree.
+
 Start implementers and related Herdr workers through the lifecycle helper in the deliverable workspace. The helper records the exact worker pane and tab IDs. One-shot reviewers use the direct review process in the review guide and do not get Herdr panes. Keep the orchestrator workspace for the orchestrator only.
 
 Read the returned deliverable workspace ID. The lifecycle helper creates each worker tab in that workspace:
@@ -50,7 +52,7 @@ herdr worktree create --cwd "$PWD" --branch <topic-branch> --base origin/<defaul
 herdr worktree open --cwd "$PWD" --branch <topic-branch> --label "WIP <short task>" --no-focus
 ```
 
-A worker for a task without a git worktree, such as editing a document through an MCP connector, still gets its own tab. Use the deliverable workspace when one exists; otherwise create a dedicated workspace outside your orchestrator workspace.
+A non-implementation worker for a task without a Git worktree, such as editing a document through an MCP connector, still gets its own tab. Use the deliverable workspace when one exists; otherwise create a dedicated workspace outside your orchestrator workspace.
 
 Never start a worker in a `herdr pane split` of your own pane. The herdr skill's sibling-pane default covers only a single helper agent the user asks for, not orchestrated workers.
 
@@ -66,10 +68,13 @@ Start each implementer through the lifecycle helper, using the launch guidance i
 
 <!-- textlint-enable sentence-length -->
 
-Use `--new-workspace` for worker-only workspaces; otherwise pass the deliverable workspace ID, worktree directory, worker label, and `root_pane.pane_id` from `herdr worktree create` to reuse it:
+Use `--new-workspace` only for non-implementation workers that need a separate worker-only workspace, such as design, research, or one-off helpers. When a non-implementation worker belongs with a deliverable worktree, reuse that worktree's workspace. Never use `--new-workspace` for an implementation worker: always pass the workspace ID, worktree path, and `root_pane.pane_id` from the same `herdr worktree create` or `herdr worktree open` result.
 
 ```bash
-~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --workspace <workspace-id> --cwd <worktree-path> --label "🚧 <short task>" --task <task-key> --root-pane <root-pane-id> -- <launch-flags>
+# Implementation worker: use all three values from the same herdr worktree create/open result.
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --workspace <worktree-workspace-id> --cwd <worktree-path> --root-pane <root-pane-id> --label "🚧 <short task>" --task <task-key> --role implementation --line-budget 400 -- <launch-flags>
+# Non-implementation worker that needs a worker-only workspace:
+~/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh launch <your-name>-<task> --kind <kind> --new-workspace --cwd <working-directory> --label "🚧 <short task>" --task <task-key> -- <launch-flags>
 ```
 
 With `--root-pane`, the helper requires that pane to exist in the given workspace, have no attached agent, and be in a tab that is unfocused and not protected; a failed check returns an error. Ordinary launches reject explicit `--env` options with `--root-pane`, but do not inspect inherited caller environment variables. Implementation launches always create a fresh no-focus tab, even when `--root-pane` is supplied, so the size-gate launch ID is available before the worker starts.

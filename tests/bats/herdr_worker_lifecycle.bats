@@ -3,6 +3,8 @@
 readonly LIFECYCLE_SCRIPT="${BATS_TEST_DIRNAME}/../../skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-worker-lifecycle.sh"
 
 function setup() {
+    export HERDR_TEST_REAL_GIT="$(command -v git)"
+    export HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE=""
     export TEST_BIN="${BATS_TEST_TMPDIR}/bin"
     export HERDR_TEST_TABS="${BATS_TEST_TMPDIR}/tabs.json"
     export HERDR_TEST_PANES="${BATS_TEST_TMPDIR}/panes.json"
@@ -12,6 +14,9 @@ function setup() {
     export HERDR_TEST_CLOSES="${BATS_TEST_TMPDIR}/closes"
     export HERDR_TEST_CREATE_ARGS="${BATS_TEST_TMPDIR}/create-args"
     export HERDR_TEST_WORKTREE="${BATS_TEST_TMPDIR}/implementation-worktree"
+    export HERDR_TEST_LINKED_WORKTREE="${BATS_TEST_TMPDIR}/implementation-linked-worktree"
+    export HERDR_TEST_WORKTREES="${BATS_TEST_TMPDIR}/worktrees.json"
+    export HERDR_TEST_WORKTREE_LIST_FAILURE=0
     export HERDR_TEST_START_FAILURE=0
     export HERDR_WORKER_LIFECYCLE_STATE_DIR="${BATS_TEST_TMPDIR}/state"
     export HOME="${BATS_TEST_TMPDIR}/home"
@@ -20,6 +25,20 @@ function setup() {
     export HERDR_TAB_ID=caller-tab
 
     mkdir -p "$TEST_BIN" "$HOME"
+    cat > "$TEST_BIN/git" << 'GIT'
+#!/usr/bin/env bash
+set -eu
+case " $* " in
+    *" worktree list --porcelain "*)
+        if [[ -n "${HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE:-}" ]]; then
+            cat "$HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE"
+            exit 0
+        fi
+        ;;
+esac
+exec "$HERDR_TEST_REAL_GIT" "$@"
+GIT
+    chmod +x "$TEST_BIN/git"
     cat > "$HERDR_TEST_TABS" << 'JSON'
 {"result":{"tabs":[{"tab_id":"caller-tab","workspace_id":"workspace-1","label":"Orchestrator","focused":true},{"tab_id":"anchor-tab","workspace_id":"workspace-2","label":"Deliverable","focused":false}]}}
 JSON
@@ -33,11 +52,16 @@ JSON
     : > "$HERDR_TEST_TAB_CREATES"
     : > "$HERDR_TEST_CREATE_ARGS"
     : > "$HERDR_TEST_CLOSES"
+    printf '{"id":"cli:worktree:list","result":{"type":"worktree_list","worktrees":[]}}\n' > "$HERDR_TEST_WORKTREES"
 
     cat > "$TEST_BIN/herdr" << 'HERDR'
 #!/usr/bin/env bash
 set -eu
 case "$1 $2" in
+    "worktree list")
+        if [[ "${HERDR_TEST_WORKTREE_LIST_FAILURE:-0}" != 0 ]]; then exit "$HERDR_TEST_WORKTREE_LIST_FAILURE"; fi
+        cat "$HERDR_TEST_WORKTREES"
+        ;;
     "tab list") cat "$HERDR_TEST_TABS" ;;
     "workspace create")
         jq '.result.tabs += [{tab_id:"owned-tab",workspace_id:"owned-workspace",label:"Worker",focused:false,pane_count:1}]' "$HERDR_TEST_TABS" > "${HERDR_TEST_TABS}.tmp" && mv "${HERDR_TEST_TABS}.tmp" "$HERDR_TEST_TABS"
@@ -112,6 +136,15 @@ function create_size_gate_repo() {
     git -C "$HERDR_TEST_WORKTREE" remote add origin "${HERDR_TEST_WORKTREE}.remote"
     git -C "$HERDR_TEST_WORKTREE" push -q origin main
     git --git-dir="${HERDR_TEST_WORKTREE}.remote" symbolic-ref HEAD refs/heads/main
+    git -C "$HERDR_TEST_WORKTREE" worktree add -q -b implementation-topic "$HERDR_TEST_LINKED_WORKTREE" main
+    configure_herdr_worktree "$HERDR_TEST_LINKED_WORKTREE" workspace-2
+}
+
+function configure_herdr_worktree() {
+    local path="$1"
+    local workspace="$2"
+    path="$(cd "$path" && pwd -P)"
+    jq -n --arg path "$path" --arg workspace "$workspace" '{id:"cli:worktree:list",result:{type:"worktree_list",worktrees:[{path:$path,is_linked_worktree:true,is_prunable:false,open_workspace_id:$workspace}]}}' > "$HERDR_TEST_WORKTREES"
 }
 
 @test "launch records owner and task and collect closes only its settled pane" {
@@ -253,7 +286,7 @@ function create_size_gate_repo() {
     [ ! -s "$HERDR_TEST_TAB_CREATES" ]
 
     create_size_gate_repo
-    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_WORKTREE" --label "Worker" --task size-test --role implementation --line-budget 400 --root-pane anchor-pane -- -m gpt-6-luna
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label "Worker" --task size-test --role implementation --line-budget 400 --root-pane anchor-pane -- -m gpt-6-luna
 
     [ "$status" -eq 0 ]
     [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
@@ -267,11 +300,190 @@ function create_size_gate_repo() {
     jq -e --arg launch_id "$launch_id" '.launch_id == $launch_id and .status == "started" and .worker.pane == "worker-pane" and .worker.tab == "worker-tab" and .worker.terminal == "terminal-worker"' "$gate_record" > /dev/null
 }
 
+@test "implementation launch refuses the main checkout before creating a tab" {
+    create_size_gate_repo
+    mkdir -p "$HERDR_TEST_WORKTREE/nested"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'implementation --cwd is the main working tree'* ]]
+    [[ "$output" == *'herdr worktree create --cwd <repo>'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_WORKTREE/nested" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'implementation --cwd is the main working tree'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "implementation launch refuses a workspace that is not the matching Herdr worktree workspace" {
+    create_size_gate_repo
+    configure_herdr_worktree "$HERDR_TEST_LINKED_WORKTREE" worktree-workspace
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'--workspace is not the open Herdr worktree workspace'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "implementation launch refuses new workspaces before creating a tab" {
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --new-workspace --cwd /tmp/worktree --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'implementation launches cannot use --new-workspace'* ]]
+    [[ "$output" == *'herdr worktree create --cwd <repo>'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "implementation launch refuses a failed Herdr worktree lookup" {
+    create_size_gate_repo
+    export HERDR_TEST_WORKTREE_LIST_FAILURE=1
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'could not verify the Herdr worktree workspace'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "implementation launch refuses a failed Git worktree lookup" {
+    mkdir -p "$BATS_TEST_TMPDIR/plain-folder"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$BATS_TEST_TMPDIR/plain-folder" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'could not verify implementation --cwd as a linked Git worktree'* ]]
+    [[ "$output" == *'herdr worktree create --cwd <repo>'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "implementation launch rejects a matching Git worktree stanza with an unknown line" {
+    create_size_gate_repo
+    local linked_worktree_root
+    linked_worktree_root="$(cd "$HERDR_TEST_LINKED_WORKTREE" && pwd -P)"
+    HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE="$BATS_TEST_TMPDIR/worktree-list.txt"
+    export HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE
+    cat > "$HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE" << EOF
+worktree $linked_worktree_root
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/implementation-topic
+junk unexpected-line
+EOF
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'not a uniquely verified current linked Git worktree'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "implementation launch rejects Git worktree stanzas without HEAD or a matching path" {
+    create_size_gate_repo
+    local linked_worktree_root main_worktree_root
+    linked_worktree_root="$(cd "$HERDR_TEST_LINKED_WORKTREE" && pwd -P)"
+    main_worktree_root="$(cd "$HERDR_TEST_WORKTREE" && pwd -P)"
+    HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE="$BATS_TEST_TMPDIR/worktree-list.txt"
+    export HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE
+    cat > "$HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE" << EOF
+worktree $linked_worktree_root
+branch refs/heads/implementation-topic
+EOF
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'not a uniquely verified current linked Git worktree'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+
+    cat > "$HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE" << EOF
+worktree $main_worktree_root
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+EOF
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'not a uniquely verified current linked Git worktree'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "implementation launch accepts documented optional Git worktree fields" {
+    create_size_gate_repo
+    local linked_worktree_root main_worktree_root
+    linked_worktree_root="$(cd "$HERDR_TEST_LINKED_WORKTREE" && pwd -P)"
+    main_worktree_root="$(cd "$HERDR_TEST_WORKTREE" && pwd -P)"
+    HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE="$BATS_TEST_TMPDIR/worktree-list.txt"
+    export HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE
+    cat > "$HERDR_TEST_GIT_WORKTREE_LIST_OVERRIDE" << EOF
+worktree $main_worktree_root
+HEAD 0123456789abcdef0123456789abcdef01234567
+branch refs/heads/main
+prunable stale worktree
+
+worktree $linked_worktree_root
+HEAD 0123456789abcdef0123456789abcdef01234567
+detached
+locked maintenance window
+EOF
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "implementation launch accepts the matching linked worktree workspace" {
+    create_size_gate_repo
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
+@test "implementation launch refuses a subdirectory of a linked worktree" {
+    create_size_gate_repo
+    mkdir -p "$HERDR_TEST_LINKED_WORKTREE/nested"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE/nested" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'implementation --cwd must be the linked Git worktree root'* ]]
+    [[ "$output" == *'herdr worktree create --cwd <repo>'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
+@test "non-implementation launch still accepts a plain folder" {
+    mkdir -p "$BATS_TEST_TMPDIR/report-folder"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$BATS_TEST_TMPDIR/report-folder" --label Worker --task inspect-pr -- -m gpt-6-luna
+
+    [ "$status" -eq 0 ]
+    [ "$(cat "$HERDR_TEST_TAB_CREATES")" = "create" ]
+    [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
+}
+
 @test "implementation launch timeout leaves a pending size-gate record" {
     create_size_gate_repo
     export HERDR_TEST_START_FAILURE=124
 
-    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_WORKTREE" --label "Worker" --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE" --label "Worker" --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
 
     [ "$status" -eq 124 ]
     [[ "$output" == *'pending size-gate record remains'* ]]

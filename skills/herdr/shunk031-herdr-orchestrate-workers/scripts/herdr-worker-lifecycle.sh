@@ -217,6 +217,100 @@ function valid_task_key() {
     esac
 }
 
+# @description Verify that an implementation launch targets an open Herdr workspace for a linked Git worktree.
+function validate_implementation_worktree() {
+    local worker_cwd repo_root git_dir common_dir git_worktrees herdr_worktrees
+    local advice
+    advice='herdr worktree create --cwd <repo> --branch <topic> --base origin/<default> --no-focus, or herdr worktree open for an existing worktree'
+    [ "$WORKER_NEW_WORKSPACE" -eq 0 ] || fail "implementation launches cannot use --new-workspace; use $advice"
+    [ -n "$WORKER_WORKSPACE" ] || fail "implementation launches require a Herdr worktree workspace; use $advice"
+    repo_root="$(git -C "$WORKER_CWD" rev-parse --show-toplevel 2> /dev/null)" || fail "could not verify implementation --cwd as a linked Git worktree; use $advice"
+    repo_root="$(cd "$repo_root" 2> /dev/null && pwd -P)" || fail "could not resolve implementation worktree path; use $advice"
+    git_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-dir 2> /dev/null)" || fail "could not inspect implementation Git directory; use $advice"
+    common_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir 2> /dev/null)" || fail "could not inspect implementation Git common directory; use $advice"
+    git_dir="$(cd "$git_dir" 2> /dev/null && pwd -P)" || fail "could not resolve implementation Git directory; use $advice"
+    common_dir="$(cd "$common_dir" 2> /dev/null && pwd -P)" || fail "could not resolve implementation Git common directory; use $advice"
+    [ "$git_dir" != "$common_dir" ] || fail "implementation --cwd is the main working tree; use $advice"
+    worker_cwd="$(cd "$WORKER_CWD" 2> /dev/null && pwd -P)" || fail "could not resolve implementation --cwd; use $advice"
+    [ "$worker_cwd" = "$repo_root" ] || fail "implementation --cwd must be the linked Git worktree root; use $advice"
+    git_worktrees="$(git -C "$repo_root" worktree list --porcelain 2> /dev/null)" || fail "could not verify implementation Git worktree membership; use $advice"
+    if ! printf '%s\n' "$git_worktrees" | awk -v expected="$repo_root" '
+        function finish_stanza() {
+            if (!in_stanza) return
+            if (!have_path || !have_head) malformed = 1
+            if (path == expected) {
+                matches++
+                if (prunable) matching_prunable = 1
+            }
+            in_stanza = 0
+            path = ""
+            have_path = have_head = have_branch = have_bare = have_detached = have_locked = prunable = 0
+        }
+        $0 == "" {
+            finish_stanza()
+            next
+        }
+        substr($0, 1, 9) == "worktree " {
+            finish_stanza()
+            in_stanza = 1
+            path = substr($0, 10)
+            if (path == "") malformed = 1
+            have_path = 1
+            next
+        }
+        {
+            if (!in_stanza) {
+                malformed = 1
+                next
+            }
+            if (substr($0, 1, 5) == "HEAD ") {
+                value = substr($0, 6)
+                if (have_head || value == "" || value ~ /[[:space:]]/) malformed = 1
+                have_head = 1
+                next
+            }
+            if (substr($0, 1, 7) == "branch ") {
+                value = substr($0, 8)
+                if (have_branch || value == "" || value ~ /[[:space:]]/) malformed = 1
+                have_branch = 1
+                next
+            }
+            if ($0 == "bare") {
+                if (have_bare) malformed = 1
+                have_bare = 1
+                next
+            }
+            if ($0 == "detached") {
+                if (have_detached) malformed = 1
+                have_detached = 1
+                next
+            }
+            if ($0 == "locked" || substr($0, 1, 7) == "locked ") {
+                if (have_locked || ($0 != "locked" && substr($0, 8) == "")) malformed = 1
+                have_locked = 1
+                next
+            }
+            if ($0 == "prunable" || substr($0, 1, 9) == "prunable ") {
+                if (prunable || ($0 != "prunable" && substr($0, 10) == "")) malformed = 1
+                prunable = 1
+                next
+            }
+            malformed = 1
+        }
+        END {
+            finish_stanza()
+            exit malformed || matches != 1 || matching_prunable
+        }
+    '; then
+        fail "implementation --cwd is not a uniquely verified current linked Git worktree; use $advice"
+    fi
+    herdr_worktrees="$(herdr worktree list --cwd "$repo_root" --json 2> /dev/null)" || fail "could not verify the Herdr worktree workspace; use $advice"
+    printf '%s\n' "$herdr_worktrees" | jq -e '.result.type == "worktree_list" and (.result.worktrees | type == "array")' > /dev/null 2>&1 || fail "Herdr returned an invalid worktree list; use $advice"
+    if ! printf '%s\n' "$herdr_worktrees" | jq -e --arg path "$repo_root" --arg workspace "$WORKER_WORKSPACE" '[.result.worktrees[] | select(.path == $path and .is_linked_worktree == true and .is_prunable == false and .open_workspace_id == $workspace)] | length == 1' > /dev/null 2>&1; then
+        fail "--workspace is not the open Herdr worktree workspace for $repo_root; use $advice"
+    fi
+}
+
 # @description Persist the exact caller and worker identities after a successful launch.
 function record_launch() {
     local matches worker_json worker_terminal worker_tab existing conflicting
@@ -335,6 +429,7 @@ function launch_worker() {
                 esac
             done
         fi
+        validate_implementation_worktree
     elif [ -n "$WORKER_LINE_BUDGET" ]; then
         fail '--line-budget requires --role implementation' 2
     fi
