@@ -48,7 +48,7 @@ Use this checklist to prepare the article brief and inspect the returned draft. 
 Give the orchestrator the evidence packet and these fields for the Japanese writing skill:
 
 - Reader and the reader's intended action or judgment.
-- Three to five directly supported requirements, with a source for each; group related facts when necessary.
+- Three to five directly supported requirements, with a source for each; group related facts when necessary. Fewer than three may remain after the user agrees to omit a required point.
 - Exclusions and the article structure. Include the dominant article type, promised outcome, positioning, title, and opening or conclusion intent when relevant.
 - The evidence ledger and example conditions so the writer can preserve versions, qualifications, and execution limits.
 
