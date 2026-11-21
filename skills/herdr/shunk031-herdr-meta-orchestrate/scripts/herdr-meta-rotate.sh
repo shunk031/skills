@@ -611,8 +611,18 @@ fi
 restart_command=''
 verify_remote_control "$meta_pane_id" ||
     fail 'the new meta session did not verify Remote Control active under the launch name Meta orch.'
-herdr agent wait "$agent_name" --until idle --until 'done' --timeout "$wait_timeout_ms" ||
+herdr agent wait "$agent_name" --until idle --until 'done' --until blocked --timeout "$wait_timeout_ms" ||
     fail 'the new meta session did not complete its handoff and task-tree restoration'
+agent_info="$(herdr agent get "$agent_name")" || fail 'cannot verify the new meta session after its handoff'
+new_meta_state="$(jq -er '.result.agent.agent_status | strings' <<< "$agent_info")" ||
+    fail 'cannot verify the new meta session state after its handoff'
+case "$new_meta_state" in
+idle | done) ;;
+blocked)
+    fail 'the new meta session is blocked at a permission prompt before its handoff and Inbox setup could finish'
+    ;;
+*) fail "the new meta session did not settle after its handoff (state: $new_meta_state)" ;;
+esac
 verify_task_tree_carried "$new_session_id" ||
     fail 'the new meta session did not restore every outgoing open Inbox task'
 send_slash_command_once "$meta_pane_id" '/inbox' ||

@@ -11,13 +11,15 @@ function setup() {
     ROTATE_STUB_NO_REMOTE=0
     ROTATE_STUB_FAIL_INBOX=0
     ROTATE_STUB_NEW_INPUT_OCCUPIED=0
+    ROTATE_STUB_AFTER_START_BLOCKED=0
     mkdir -p "$HOME/.local/state/inbox/task-tree"
     mkdir -p "$ROTATE_STUB_STATE/bin"
     mkdir -p "$HOME/.agents/skills/shunk031-herdr-orchestrate-workers/scripts"
     cp ./skills/herdr/shunk031-herdr-orchestrate-workers/scripts/herdr-visible-input-state.awk \
         "$HOME/.agents/skills/shunk031-herdr-orchestrate-workers/scripts/"
     export ROTATE_STUB_STATE ROTATE_STUB_EXPECT_FEED_DIR ROTATE_STUB_START_TIMEOUT ROTATE_STUB_NO_REMOTE
-    export ROTATE_STUB_FAIL_INBOX ROTATE_STUB_NEW_INPUT_OCCUPIED HERDR_ENV=1 ROTATE_TEST_ENV=preserved
+    export ROTATE_STUB_FAIL_INBOX ROTATE_STUB_NEW_INPUT_OCCUPIED ROTATE_STUB_AFTER_START_BLOCKED
+    export HERDR_ENV=1 ROTATE_TEST_ENV=preserved
     ln -s /bin/bash "$ROTATE_STUB_STATE/bin/bash"
     cat > "$ROTATE_STUB_STATE/bin/date" << 'EOF'
 #!/usr/bin/env bash
@@ -136,7 +138,14 @@ case "$1 $2" in
         fi
         ;;
     "agent wait")
-        [[ "$*" == *'--until idle --until done'* ]]
+        if [[ -f "$ROTATE_STUB_STATE/started" ]]; then
+            [[ "$*" == *'--until idle --until done --until blocked'* ]]
+            if [[ "$ROTATE_STUB_AFTER_START_BLOCKED" == 1 ]]; then
+                touch "$ROTATE_STUB_STATE/blocked_handoff_wait"
+            fi
+        else
+            [[ "$*" == *'--until idle --until done'* ]]
+        fi
         touch "$ROTATE_STUB_STATE/waited_for_done"
         if [[ -f "$ROTATE_STUB_STATE/started" ]]; then
             cat > "$HOME/.local/state/inbox/task-tree/new-session.json" << 'TASK_TREE'
@@ -462,21 +471,23 @@ EOF
     ! grep -R -q 'INBOX_FEED' ./skills/herdr/shunk031-herdr-orchestrator-handoff
 }
 
-@test "a successful start at a permission prompt is accepted without exiting it" {
+@test "a blocked new session reports incomplete handoff without retrying or opening Inbox" {
     export ROTATE_STUB_AFTER_START_BLOCKED=1
 
     run "$ROTATE_SCRIPT_PATH" "$ROTATE_STUB_STATE/handoff.md"
 
     [ "$status" -eq 0 ]
     for ((attempt = 0; attempt < 50; attempt++)); do
-        [[ -f "$ROTATE_STUB_STATE/inbox_opened" ]] && break
+        [[ -f "$ROTATE_STUB_STATE/notified" ]] && break
         sleep 0.1
     done
-    [ -f "$ROTATE_STUB_STATE/inbox_opened" ]
+    [ -f "$ROTATE_STUB_STATE/notified" ]
+    [ -f "$ROTATE_STUB_STATE/blocked_handoff_wait" ]
     [ "$(cat "$ROTATE_STUB_STATE/start_count")" -eq 1 ]
     [ "$(grep -c 'pane send-text test:p1 /exit' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
-    [ "$(grep -c 'pane send-keys test:p1 enter' "$ROTATE_STUB_STATE/calls")" -eq 2 ]
-    [ ! -f "$ROTATE_STUB_STATE/notified" ]
+    [ "$(grep -c 'pane send-keys test:p1 enter' "$ROTATE_STUB_STATE/calls")" -eq 1 ]
+    grep -q 'blocked at a permission prompt' "$ROTATE_STUB_STATE/notification"
+    ! grep -q 'pane send-text test:p1 /inbox' "$ROTATE_STUB_STATE/calls"
 }
 
 @test "a briefly unknown new session is accepted when Herdr sees it" {
