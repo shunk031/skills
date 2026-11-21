@@ -19,7 +19,8 @@ Use this checklist to prepare the article brief and inspect the returned draft. 
 - For each consequential mechanism, default, guarantee, comparison, or number, record the claim and its primary URL with a precise location.
 - Also record its version or date, status (`verified`, `inference`, or `unresolved`), and qualification.
 - Pin decisive source-code evidence to a commit permalink with line numbers. Record a documentation version or date when behavior can change; prefer versioned sources where available.
-- Mark an unresolved required claim explicitly. Narrow it to what the evidence supports or ask the user for the missing source or decision. Do not invent evidence or silently remove a required point.
+- Mark an unresolved required claim explicitly. Ask the user for a source or a decision on a proposed narrowing or omission.
+- Do not change the required claim or continue drafting until the user supplies a source or agrees to update the brief.
 
 ### Structure
 
