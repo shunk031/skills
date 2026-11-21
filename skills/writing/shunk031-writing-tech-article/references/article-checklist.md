@@ -55,14 +55,14 @@ Give the orchestrator the evidence packet and these fields for the Japanese writ
 
 ### Orchestrator self-check
 
-- Check that the title, opening, structure, and conclusion serve the same reader and promised outcome in the brief.
-- Check that each consequential factual claim maps to the evidence ledger and preserves its source, version, scope, status, and qualification. Flag claims introduced during drafting that need research.
-- Check examples against their prerequisites, inputs, expected results, and execution evidence. Ensure the draft does not claim a run that did not happen.
-- Check that comparisons use fair criteria, distinguish alternatives, and do not claim more than the research established.
-- Check that links support the sentence they accompany, quotations are attributed, and the author's contribution is distinguishable from cited work.
-- Check that the draft stays within the agreed scope and addresses the article's exclusions without expanding the promise.
+Check workflow and requested scope without independently reviewing article facts or rereading the draft to find content issues:
 
-This is an orchestration check for fit and handoff quality. It does not replace or duplicate the single factual review required by the Japanese writing skill.
+- Confirm the Japanese writing skill received the approved brief, evidence packet, and intended output path.
+- Confirm the returned deliverable matches the requested format and scope at a high level. Route any scope change or dropped required point through the existing user decision process.
+- Confirm the final draft received the single factual review required by the Japanese writing skill, and that any blocking findings were returned to the writer for correction.
+- Check the required machine validation results. Leave factual accuracy, source support, comparison fairness, and reader misunderstandings to the factual reviewer.
+
+This self-check tracks handoff and completion. It does not add a content-review pass or approval gate.
 
 ### Single factual reviewer
 
