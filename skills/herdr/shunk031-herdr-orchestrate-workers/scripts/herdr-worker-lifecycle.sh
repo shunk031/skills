@@ -235,15 +235,74 @@ function validate_implementation_worktree() {
     [ "$worker_cwd" = "$repo_root" ] || fail "implementation --cwd must be the linked Git worktree root; use $advice"
     git_worktrees="$(git -C "$repo_root" worktree list --porcelain 2> /dev/null)" || fail "could not verify implementation Git worktree membership; use $advice"
     if ! printf '%s\n' "$git_worktrees" | awk -v expected="$repo_root" '
-        substr($0, 1, 9) == "worktree " {
-            current = substr($0, 10) == expected
-            if (current) found = 1
+        function finish_stanza() {
+            if (!in_stanza) return
+            if (!have_path || !have_head) malformed = 1
+            if (path == expected) {
+                matches++
+                if (prunable) matching_prunable = 1
+            }
+            in_stanza = 0
+            path = ""
+            have_path = have_head = have_branch = have_bare = have_detached = have_locked = prunable = 0
+        }
+        $0 == "" {
+            finish_stanza()
             next
         }
-        current && $1 == "prunable" { prunable = 1 }
-        END { exit found && !prunable ? 0 : 1 }
+        substr($0, 1, 9) == "worktree " {
+            finish_stanza()
+            in_stanza = 1
+            path = substr($0, 10)
+            if (path == "") malformed = 1
+            have_path = 1
+            next
+        }
+        {
+            if (!in_stanza) {
+                malformed = 1
+                next
+            }
+            if (substr($0, 1, 5) == "HEAD ") {
+                value = substr($0, 6)
+                if (have_head || value == "" || value ~ /[[:space:]]/) malformed = 1
+                have_head = 1
+                next
+            }
+            if (substr($0, 1, 7) == "branch ") {
+                value = substr($0, 8)
+                if (have_branch || value == "" || value ~ /[[:space:]]/) malformed = 1
+                have_branch = 1
+                next
+            }
+            if ($0 == "bare") {
+                if (have_bare) malformed = 1
+                have_bare = 1
+                next
+            }
+            if ($0 == "detached") {
+                if (have_detached) malformed = 1
+                have_detached = 1
+                next
+            }
+            if ($0 == "locked" || substr($0, 1, 7) == "locked ") {
+                if (have_locked || ($0 != "locked" && substr($0, 8) == "")) malformed = 1
+                have_locked = 1
+                next
+            }
+            if ($0 == "prunable" || substr($0, 1, 9) == "prunable ") {
+                if (prunable || ($0 != "prunable" && substr($0, 10) == "")) malformed = 1
+                prunable = 1
+                next
+            }
+            malformed = 1
+        }
+        END {
+            finish_stanza()
+            exit malformed || matches != 1 || matching_prunable
+        }
     '; then
-        fail "implementation --cwd is not a current linked Git worktree; use $advice"
+        fail "implementation --cwd is not a uniquely verified current linked Git worktree; use $advice"
     fi
     herdr_worktrees="$(herdr worktree list --cwd "$repo_root" --json 2> /dev/null)" || fail "could not verify the Herdr worktree workspace; use $advice"
     printf '%s\n' "$herdr_worktrees" | jq -e '.result.type == "worktree_list" and (.result.worktrees | type == "array")' > /dev/null 2>&1 || fail "Herdr returned an invalid worktree list; use $advice"
