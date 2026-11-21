@@ -39,6 +39,8 @@ Before starting a piece of work, write what is most likely to fail, how you will
 
 Before editing, establish the deliverable's repository-associated workspace with `herdr worktree create`. Before creating it, fetch `origin` and identify the repository's default branch. Pass `--base origin/<default-branch>`; `create` otherwise starts from the current checkout's `HEAD`, which may be stale. For an already-open worktree, run `herdr worktree open` and reuse its returned workspace ID. Do not substitute manual `git worktree add` plus `herdr tab create`.
 
+The lifecycle helper enforces that implementation launches use the open Herdr workspace for their linked Git worktree.
+
 Start implementers and related Herdr workers through the lifecycle helper in the deliverable workspace. The helper records the exact worker pane and tab IDs. One-shot reviewers use the direct review process in the review guide and do not get Herdr panes. Keep the orchestrator workspace for the orchestrator only.
 
 Read the returned deliverable workspace ID. The lifecycle helper creates each worker tab in that workspace:
