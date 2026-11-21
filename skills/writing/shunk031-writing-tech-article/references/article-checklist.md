@@ -57,7 +57,7 @@ Give the orchestrator the evidence packet and these fields for the Japanese writ
 
 Check workflow and requested scope without independently reviewing article facts or rereading the draft to find content issues:
 
-- Confirm the Japanese writing skill received the approved brief, evidence packet, and intended output path.
+- Confirm the Japanese writing skill received the working brief, evidence packet, and intended output path.
 - Confirm the returned deliverable matches the requested format and scope at a high level. Route any scope change or dropped required point through the existing user decision process.
 - Confirm the final draft received the single factual review required by the Japanese writing skill, and that any blocking findings were returned to the writer for correction.
 - Check the required machine validation results. Leave factual accuracy, source support, comparison fairness, and reader misunderstandings to the factual reviewer.
