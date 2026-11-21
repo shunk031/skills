@@ -219,13 +219,15 @@ function valid_task_key() {
 
 # @description Verify that an implementation launch targets an open Herdr workspace for a linked Git worktree.
 function validate_implementation_worktree() {
-    local repo_root git_dir common_dir git_worktrees herdr_worktrees
+    local worker_cwd repo_root git_dir common_dir git_worktrees herdr_worktrees
     local advice
     advice='herdr worktree create --cwd <repo> --branch <topic> --base origin/<default> --no-focus, or herdr worktree open for an existing worktree'
     [ "$WORKER_NEW_WORKSPACE" -eq 0 ] || fail "implementation launches cannot use --new-workspace; use $advice"
     [ -n "$WORKER_WORKSPACE" ] || fail "implementation launches require a Herdr worktree workspace; use $advice"
     repo_root="$(git -C "$WORKER_CWD" rev-parse --show-toplevel 2> /dev/null)" || fail "could not verify implementation --cwd as a linked Git worktree; use $advice"
     repo_root="$(cd "$repo_root" 2> /dev/null && pwd -P)" || fail "could not resolve implementation worktree path; use $advice"
+    worker_cwd="$(cd "$WORKER_CWD" 2> /dev/null && pwd -P)" || fail "could not resolve implementation --cwd; use $advice"
+    [ "$worker_cwd" = "$repo_root" ] || fail "implementation --cwd must be the linked Git worktree root; use $advice"
     git_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-dir 2> /dev/null)" || fail "could not inspect implementation Git directory; use $advice"
     common_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir 2> /dev/null)" || fail "could not inspect implementation Git common directory; use $advice"
     [ "$git_dir" != "$common_dir" ] || fail "implementation --cwd is the main working tree; use $advice"

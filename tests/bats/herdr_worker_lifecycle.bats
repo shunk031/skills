@@ -360,6 +360,19 @@ function configure_herdr_worktree() {
     [ "$(cat "$HERDR_TEST_STARTS")" = "$(printf 'meta-tabclean-reader\tworker-pane')" ]
 }
 
+@test "implementation launch refuses a subdirectory of a linked worktree" {
+    create_size_gate_repo
+    mkdir -p "$HERDR_TEST_LINKED_WORKTREE/nested"
+
+    run "$LIFECYCLE_SCRIPT" launch meta-tabclean-reader --kind codex --workspace workspace-2 --cwd "$HERDR_TEST_LINKED_WORKTREE/nested" --label Worker --task size-test --role implementation --line-budget 400 -- -m gpt-6-luna
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'implementation --cwd must be the linked Git worktree root'* ]]
+    [[ "$output" == *'herdr worktree create --cwd <repo>'* ]]
+    [ ! -s "$HERDR_TEST_TAB_CREATES" ]
+    [ ! -s "$HERDR_TEST_STARTS" ]
+}
+
 @test "non-implementation launch still accepts a plain folder" {
     mkdir -p "$BATS_TEST_TMPDIR/report-folder"
 
