@@ -12,8 +12,8 @@ Follow this checklist-driven method from research through factual review. The or
 
 ## Boundaries
 
-- Use [`shunk031-research-before-implementation`](../../research/shunk031-research-before-implementation/SKILL.md) for general research that informs a non-trivial implementation or design. That skill establishes how to check external behavior before deciding; this skill owns the end-to-end method for researching, planning, and checking a technical article.
-- Hand the prepared brief and evidence to [`shunk031-writing-gemini-japanese`](../shunk031-writing-gemini-japanese/SKILL.md) for Japanese drafting, editing, and the single factual review. Do not draft or edit Japanese prose yourself, add another reviewer, or create a second approval gate.
+- Use [`shunk031-research-before-implementation`](../../research/shunk031-research-before-implementation/) for general research that informs a non-trivial implementation or design. That skill establishes how to check external behavior before deciding; this skill owns the end-to-end method for researching, planning, and checking a technical article.
+- Hand the prepared brief and evidence to [`shunk031-writing-gemini-japanese`](../shunk031-writing-gemini-japanese/) for Japanese drafting, editing, and the single factual review. Do not draft or edit Japanese prose yourself, add another reviewer, or create a second approval gate.
 - Keep destination-specific publication rules with the destination. Use their official guidelines as input when relevant; do not treat one platform's conventions as universal article rules.
 
 ## Workflow
